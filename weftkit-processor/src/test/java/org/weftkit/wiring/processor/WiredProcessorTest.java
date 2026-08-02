@@ -1,0 +1,459 @@
+package org.weftkit.wiring.processor;
+
+import static com.google.testing.compile.CompilationSubject.assertThat;
+import static com.google.testing.compile.Compiler.javac;
+
+import com.google.testing.compile.Compilation;
+import com.google.testing.compile.JavaFileObjects;
+import javax.tools.JavaFileObject;
+import javax.tools.StandardLocation;
+import org.junit.jupiter.api.Test;
+
+class WiredProcessorTest {
+
+    private static Compilation compile(JavaFileObject... sources) {
+        return javac().withProcessors(new WiredProcessor()).compile(sources);
+    }
+
+    private static JavaFileObject registry() {
+        return JavaFileObjects.forSourceLines(
+                "test.Reg",
+                "package test;",
+                "import org.weftkit.wiring.Registry;",
+                "@Registry public final class Reg { public Reg() {} }");
+    }
+
+    @Test
+    void acceptsAValidGraphAndGeneratesTheRegistry() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Svc",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton public final class Svc { public Svc(Reg reg) {} }"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation).generatedSourceFile("test.WiredComponents");
+        assertThat(compilation).generatedFile(StandardLocation.SOURCE_OUTPUT, "test", "weftkit-graph.dot");
+    }
+
+    @Test
+    void rejectsLoaderThatIsNotSingleton() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Svc",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Loader;",
+                        "@Wired public final class Svc implements Loader {",
+                        "  public Svc() {}",
+                        "  public boolean load() { return true; }",
+                        "}"));
+        assertThat(compilation).hadErrorContaining("Loader implementations must be @Singleton");
+    }
+
+    @Test
+    void rejectsSingletonWithoutWired() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Svc",
+                        "package test;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Singleton public final class Svc { public Svc() {} }"));
+        assertThat(compilation).hadErrorContaining("@Singleton classes must be @Wired");
+    }
+
+    @Test
+    void rejectsProvidesOnNonSingleton() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Prov",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Provides;",
+                        "@Wired public final class Prov {",
+                        "  public Prov() {}",
+                        "  @Provides public String thing() { return \"\"; }",
+                        "}"));
+        assertThat(compilation).hadErrorContaining("@Provides getters must live on a @Wired singleton");
+    }
+
+    @Test
+    void rejectsDuplicateRegistry() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Other",
+                        "package test;",
+                        "import org.weftkit.wiring.Registry;",
+                        "@Registry public final class Other { public Other() {} }"));
+        assertThat(compilation).hadErrorContaining("@Registry is already declared on");
+    }
+
+    @Test
+    void rejectsMissingRegistry() {
+        Compilation compilation = compile(JavaFileObjects.forSourceLines(
+                "test.Svc",
+                "package test;",
+                "import org.weftkit.wiring.Wired;",
+                "import org.weftkit.wiring.Singleton;",
+                "@Wired @Singleton public final class Svc { public Svc() {} }"));
+        assertThat(compilation).hadErrorContaining("No @Registry class to generate");
+    }
+
+    @Test
+    void rejectsDependencyCycle() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.A",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton public final class A { public A(B b) {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.B",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton public final class B { public B(A a) {} }"));
+        assertThat(compilation).hadErrorContaining("Component dependency cycle");
+    }
+
+    @Test
+    void rejectsUnresolvableDependency() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Plain", "package test;", "public final class Plain { public Plain() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Needs",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton public final class Needs { public Needs(Plain plain) {} }"));
+        assertThat(compilation).hadErrorContaining("Dependency must be @Wired or a @Provides product");
+    }
+
+    @Test
+    void rejectsWiredInterface() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Iface",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "@Wired public interface Iface {}"));
+        assertThat(compilation).hadErrorContaining("@Wired requires a concrete class");
+    }
+
+    @Test
+    void bindsInterfaceDependencyToItsSingleImplementation() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines("test.Store", "package test;", "public interface Store {}"),
+                JavaFileObjects.forSourceLines(
+                        "test.SqlStore",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton public final class SqlStore implements Store { public SqlStore() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Uses",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton public final class Uses { public Uses(Store store) {} }"));
+        assertThat(compilation).succeeded();
+    }
+
+    @Test
+    void rejectsAmbiguousInterfaceDependency() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines("test.Store", "package test;", "public interface Store {}"),
+                JavaFileObjects.forSourceLines(
+                        "test.SqlStore",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton public final class SqlStore implements Store { public SqlStore() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.FileStore",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton public final class FileStore implements Store { public FileStore() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Uses",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton public final class Uses { public Uses(Store store) {} }"));
+        assertThat(compilation).hadErrorContaining("Ambiguous dependency test.Store");
+    }
+
+    @Test
+    void acceptsUnresolvableOptionalDependency() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines("test.Maybe", "package test;", "public interface Maybe {}"),
+                JavaFileObjects.forSourceLines(
+                        "test.Uses",
+                        "package test;",
+                        "import java.util.Optional;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton public final class Uses { public Uses(Optional<Maybe> maybe) {} }"));
+        assertThat(compilation).succeeded();
+    }
+
+    @Test
+    void rejectsRawOptionalDependency() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Uses",
+                        "package test;",
+                        "import java.util.Optional;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton public final class Uses { public Uses(Optional maybe) {} }"));
+        assertThat(compilation).hadErrorContaining("Optional dependencies need a concrete type argument");
+    }
+
+    @Test
+    void rejectsLazyLoaderImplementation() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Svc",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Loader;",
+                        "@Wired @Singleton(lazy = true) public final class Svc implements Loader {",
+                        "  public Svc() {}",
+                        "  public boolean load() { return true; }",
+                        "}"));
+        assertThat(compilation).hadErrorContaining("Lazy singletons cannot implement Loader");
+    }
+
+    @Test
+    void rejectsProvidesOnLazySingleton() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Prov",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Provides;",
+                        "@Wired @Singleton(lazy = true) public final class Prov {",
+                        "  public Prov() {}",
+                        "  @Provides public String thing() { return \"\"; }",
+                        "}"));
+        assertThat(compilation).hadErrorContaining("@Provides getters cannot live on a lazy singleton");
+    }
+
+    @Test
+    void bindsQualifiedDependencyToTaggedImplementation() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines("test.Store", "package test;", "public interface Store {}"),
+                JavaFileObjects.forSourceLines(
+                        "test.SqlStore",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Qualified;",
+                        "@Wired @Singleton @Qualified(\"sql\")",
+                        "public final class SqlStore implements Store { public SqlStore() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.FileStore",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Qualified;",
+                        "@Wired @Singleton @Qualified(\"file\")",
+                        "public final class FileStore implements Store { public FileStore() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Uses",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Qualified;",
+                        "@Wired @Singleton public final class Uses {",
+                        "  public Uses(@Qualified(\"sql\") Store store) {}",
+                        "}"));
+        assertThat(compilation).succeeded();
+    }
+
+    @Test
+    void allowsSameProductTypeWithDifferentQualifiers() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Prov",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Provides;",
+                        "import org.weftkit.wiring.Qualified;",
+                        "@Wired @Singleton public final class Prov {",
+                        "  public Prov() {}",
+                        "  @Provides public String primary() { return \"\"; }",
+                        "  @Provides @Qualified(\"backup\") public String backup() { return \"\"; }",
+                        "}"));
+        assertThat(compilation).succeeded();
+    }
+
+    @Test
+    void rejectsDuplicateProduct() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Prov",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Provides;",
+                        "@Wired @Singleton public final class Prov {",
+                        "  public Prov() {}",
+                        "  @Provides public String primary() { return \"\"; }",
+                        "  @Provides public String secondary() { return \"\"; }",
+                        "}"));
+        assertThat(compilation).hadErrorContaining("Product is already provided by");
+    }
+
+    @Test
+    void bindsExternalInterfaceWithSingleImplementation() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.SqlStore",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.processor.fixture.ExternalStore;",
+                        "@Wired @Singleton public final class SqlStore implements ExternalStore { public SqlStore() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Uses",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.processor.fixture.ExternalStore;",
+                        "@Wired @Singleton public final class Uses { public Uses(ExternalStore store) {} }"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WiredComponents")
+                .contentsAsUtf8String()
+                .contains("org.weftkit.wiring.processor.fixture.ExternalStore.class");
+    }
+
+    @Test
+    void escapesQualifiersWithSpecialCharactersInGeneratedSource() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines("test.Store", "package test;", "public interface Store {}"),
+                JavaFileObjects.forSourceLines(
+                        "test.SqlStore",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Qualified;",
+                        "@Wired @Singleton @Qualified(\"a\\\"b\\\\c\")",
+                        "public final class SqlStore implements Store { public SqlStore() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Uses",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Qualified;",
+                        "@Wired @Singleton public final class Uses {",
+                        "  public Uses(@Qualified(\"a\\\"b\\\\c\") Store store) {}",
+                        "}"));
+        // The generated registry is compiled in the same run, so a broken string literal would fail it
+        assertThat(compilation).succeeded();
+    }
+
+    @Test
+    void warnsWhenExternalInterfaceHasMultipleImplementations() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.SqlStore",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.processor.fixture.ExternalStore;",
+                        "@Wired @Singleton public final class SqlStore implements ExternalStore { public SqlStore() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.FileStore",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.processor.fixture.ExternalStore;",
+                        "@Wired @Singleton public final class FileStore implements ExternalStore { public FileStore() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Uses",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.processor.fixture.ExternalStore;",
+                        "@Wired @Singleton public final class Uses { public Uses(ExternalStore store) {} }"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation).hadWarningContaining("has multiple @Wired implementations");
+    }
+
+    @Test
+    void leavesAmbiguousExternalInterfaceUnbound() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.SqlStore",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.processor.fixture.ExternalStore;",
+                        "@Wired @Singleton public final class SqlStore implements ExternalStore { public SqlStore() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.FileStore",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.processor.fixture.ExternalStore;",
+                        "@Wired @Singleton public final class FileStore implements ExternalStore { public FileStore() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Uses",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.processor.fixture.ExternalStore;",
+                        "@Wired @Singleton public final class Uses { public Uses(ExternalStore store) {} }"));
+        assertThat(compilation).succeeded();
+    }
+
+    @Test
+    void rejectsDuplicateConstructorParameterType() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Dep",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton public final class Dep { public Dep() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Two",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton public final class Two { public Two(Dep a, Dep b) {} }"));
+        assertThat(compilation).hadErrorContaining("Duplicate constructor parameter type");
+    }
+}
