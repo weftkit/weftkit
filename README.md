@@ -62,7 +62,8 @@ public final class HelloPlugin extends JavaPlugin {
 Components are plain classes. `@Wired` makes one injectable, and `@Singleton` creates it
 once during load and injects it by type from then on. Implement `Loader` to hook the lifecycle
 (returning `false` from `load` aborts startup and disables the plugin), and expose a value
-to the rest of the graph with `@Provides`:
+to the rest of the graph with `@Provides`. The value is captured right after `load`, so a
+getter that still returns null at that point fails startup instead of the first injection:
 
 ```java
 @Wired

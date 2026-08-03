@@ -176,6 +176,14 @@ class WeftLoaderIntegrationTest {
     }
 
     @Test
+    void dropsCapturedProductsOnUnload() {
+        WeftLoader loader = newLoader();
+        loader.load();
+        loader.unload();
+        assertThrows(IllegalStateException.class, () -> loader.create(Sample.Consumer.class));
+    }
+
+    @Test
     void resolvesOwnProductDuringLoadHook() {
         WeftLoader loader = newLoader();
         assertTrue(loader.load());

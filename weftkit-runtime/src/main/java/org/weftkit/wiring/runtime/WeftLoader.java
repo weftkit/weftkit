@@ -29,6 +29,8 @@ public final class WeftLoader {
 
     private final Map<Class<?>, Duration> timings = new LinkedHashMap<>();
 
+    private final Map<Class<?>, Map<String, Object>> products = new HashMap<>();
+
     public WeftLoader(ComponentRegistry registry, Object... ambient) {
         this.registry = registry;
         this.ambient = ambient.clone();
@@ -50,6 +52,7 @@ public final class WeftLoader {
                 unload();
                 return false;
             }
+            captureProducts(type, singleton);
             timings.put(type, Duration.ofNanos(System.nanoTime() - start));
         }
         return true;
@@ -73,6 +76,7 @@ public final class WeftLoader {
             }
         }
         singletons.clear();
+        products.clear();
         if (failure != null) throw failure;
     }
 
@@ -172,6 +176,10 @@ public final class WeftLoader {
         Map<String, Class<?>> owners = registry.productOwners().get(type);
         Class<?> owner = owners == null ? null : owners.get(dependency.qualifier());
         if (owner == null) return null;
+        Map<String, Object> captured = products.get(type);
+        Object cached = captured == null ? null : captured.get(dependency.qualifier());
+        if (cached != null) return cached;
+        // The owner may still be inside its own load hook, so fall back to the live getter
         Object provider = singletons.get(owner);
         Object product = provider == null
                 ? null
@@ -182,6 +190,21 @@ public final class WeftLoader {
         if (product == null && !dependency.optional())
             throw new IllegalStateException("Dependency is not available yet: " + type.getName());
         return product;
+    }
+
+    private void captureProducts(Class<?> owner, Object singleton) {
+        registry.productOwners()
+                .forEach((product, qualified) -> qualified.forEach((qualifier, type) -> {
+                    if (!type.equals(owner)) return;
+                    Object value = registry.productGetters()
+                            .get(product)
+                            .get(qualifier)
+                            .apply(singleton);
+                    if (value == null)
+                        throw new IllegalStateException(
+                                "Product " + product.getName() + " of " + owner.getName() + " is null after load");
+                    products.computeIfAbsent(product, key -> new HashMap<>()).put(qualifier, value);
+                }));
     }
 
     private Class<?> bound(Class<?> type, String qualifier) {
