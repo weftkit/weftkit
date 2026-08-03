@@ -133,7 +133,7 @@ plugin - a kit for weaving a plugin together.
 
 | Module | Description |
 | --- | --- |
-| `weftkit-annotations` | The wiring vocabulary - `@Registry`, `@Wired`, `@Singleton`, `@Provides`, `@Qualified`, `@Initializes`, `@Requires` - and the `Loader` lifecycle interface (`load`/`unload`). |
+| `weftkit-annotations` | The wiring vocabulary - `@Registry`, `@Wired`, `@Singleton`, `@Provides`, `@Qualified`, `@Initializes`, `@Requires`, `@StaticHolder` - and the `Loader` lifecycle interface (`load`/`unload`). |
 | `weftkit-runtime` | The runtime. `WeftLoader` instantiates components in dependency order, injects by type, and drives the `Loader` lifecycle, working against the `ComponentRegistry` the processor generates. |
 | `weftkit-processor` | The platform-neutral annotation processor that validates the graph at compile time and generates the registry. Platform-specific checks are contributed through the `ComponentRule` service interface. |
 | `weftkit-bukkit` | The Bukkit adapter. `BukkitWeft` loads the plugin, registers listeners, and tears down on disable, and a `ComponentRule` validates `Listener` components and their `@EventHandler` methods. |

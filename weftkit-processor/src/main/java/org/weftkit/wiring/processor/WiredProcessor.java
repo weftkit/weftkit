@@ -16,6 +16,7 @@ import org.weftkit.wiring.Qualified;
 import org.weftkit.wiring.Registry;
 import org.weftkit.wiring.Requires;
 import org.weftkit.wiring.Singleton;
+import org.weftkit.wiring.StaticHolder;
 import org.weftkit.wiring.Wired;
 
 @AutoService(Processor.class)
@@ -42,7 +43,8 @@ public class WiredProcessor extends AbstractProcessor {
                 Provides.class.getCanonicalName(),
                 Initializes.class.getCanonicalName(),
                 Requires.class.getCanonicalName(),
-                Qualified.class.getCanonicalName());
+                Qualified.class.getCanonicalName(),
+                StaticHolder.class.getCanonicalName());
     }
 
     @Override

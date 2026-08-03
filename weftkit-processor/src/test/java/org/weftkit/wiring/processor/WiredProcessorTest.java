@@ -438,6 +438,137 @@ class WiredProcessorTest {
         assertThat(compilation).succeeded();
     }
 
+    private static JavaFileObject settingsHolder() {
+        return JavaFileObjects.forSourceLines(
+                "test.Settings",
+                "package test;",
+                "import org.weftkit.wiring.StaticHolder;",
+                "@StaticHolder public final class Settings {",
+                "  public static int LIMIT = 3;",
+                "}");
+    }
+
+    @Test
+    void rejectsUndeclaredHolderAccessDuringLoad() {
+        Compilation compilation = compile(
+                registry(),
+                settingsHolder(),
+                JavaFileObjects.forSourceLines(
+                        "test.Svc",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Loader;",
+                        "@Wired @Singleton public final class Svc implements Loader {",
+                        "  public Svc() {}",
+                        "  public boolean load() { return Settings.LIMIT > 0; }",
+                        "}"));
+        assertThat(compilation)
+                .hadErrorContaining("Static holder is accessed during load without @Requires: test.Settings");
+    }
+
+    @Test
+    void acceptsDeclaredHolderAccessDuringLoad() {
+        Compilation compilation = compile(
+                registry(),
+                settingsHolder(),
+                JavaFileObjects.forSourceLines(
+                        "test.Init",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Initializes;",
+                        "import org.weftkit.wiring.Loader;",
+                        "@Wired @Singleton @Initializes(Settings.class)",
+                        "public final class Init implements Loader {",
+                        "  public Init() {}",
+                        "  public boolean load() { Settings.LIMIT = 5; return true; }",
+                        "}"),
+                JavaFileObjects.forSourceLines(
+                        "test.Svc",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Requires;",
+                        "import org.weftkit.wiring.Loader;",
+                        "@Wired @Singleton @Requires(Settings.class)",
+                        "public final class Svc implements Loader {",
+                        "  public Svc() {}",
+                        "  public boolean load() { return Settings.LIMIT > 0; }",
+                        "}"));
+        assertThat(compilation).succeeded();
+    }
+
+    @Test
+    void ignoresHolderAccessOutsideTheLoadWindow() {
+        Compilation compilation = compile(
+                registry(),
+                settingsHolder(),
+                JavaFileObjects.forSourceLines(
+                        "test.Cmd",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "@Wired public final class Cmd {",
+                        "  public Cmd() {}",
+                        "  public int limit() { return Settings.LIMIT; }",
+                        "}"));
+        assertThat(compilation).succeeded();
+    }
+
+    @Test
+    void ignoresLoadHelperOnNonLoaderComponent() {
+        Compilation compilation = compile(
+                registry(),
+                settingsHolder(),
+                JavaFileObjects.forSourceLines(
+                        "test.Cmd",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "@Wired public final class Cmd {",
+                        "  public Cmd() {}",
+                        "  public int load() { return Settings.LIMIT; }",
+                        "}"));
+        assertThat(compilation).succeeded();
+    }
+
+    @Test
+    void rejectsInitializesTargetWithoutStaticHolder() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Plain", "package test;", "public final class Plain { public static int VALUE; }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Init",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Initializes;",
+                        "import org.weftkit.wiring.Loader;",
+                        "@Wired @Singleton @Initializes(Plain.class)",
+                        "public final class Init implements Loader {",
+                        "  public Init() {}",
+                        "  public boolean load() { return true; }",
+                        "}"));
+        assertThat(compilation).hadErrorContaining("Holder must be annotated with @StaticHolder: test.Plain");
+    }
+
+    @Test
+    void rejectsRequiresTargetWithoutStaticHolder() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Plain", "package test;", "public final class Plain { public static int VALUE; }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Svc",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Requires;",
+                        "@Wired @Singleton @Requires(Plain.class)",
+                        "public final class Svc { public Svc() {} }"));
+        assertThat(compilation).hadErrorContaining("Holder must be annotated with @StaticHolder: test.Plain");
+    }
+
     @Test
     void rejectsDuplicateConstructorParameterType() {
         Compilation compilation = compile(

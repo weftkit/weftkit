@@ -28,6 +28,7 @@ import org.weftkit.wiring.Loader;
 import org.weftkit.wiring.Qualified;
 import org.weftkit.wiring.Requires;
 import org.weftkit.wiring.Singleton;
+import org.weftkit.wiring.StaticHolder;
 import org.weftkit.wiring.Wired;
 import org.weftkit.wiring.processor.spi.ComponentRule;
 
@@ -43,6 +44,8 @@ class WiredValidator {
 
     private final List<ComponentRule> rules = loadRules();
 
+    private final StaticHolderCheck holderCheck;
+
     private String registry;
 
     private String registryPackage;
@@ -52,6 +55,7 @@ class WiredValidator {
     WiredValidator(ProcessingEnvironment processingEnv, WiringModel model) {
         this.processingEnv = processingEnv;
         this.model = model;
+        this.holderCheck = new StaticHolderCheck(processingEnv);
     }
 
     void addSources(RoundEnvironment roundEnvironment) {
@@ -115,7 +119,17 @@ class WiredValidator {
             return;
         }
         for (ComponentRule rule : rules) rule.validate(component, processingEnv);
+        holderCheck.check(component, constructors.get(0), isSubtype(component, LOADER), declaredHolders(component));
         collect(component, constructors.get(0));
+    }
+
+    private Set<String> declaredHolders(TypeElement component) {
+        Set<String> declared = new HashSet<>();
+        Requires requires = component.getAnnotation(Requires.class);
+        if (requires != null) declared.addAll(holders(requires::value));
+        Initializes initializes = component.getAnnotation(Initializes.class);
+        if (initializes != null) declared.addAll(holders(initializes::value));
+        return declared;
     }
 
     void validateProduct(ExecutableElement getter) {
@@ -163,6 +177,7 @@ class WiredValidator {
             return;
         }
         for (String holder : holders(component.getAnnotation(Initializes.class)::value)) {
+            requireStaticHolder(component, holder);
             String previous =
                     model.addInitializer(holder, component.getQualifiedName().toString());
             if (previous != null) error(component, "Holder is already initialized by " + previous);
@@ -178,8 +193,15 @@ class WiredValidator {
             error(component, "@Requires cannot be used on a lazy singleton");
             return;
         }
-        model.addRequirements(
-                component.getQualifiedName().toString(), holders(component.getAnnotation(Requires.class)::value));
+        List<String> holders = holders(component.getAnnotation(Requires.class)::value);
+        for (String holder : holders) requireStaticHolder(component, holder);
+        model.addRequirements(component.getQualifiedName().toString(), holders);
+    }
+
+    private void requireStaticHolder(Element anchor, String holder) {
+        TypeElement element = processingEnv.getElementUtils().getTypeElement(holder);
+        if (element != null && element.getAnnotation(StaticHolder.class) == null)
+            error(anchor, "Holder must be annotated with @StaticHolder: " + holder);
     }
 
     // Class values in annotations are only accessible as mirrors during processing

@@ -10,6 +10,7 @@ import org.weftkit.wiring.Qualified;
 import org.weftkit.wiring.Registry;
 import org.weftkit.wiring.Requires;
 import org.weftkit.wiring.Singleton;
+import org.weftkit.wiring.StaticHolder;
 import org.weftkit.wiring.Wired;
 import org.weftkit.wiring.runtime.WeftLoader;
 
@@ -28,6 +29,7 @@ public final class Sample {
 
     public static final class Widget {}
 
+    @StaticHolder
     static final class Flag {
         static int value;
     }
