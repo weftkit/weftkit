@@ -5,6 +5,7 @@ plugins {
 
 subprojects {
     apply(plugin = "java-library")
+    apply(plugin = "jacoco")
     apply(plugin = "com.diffplug.spotless")
     apply(plugin = "com.vanniktech.maven.publish")
 
@@ -30,6 +31,11 @@ subprojects {
 
     tasks.withType<Test>().configureEach {
         useJUnitPlatform()
+        finalizedBy(tasks.withType<JacocoReport>())
+    }
+
+    tasks.withType<JacocoReport>().configureEach {
+        reports.xml.required.set(true)
     }
 
     extensions.configure<com.vanniktech.maven.publish.MavenPublishBaseExtension> {
