@@ -30,9 +30,9 @@ during compilation:
 dependencies {
     compileOnly("org.spigotmc:spigot-api:1.20.4-R0.1-SNAPSHOT")
 
-    implementation("org.weftkit:weftkit-bukkit:0.1.0")
-    annotationProcessor("org.weftkit:weftkit-processor:0.1.0")
-    annotationProcessor("org.weftkit:weftkit-bukkit:0.1.0")
+    implementation("org.weftkit:weftkit-bukkit:0.2.0")
+    annotationProcessor("org.weftkit:weftkit-processor:0.2.0")
+    annotationProcessor("org.weftkit:weftkit-bukkit:0.2.0")
 }
 ```
 
