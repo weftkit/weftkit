@@ -103,7 +103,22 @@ class WeftLoaderIntegrationTest {
     @Test
     void wrapsConstructorFailureInComponentLoadException() {
         probe.explode = true;
-        assertThrows(ComponentLoadException.class, newLoader()::load);
+        WeftLoader loader = newLoader();
+        assertThrows(ComponentLoadException.class, loader::load);
+        // Singletons loaded before the failing constructor are torn back down in reverse order
+        assertTrue(probe.unloads.indexOf("Gate") < probe.unloads.indexOf("Beta"));
+        assertTrue(probe.unloads.indexOf("Beta") < probe.unloads.indexOf("Alpha"));
+        assertNull(loader.get(Sample.Alpha.class));
+    }
+
+    @Test
+    void loadHookThrowTearsDownWithoutUnloadingTheThrower() {
+        probe.throwOnLoad = true;
+        WeftLoader loader = newLoader();
+        assertThrows(IllegalStateException.class, loader::load);
+        assertFalse(probe.unloads.contains("Gate"));
+        assertTrue(probe.unloads.indexOf("Beta") < probe.unloads.indexOf("Alpha"));
+        assertNull(loader.get(Sample.Beta.class));
     }
 
     @Test

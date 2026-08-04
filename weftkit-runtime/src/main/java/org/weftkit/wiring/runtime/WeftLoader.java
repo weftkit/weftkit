@@ -39,20 +39,35 @@ public final class WeftLoader {
 
     /**
      * Creates every eager singleton in dependency order, running their {@link Loader} hooks.
-     * Returns false after tearing the loaded singletons back down when a hook aborts.
+     * Returns false after tearing the loaded singletons back down when a hook aborts. A
+     * RuntimeException thrown while creating or loading a singleton triggers the same teardown
+     * before it propagates, with any teardown failure attached as suppressed.
      */
     public boolean load() {
         for (Class<?> type : registry.loadOrder()) {
             long start = System.nanoTime();
-            Object singleton = create(type);
-            // Publish before the load hook runs so the hook can resolve this singleton and its products
-            singletons.put(type, singleton);
-            if (singleton instanceof Loader loader && !loader.load()) {
-                singletons.remove(type);
-                unload();
-                return false;
+            boolean hookCompleted = false;
+            try {
+                Object singleton = create(type);
+                // Publish before the load hook runs so the hook can resolve this singleton and its products
+                singletons.put(type, singleton);
+                if (singleton instanceof Loader loader && !loader.load()) {
+                    singletons.remove(type);
+                    unload();
+                    return false;
+                }
+                hookCompleted = true;
+                captureProducts(type, singleton);
+            } catch (RuntimeException ex) {
+                // A singleton whose hook never completed is treated like an abort and not unloaded
+                if (!hookCompleted) singletons.remove(type);
+                try {
+                    unload();
+                } catch (RuntimeException teardown) {
+                    ex.addSuppressed(teardown);
+                }
+                throw ex;
             }
-            captureProducts(type, singleton);
             timings.put(type, Duration.ofNanos(System.nanoTime() - start));
         }
         return true;

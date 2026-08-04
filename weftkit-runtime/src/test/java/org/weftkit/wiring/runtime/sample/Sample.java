@@ -22,6 +22,7 @@ public final class Sample {
         public final List<String> loads = new ArrayList<>();
         public final List<String> unloads = new ArrayList<>();
         public boolean proceed = true;
+        public boolean throwOnLoad = false;
         public boolean faultOnUnload = false;
         public boolean explode = false;
         public int flagValue;
@@ -282,6 +283,7 @@ public final class Sample {
 
         public boolean load() {
             probe.loads.add("Gate");
+            if (probe.throwOnLoad) throw new IllegalStateException("load hook failed");
             return probe.proceed;
         }
 
