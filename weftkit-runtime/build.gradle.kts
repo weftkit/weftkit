@@ -1,3 +1,5 @@
+description = "The weftkit component loader that drives generated registries at runtime"
+
 dependencies {
     api(project(":weftkit-annotations"))
 

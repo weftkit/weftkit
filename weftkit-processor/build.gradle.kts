@@ -1,3 +1,5 @@
+description = "The weftkit annotation processor that validates the wiring graph and generates the registry"
+
 dependencies {
     implementation(project(":weftkit-annotations"))
 

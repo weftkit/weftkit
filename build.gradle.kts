@@ -1,15 +1,12 @@
 plugins {
     alias(libs.plugins.spotless) apply false
-}
-
-allprojects {
-    group = "org.weftkit"
-    version = "0.1.0-SNAPSHOT"
+    alias(libs.plugins.maven.publish) apply false
 }
 
 subprojects {
     apply(plugin = "java-library")
     apply(plugin = "com.diffplug.spotless")
+    apply(plugin = "com.vanniktech.maven.publish")
 
     extensions.configure<JavaPluginExtension> {
         toolchain.languageVersion.set(JavaLanguageVersion.of(17))
@@ -33,5 +30,37 @@ subprojects {
 
     tasks.withType<Test>().configureEach {
         useJUnitPlatform()
+    }
+
+    extensions.configure<com.vanniktech.maven.publish.MavenPublishBaseExtension> {
+        publishToMavenCentral()
+        // Sign only when the release workflow supplies the key, so local publishing stays credential-free;
+        // Central rejects unsigned uploads, so a missing key cannot slip through to a release
+        if (providers.gradleProperty("signingInMemoryKey").isPresent) signAllPublications()
+        pom {
+            name.set(project.name)
+            // Each module sets project.description; fail loudly if a new one forgets
+            description.set(provider {
+                checkNotNull(project.description) { "Set description in ${project.name}/build.gradle.kts" }
+            })
+            url.set("https://weftkit.org")
+            licenses {
+                license {
+                    name.set("Apache-2.0")
+                    url.set("https://www.apache.org/licenses/LICENSE-2.0")
+                }
+            }
+            developers {
+                developer {
+                    id.set("CorneliusMa")
+                    name.set("Cornelius Mayer")
+                }
+            }
+            scm {
+                url.set("https://github.com/weftkit/weftkit")
+                connection.set("scm:git:https://github.com/weftkit/weftkit.git")
+                developerConnection.set("scm:git:ssh://git@github.com/weftkit/weftkit.git")
+            }
+        }
     }
 }

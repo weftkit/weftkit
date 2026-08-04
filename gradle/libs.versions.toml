@@ -2,6 +2,7 @@
 auto-service = "1.1.1"
 junit = "5.11.4"
 junit-platform = "1.11.4"
+maven-publish = "0.34.0"
 spotless = "8.8.0"
 
 [libraries]
@@ -13,4 +14,5 @@ junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher
 compile-testing = { module = "com.google.testing.compile:compile-testing", version = "0.21.0" }
 
 [plugins]
+maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }

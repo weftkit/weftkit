@@ -1,3 +1,5 @@
+description = "The weftkit Bukkit adapter: plugin lifecycle entry points and listener wiring"
+
 dependencies {
     api(project(":weftkit-runtime"))
     compileOnly(project(":weftkit-processor"))
