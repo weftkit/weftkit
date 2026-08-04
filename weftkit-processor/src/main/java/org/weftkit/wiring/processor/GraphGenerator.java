@@ -5,6 +5,7 @@ import java.io.Writer;
 import java.util.Set;
 import java.util.TreeSet;
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.Element;
 import javax.tools.Diagnostic;
 import javax.tools.StandardLocation;
 
@@ -19,10 +20,10 @@ class GraphGenerator {
         this.registryPackage = registryPackage;
     }
 
-    void write(ProcessingEnvironment processingEnv) {
+    void write(ProcessingEnvironment processingEnv, Element... originating) {
         try (Writer writer = processingEnv
                 .getFiler()
-                .createResource(StandardLocation.SOURCE_OUTPUT, registryPackage, "weftkit-graph.dot")
+                .createResource(StandardLocation.SOURCE_OUTPUT, registryPackage, "weftkit-graph.dot", originating)
                 .openWriter()) {
             writer.write(render());
         } catch (IOException ex) {

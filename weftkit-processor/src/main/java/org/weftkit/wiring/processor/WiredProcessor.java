@@ -1,7 +1,9 @@
 package org.weftkit.wiring.processor;
 
 import com.google.auto.service.AutoService;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Stream;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
@@ -71,11 +73,20 @@ public class WiredProcessor extends AbstractProcessor {
         if (!generated && !model.isEmpty() && !roundEnvironment.processingOver()) {
             validator.validateGraph();
             if (validator.registryPackage() != null) {
-                new RegistryGenerator(model, validator.registryPackage()).write(processingEnv);
-                new GraphGenerator(model, validator.registryPackage()).write(processingEnv);
+                Element[] originating = originatingElements();
+                new RegistryGenerator(model, validator.registryPackage()).write(processingEnv, originating);
+                new GraphGenerator(model, validator.registryPackage()).write(processingEnv, originating);
             }
             generated = true;
         }
         return true;
+    }
+
+    // The generated files aggregate every component and the registry class, so name them all as origins
+    private Element[] originatingElements() {
+        return Stream.concat(model.components().keySet().stream(), Stream.ofNullable(validator.registryClass()))
+                .map(processingEnv.getElementUtils()::getTypeElement)
+                .filter(Objects::nonNull)
+                .toArray(Element[]::new);
     }
 }

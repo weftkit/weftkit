@@ -67,6 +67,10 @@ class WiredValidator {
         return registryPackage;
     }
 
+    String registryClass() {
+        return registry;
+    }
+
     void validateRegistry(TypeElement element) {
         String name = element.getQualifiedName().toString();
         if (registry != null && !registry.equals(name)) {
@@ -453,7 +457,9 @@ class WiredValidator {
         return singleton != null && singleton.lazy();
     }
 
-    // Internal means declared in this compilation and not already satisfied by a @Registry constructor argument
+    // Internal means declared in this compilation and not already satisfied by a @Registry constructor argument.
+    // On an incremental rebuild only annotated sources are guaranteed to recompile, so an unannotated in-project
+    // type can be misread as external there; the unresolved-dependency error then only fires on a clean build.
     private boolean isInternal(TypeMirror type) {
         for (TypeMirror provided : ambient) if (processingEnv.getTypeUtils().isAssignable(provided, type)) return false;
         for (Element element = processingEnv.getTypeUtils().asElement(type);

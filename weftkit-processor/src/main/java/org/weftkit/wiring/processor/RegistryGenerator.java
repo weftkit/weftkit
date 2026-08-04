@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.Element;
 import javax.tools.Diagnostic;
 
 class RegistryGenerator {
@@ -99,10 +100,10 @@ class RegistryGenerator {
         this.registryPackage = registryPackage;
     }
 
-    void write(ProcessingEnvironment processingEnv) {
+    void write(ProcessingEnvironment processingEnv, Element... originating) {
         try (Writer writer = processingEnv
                 .getFiler()
-                .createSourceFile(registryPackage + ".WiredComponents")
+                .createSourceFile(registryPackage + ".WiredComponents", originating)
                 .openWriter()) {
             writer.write(render());
         } catch (IOException ex) {
