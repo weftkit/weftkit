@@ -18,11 +18,19 @@ public final class BukkitWeft {
     /**
      * Loads the registry with the plugin and the extra values as ambient roots, then registers
      * every wired {@code Listener}. Returns null after disabling the plugin when a component
-     * aborts the load.
+     * aborts or fails the load; a load failure is logged instead of escaping {@code onEnable},
+     * where Bukkit would only log it and leave the plugin half-enabled.
      */
     public static WeftLoader enable(JavaPlugin plugin, ComponentRegistry registry, Object... extraAmbient) {
         WeftLoader loader = new WeftLoader(registry, ambient(plugin, extraAmbient));
-        if (!loader.load()) {
+        boolean loaded;
+        try {
+            loaded = loader.load();
+        } catch (RuntimeException ex) {
+            plugin.getLogger().log(Level.SEVERE, "Error during weftkit startup", ex);
+            loaded = false;
+        }
+        if (!loaded) {
             plugin.getServer().getPluginManager().disablePlugin(plugin);
             return null;
         }
