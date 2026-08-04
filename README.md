@@ -8,10 +8,8 @@
   Lifecycle management for Bukkit plugins, wired at compile time.
 </p>
 
-> [!WARNING]
-> weftkit is at a very early stage and is not published anywhere yet. You have to build it
-> from source yourself, and it comes with no stability or safety guarantees. Use it at your
-> own risk.
+> [!NOTE]
+> weftkit is pre-1.0, so the public API can still change between releases until 1.0.
 
 weftkit runs your plugin's lifecycle. It brings your components up in dependency order, runs
 their startup and shutdown hooks, registers your Bukkit listeners, and tears everything down in
