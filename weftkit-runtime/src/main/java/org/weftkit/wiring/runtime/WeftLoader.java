@@ -153,16 +153,10 @@ public final class WeftLoader {
         // Arguments, ambient roots, and the loader itself carry no qualifier, so only an unqualified
         // dependency may match them; a qualified one must resolve through its binding or product
         if (dependency.qualifier().isEmpty()) {
-            Object match = null;
-            for (Object argument : arguments) {
-                if (!type.isInstance(argument)) continue;
-                if (match != null)
-                    throw new IllegalStateException(
-                            "Ambiguous argument for " + type.getName() + " of " + component.getName());
-                match = argument;
-            }
-            if (match != null) return match;
-            for (Object provided : ambient) if (type.isInstance(provided)) return provided;
+            Object argument = unique(arguments, type, component, "argument");
+            if (argument != null) return argument;
+            Object provided = unique(ambient, type, component, "ambient value");
+            if (provided != null) return provided;
             if (type.isInstance(this)) return this;
         }
         Class<?> target = bound(type, dependency.qualifier());
@@ -171,6 +165,18 @@ public final class WeftLoader {
         if (product != null) return product;
         if (dependency.optional()) return null;
         throw new IllegalStateException("Cannot resolve dependency " + type.getName() + " for " + component.getName());
+    }
+
+    private Object unique(Object[] candidates, Class<?> type, Class<?> component, String kind) {
+        Object match = null;
+        for (Object candidate : candidates) {
+            if (!type.isInstance(candidate)) continue;
+            if (match != null)
+                throw new IllegalStateException(
+                        "Ambiguous " + kind + " for " + type.getName() + " of " + component.getName());
+            match = candidate;
+        }
+        return match;
     }
 
     private Object instance(Class<?> type, Object... arguments) {

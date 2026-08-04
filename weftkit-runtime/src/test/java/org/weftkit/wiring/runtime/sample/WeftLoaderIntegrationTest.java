@@ -122,6 +122,13 @@ class WeftLoaderIntegrationTest {
     }
 
     @Test
+    void rejectsAmbiguousAmbientValue() {
+        WeftLoader loader = new WeftLoader(WiredComponents.INSTANCE, wiring, probe, new Sample.Probe());
+        IllegalStateException ex = assertThrows(IllegalStateException.class, loader::load);
+        assertTrue(ex.getMessage().contains("Ambiguous ambient value"));
+    }
+
+    @Test
     void exposesLoadOrderAndTimings() {
         WeftLoader loader = newLoader();
         loader.load();
