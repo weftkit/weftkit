@@ -18,6 +18,8 @@ behind it is resolved at compile time. An annotation processor validates the who
 graph during `javac`, so a missing dependency, a cycle, or a misused annotation fails the build
 instead of crashing on startup, and the generated registry keeps the hot path free of reflection.
 
+Full documentation lives at [weftkit.org](https://weftkit.org).
+
 ## Quick start
 
 Add weftkit to your plugin's Gradle build. `weftkit-bukkit` carries the runtime and the
@@ -126,6 +128,11 @@ A *weft* is the horizontal thread passed back and forth through the vertical war
 weaving, binding the loose strands into a single fabric. That is exactly what weftkit does:
 it threads through your independent components and binds them into one coherent, working
 plugin - a kit for weaving a plugin together.
+
+## Used by
+
+weftkit was extracted from [SilkSpawners](https://github.com/CorneliusMa/SilkSpawners_v2), which
+runs on it as its wiring and lifecycle framework.
 
 ## Modules
 
