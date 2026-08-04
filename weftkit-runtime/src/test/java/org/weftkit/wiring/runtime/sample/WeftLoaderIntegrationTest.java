@@ -129,6 +129,19 @@ class WeftLoaderIntegrationTest {
     }
 
     @Test
+    void lazySingletonIgnoresCallerArguments() {
+        WeftLoader loader = newLoader();
+        loader.load();
+        Sample.Probe other = new Sample.Probe();
+        List<Sample.Cold> colds = loader.createAll(Sample.Cold.class, other);
+        assertEquals(1, colds.size());
+        // The cached instance is built from the graph, not from whichever call materialized it
+        assertTrue(probe.loads.contains("Cold"));
+        assertFalse(other.loads.contains("Cold"));
+        assertSame(colds.get(0), loader.get(Sample.Cold.class));
+    }
+
+    @Test
     void exposesLoadOrderAndTimings() {
         WeftLoader loader = newLoader();
         loader.load();

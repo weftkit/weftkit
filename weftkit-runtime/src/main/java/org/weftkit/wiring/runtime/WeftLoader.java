@@ -115,7 +115,8 @@ public final class WeftLoader {
 
     /**
      * Creates or fetches every component assignable to the supertype, sorted by class name.
-     * Arguments are matched to constructor parameters by type.
+     * Arguments are matched to constructor parameters by type; they only reach plain components,
+     * since a singleton's cached state must not depend on whichever call materialized it.
      */
     public <T> List<T> createAll(Class<T> supertype, Object... arguments) {
         return registry.parameters().keySet().stream()
@@ -181,14 +182,15 @@ public final class WeftLoader {
 
     private Object instance(Class<?> type, Object... arguments) {
         if (eager.contains(type)) return loaded(type);
-        if (registry.lazySingletons().contains(type)) return lazySingleton(type, arguments);
+        // The cached instance must not depend on one call site, so lazy singletons ignore arguments
+        if (registry.lazySingletons().contains(type)) return lazySingleton(type);
         return create(type, arguments);
     }
 
-    private Object lazySingleton(Class<?> type, Object... arguments) {
+    private Object lazySingleton(Class<?> type) {
         Object singleton = singletons.get(type);
         if (singleton != null) return singleton;
-        Object created = create(type, arguments);
+        Object created = create(type);
         singletons.put(type, created);
         return created;
     }
