@@ -271,9 +271,11 @@ class WiredValidator {
     private void checkCycle(String component, List<String> path, Set<String> cleared) {
         if (cleared.contains(component)) return;
         if (path.contains(component)) {
+            // Report only the cycle itself, not the acyclic tail the search walked to reach it
+            List<String> cycle = path.subList(path.indexOf(component), path.size());
             error(
                     processingEnv.getElementUtils().getTypeElement(component),
-                    "Component dependency cycle: " + String.join(" -> ", path) + " -> " + component);
+                    "Component dependency cycle: " + String.join(" -> ", cycle) + " -> " + component);
             return;
         }
         path.add(component);

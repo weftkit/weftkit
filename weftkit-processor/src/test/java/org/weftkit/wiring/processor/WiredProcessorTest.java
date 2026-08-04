@@ -125,6 +125,32 @@ class WiredProcessorTest {
     }
 
     @Test
+    void reportsOnlyTheCycleSegment() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.A",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton public final class A { public A(B b) {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.B",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton public final class B { public B(C c) {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.C",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton public final class C { public C(B b) {} }"));
+        // A is only the tail the search walked through; the reported cycle starts at its first member
+        assertThat(compilation).hadErrorContaining("Component dependency cycle: test.B -> test.C -> test.B");
+    }
+
+    @Test
     void rejectsUnresolvableDependency() {
         Compilation compilation = compile(
                 registry(),
