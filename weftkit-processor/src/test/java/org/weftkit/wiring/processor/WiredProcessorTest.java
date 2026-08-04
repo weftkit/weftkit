@@ -500,6 +500,42 @@ class WiredProcessorTest {
     }
 
     @Test
+    void graphIncludesStaticHolders() {
+        Compilation compilation = compile(
+                registry(),
+                settingsHolder(),
+                JavaFileObjects.forSourceLines(
+                        "test.Init",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Initializes;",
+                        "import org.weftkit.wiring.Loader;",
+                        "@Wired @Singleton @Initializes(Settings.class)",
+                        "public final class Init implements Loader {",
+                        "  public Init() {}",
+                        "  public boolean load() { Settings.LIMIT = 5; return true; }",
+                        "}"),
+                JavaFileObjects.forSourceLines(
+                        "test.Svc",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Requires;",
+                        "@Wired @Singleton @Requires(Settings.class)",
+                        "public final class Svc { public Svc() {} }"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedFile(StandardLocation.SOURCE_OUTPUT, "test", "weftkit-graph.dot")
+                .contentsAsUtf8String()
+                .contains("\"test.Svc\" -> \"test.Settings\" [style=dashed]");
+        assertThat(compilation)
+                .generatedFile(StandardLocation.SOURCE_OUTPUT, "test", "weftkit-graph.dot")
+                .contentsAsUtf8String()
+                .contains("\"test.Settings\" -> \"test.Init\"");
+    }
+
+    @Test
     void ignoresHolderAccessOutsideTheLoadWindow() {
         Compilation compilation = compile(
                 registry(),

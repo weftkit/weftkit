@@ -2,6 +2,8 @@ package org.weftkit.wiring.processor;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Set;
+import java.util.TreeSet;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.tools.Diagnostic;
 import javax.tools.StandardLocation;
@@ -41,6 +43,9 @@ class GraphGenerator {
 
     private static final String SINGLETON_STYLE = ", fillcolor=\"#FFF7ED\", color=\"#F59E0B\", penwidth=1.8";
 
+    private static final String HOLDER_STYLE =
+            ", style=\"rounded,filled,dashed\", fillcolor=\"#F5F5F4\", color=\"#78716C\"";
+
     private String render() {
         StringBuilder graph = new StringBuilder(HEADER);
         model.components()
@@ -50,11 +55,26 @@ class GraphGenerator {
                                 simpleName(component),
                                 component,
                                 definition.singleton() ? SINGLETON_STYLE : "")));
+        holders()
+                .forEach(holder -> graph.append("    \"%s\" [label=\"%s\", tooltip=\"%s\"%s];\n"
+                        .formatted(holder, simpleName(holder), holder, HOLDER_STYLE)));
         model.components()
-                .forEach((component, definition) -> model.dependencies(component)
+                .forEach((component, definition) -> model.injectionDependencies(component)
                         .forEach(dependency ->
                                 graph.append("    \"%s\" -> \"%s\";\n".formatted(component, dependency))));
+        model.requirements()
+                .forEach((component, required) -> required.forEach(
+                        holder -> graph.append("    \"%s\" -> \"%s\" [style=dashed];\n".formatted(component, holder))));
+        model.initializers()
+                .forEach((holder, initializer) -> graph.append(
+                        "    \"%s\" -> \"%s\" [style=dashed, color=\"#F59E0B\"];\n".formatted(holder, initializer)));
         return graph.append("}\n").toString();
+    }
+
+    private Set<String> holders() {
+        Set<String> holders = new TreeSet<>(model.initializers().keySet());
+        model.requirements().values().forEach(holders::addAll);
+        return holders;
     }
 
     private static String simpleName(String qualified) {

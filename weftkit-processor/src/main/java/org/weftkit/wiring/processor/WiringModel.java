@@ -103,6 +103,15 @@ class WiringModel {
     }
 
     private List<String> computeDependencies(String component) {
+        List<String> dependencies = injectionDependencies(component);
+        for (String holder : requirements.getOrDefault(component, List.of())) {
+            String initializer = initializers.get(holder);
+            if (initializer != null && isComponent(initializer)) dependencies.add(initializer);
+        }
+        return dependencies;
+    }
+
+    List<String> injectionDependencies(String component) {
         List<String> dependencies = new ArrayList<>();
         for (Parameter parameter : components.get(component).parameters()) {
             String bound = binding(parameter);
@@ -115,10 +124,6 @@ class WiringModel {
                         .owner();
                 if (isComponent(owner)) dependencies.add(owner);
             }
-        }
-        for (String holder : requirements.getOrDefault(component, List.of())) {
-            String initializer = initializers.get(holder);
-            if (initializer != null && isComponent(initializer)) dependencies.add(initializer);
         }
         return dependencies;
     }
