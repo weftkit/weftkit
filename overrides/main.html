@@ -1,5 +1,15 @@
 {% extends "base.html" %}
 
+{% block htmltitle %}
+  {% if page and page.is_homepage %}
+    <title>{{ config.site_name }} — {{ config.site_description }}</title>
+  {% elif page and page.title %}
+    <title>{{ page.title }} - {{ config.site_name }}</title>
+  {% else %}
+    <title>{{ config.site_name }}</title>
+  {% endif %}
+{% endblock %}
+
 {% block extrahead %}
   {% if page and page.is_homepage %}
     {% set og_title = config.site_name %}
@@ -11,14 +21,46 @@
   {% else %}
     {% set og_description = config.site_description %}
   {% endif %}
+  {% set og_image = config.site_url ~ "assets/logo/png/weftkit-wordmark.png" %}
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ 'assets/favicon/apple-touch-icon.png' | url }}">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="{{ config.site_name }}">
   <meta property="og:title" content="{{ og_title }}">
   <meta property="og:description" content="{{ og_description }}">
   <meta property="og:url" content="{{ page.canonical_url }}">
-  <meta property="og:image" content="https://cdn.jsdelivr.net/gh/weftkit/assets@1/logo/png/weftkit-wordmark.png">
+  <meta property="og:locale" content="en">
+  <meta property="og:image" content="{{ og_image }}">
+  <meta property="og:image:width" content="1600">
+  <meta property="og:image:height" content="436">
+  <meta property="og:image:alt" content="{{ config.site_name }} wordmark">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="{{ og_title }}">
   <meta name="twitter:description" content="{{ og_description }}">
-  <meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/weftkit/assets@1/logo/png/weftkit-wordmark.png">
+  <meta name="twitter:image" content="{{ og_image }}">
+  <meta name="twitter:image:alt" content="{{ config.site_name }} wordmark">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "{{ config.site_url }}#website",
+        "url": "{{ config.site_url }}",
+        "name": "{{ config.site_name }}",
+        "description": "{{ config.site_description }}",
+        "inLanguage": "en"
+      },
+      {
+        "@type": "SoftwareSourceCode",
+        "name": "{{ config.site_name }}",
+        "description": "{{ config.site_description }}",
+        "url": "{{ config.site_url }}",
+        "codeRepository": "{{ config.repo_url }}",
+        "programmingLanguage": "Java",
+        "runtimePlatform": "Java",
+        "sameAs": "{{ config.repo_url }}"
+      }
+    ]
+  }
+  </script>
 {% endblock %}

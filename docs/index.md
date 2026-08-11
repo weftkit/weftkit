@@ -4,7 +4,7 @@ description: weftkit manages the lifecycle of Bukkit plugins with compile-time w
 ---
 
 <p align="center">
-  <img src="https://cdn.jsdelivr.net/gh/weftkit/assets@1/logo/png/weftkit-wordmark.png" alt="weftkit" width="440">
+  <img src="assets/logo/png/weftkit-wordmark.png" alt="weftkit" width="440">
 </p>
 
 # Lifecycle management for Bukkit plugins, wired at compile time
@@ -31,11 +31,39 @@ lifecycle.
 
 ## Highlights
 
-- **Managed lifecycle.** Components load in dependency order, run startup and teardown hooks, and shut down in reverse.
-- **Bukkit integration.** `onEnable`, `onDisable`, listener registration, and clean shutdown are handled for you.
-- **Compile-time safety.** The graph is validated during `javac`, so wiring mistakes are build errors, not startup crashes.
-- **Zero runtime reflection.** Components are built by generated factories.
-- **Readable wiring.** The processor renders your whole dependency graph to Graphviz, so you can see the plugin's structure at a glance.
+<div class="grid cards" markdown>
+
+-   :material-sync:{ .lg .middle } __Managed lifecycle__
+
+    ---
+
+    Components load in dependency order, run startup and teardown hooks, and shut down in reverse.
+
+-   :material-puzzle:{ .lg .middle } __Bukkit integration__
+
+    ---
+
+    `onEnable`, `onDisable`, listener registration, and clean shutdown are handled for you.
+
+-   :material-shield-check:{ .lg .middle } __Compile-time safety__
+
+    ---
+
+    The graph is validated during `javac`, so wiring mistakes are build errors, not startup crashes.
+
+-   :material-lightning-bolt:{ .lg .middle } __Zero runtime reflection__
+
+    ---
+
+    Components are built by generated factories, so the hot path does no reflection.
+
+-   :material-graph:{ .lg .middle } __Readable wiring__
+
+    ---
+
+    The processor renders your whole dependency graph to Graphviz, so you can see the plugin's structure at a glance.
+
+</div>
 
 [Get started](getting-started.md){ .md-button .md-button--primary }
 [Browse the annotations](annotations.md){ .md-button }

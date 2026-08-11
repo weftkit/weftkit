@@ -8,8 +8,10 @@ copyright: Copyright &copy; 2026 the weftkit authors
 theme:
   name: material
   custom_dir: overrides
-  logo: https://cdn.jsdelivr.net/gh/weftkit/assets@1/logo/png/weftkit-mark-weave.png
-  favicon: https://cdn.jsdelivr.net/gh/weftkit/assets@1/favicon/favicon-32x32.png
+  font: false
+  language: en
+  logo: assets/logo/png/weftkit-mark-weave.png
+  favicon: assets/favicon/favicon-32x32.png
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -27,12 +29,17 @@ theme:
         name: Switch to light mode
   features:
     - navigation.instant
+    - navigation.instant.progress
     - navigation.tracking
     - navigation.top
     - navigation.sections
+    - navigation.footer
     - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
     - search.suggest
     - search.highlight
+    - search.share
     - toc.follow
 
 extra_css:
@@ -48,6 +55,9 @@ markdown_extensions:
   - pymdownx.snippets
   - pymdownx.highlight:
       anchor_linenums: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - toc:
       permalink: true
 
@@ -59,3 +69,7 @@ nav:
   - Listeners and commands: listeners-and-commands.md
   - Annotations: annotations.md
   - Troubleshooting: troubleshooting.md
+
+not_in_nav: |
+  /impressum.md
+  /datenschutz.md
