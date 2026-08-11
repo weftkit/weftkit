@@ -67,3 +67,8 @@ lifecycle.
 
 [Get started](getting-started.md){ .md-button .md-button--primary }
 [Browse the annotations](annotations.md){ .md-button }
+
+## Used by
+
+weftkit was extracted from [SilkSpawners](https://github.com/CorneliusMa/SilkSpawners_v2), which
+runs on it as its wiring and lifecycle framework.

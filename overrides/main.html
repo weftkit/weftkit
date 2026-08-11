@@ -2,7 +2,7 @@
 
 {% block htmltitle %}
   {% if page and page.is_homepage %}
-    <title>{{ config.site_name }} — {{ config.site_description }}</title>
+    <title>{{ config.site_name }} - {{ config.site_description }}</title>
   {% elif page and page.title %}
     <title>{{ page.title }} - {{ config.site_name }}</title>
   {% else %}
