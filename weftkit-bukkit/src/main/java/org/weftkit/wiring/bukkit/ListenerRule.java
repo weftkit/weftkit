@@ -10,6 +10,10 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import org.weftkit.wiring.processor.spi.ComponentRule;
 
+/**
+ * Validates {@code Listener} components at compile time: at least one {@code @EventHandler}
+ * method, each public, with exactly one Bukkit event parameter.
+ */
 @AutoService(ComponentRule.class)
 public class ListenerRule implements ComponentRule {
 

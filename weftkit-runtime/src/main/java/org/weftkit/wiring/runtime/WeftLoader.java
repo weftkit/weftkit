@@ -31,6 +31,10 @@ public final class WeftLoader {
 
     private final Map<Class<?>, Map<String, Object>> products = new HashMap<>();
 
+    /**
+     * Creates a loader over the registry. The ambient values are offered to every component by
+     * type, before the graph resolves, and at most one value may match a parameter type.
+     */
     public WeftLoader(ComponentRegistry registry, Object... ambient) {
         this.registry = registry;
         this.ambient = ambient.clone();
