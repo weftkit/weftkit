@@ -273,11 +273,10 @@ public final class Sample {
     @Wired
     @Singleton
     public static final class Gate implements Loader {
-        private final Beta beta;
         private final Probe probe;
 
+        // The Beta parameter is not used. It orders the graph so Beta loads before Gate
         public Gate(Beta beta, Probe probe) {
-            this.beta = beta;
             this.probe = probe;
         }
 
