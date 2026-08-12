@@ -113,6 +113,11 @@ public final class WeftLoader {
         return Collections.unmodifiableMap(timings);
     }
 
+    /** Returns the combined creation and load time of every eager singleton. */
+    public Duration totalLoadTime() {
+        return timings.values().stream().reduce(Duration.ZERO, Duration::plus);
+    }
+
     /**
      * Creates or fetches every component assignable to the supertype, sorted by class name.
      * Arguments are matched to constructor parameters by type; they only reach plain components,
@@ -149,7 +154,7 @@ public final class WeftLoader {
     private List<Dependency> parameters(Class<?> type) {
         List<Dependency> parameters = registry.parameters().get(type);
         if (parameters == null)
-            throw new IllegalStateException("Component is not annotated with @Wired: " + type.getName());
+            throw new ResolutionException("Component is not annotated with @Wired: " + type.getName());
         return parameters;
     }
 
@@ -169,7 +174,7 @@ public final class WeftLoader {
         Object product = product(type, dependency);
         if (product != null) return product;
         if (dependency.optional()) return null;
-        throw new IllegalStateException("Cannot resolve dependency " + type.getName() + " for " + component.getName());
+        throw new ResolutionException("Cannot resolve dependency " + type.getName() + " for " + component.getName());
     }
 
     private Object unique(Object[] candidates, Class<?> type, Class<?> component, String kind) {
@@ -177,7 +182,7 @@ public final class WeftLoader {
         for (Object candidate : candidates) {
             if (!type.isInstance(candidate)) continue;
             if (match != null)
-                throw new IllegalStateException(
+                throw new ResolutionException(
                         "Ambiguous " + kind + " for " + type.getName() + " of " + component.getName());
             match = candidate;
         }
@@ -215,7 +220,7 @@ public final class WeftLoader {
                         .get(dependency.qualifier())
                         .apply(provider);
         if (product == null && !dependency.optional())
-            throw new IllegalStateException("Dependency is not available yet: " + type.getName());
+            throw new ResolutionException("Dependency is not available yet: " + type.getName());
         return product;
     }
 
@@ -228,7 +233,7 @@ public final class WeftLoader {
                             .get(qualifier)
                             .apply(singleton);
                     if (value == null)
-                        throw new IllegalStateException(
+                        throw new ResolutionException(
                                 "Product " + product.getName() + " of " + owner.getName() + " is null after load");
                     products.computeIfAbsent(product, key -> new HashMap<>()).put(qualifier, value);
                 }));
@@ -243,7 +248,7 @@ public final class WeftLoader {
 
     private Object loaded(Class<?> type) {
         Object singleton = singletons.get(type);
-        if (singleton == null) throw new IllegalStateException("Singleton dependency is not loaded: " + type.getName());
+        if (singleton == null) throw new ResolutionException("Singleton dependency is not loaded: " + type.getName());
         return singleton;
     }
 }
