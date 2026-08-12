@@ -32,13 +32,19 @@ injection point, or depend on the concrete class.
 ### External dependency has multiple @Wired implementations (warning)
 
 Same situation for a type from another module or jar. The dependency stays unbound because such
-a value may legitimately arrive as an ambient root. Either qualify the implementations or pass
-one instance to `BukkitWeft.enable` as an extra ambient value.
+a value may legitimately arrive as an ambient root. Either qualify the implementations or
+supply one instance as an ambient value through `WeftPlugin.ambientValues`.
 
-### @Wired components need exactly one public constructor
+### @Wired components need exactly one accessible constructor
 
-The processor needs an unambiguous injection point. Keep one public constructor and make any
-others private, or split the class.
+The processor needs an unambiguous injection point. Keep one public constructor (package-private
+components may use a package-private one) and make any others private, or split the class.
+
+### Stale weftkit registry, run a clean build
+
+The generated registry and a package's `WeftWiring` holder disagree, which only happens
+when an incremental build left one of them behind. A clean build regenerates both from the same
+sources.
 
 ### Static holder is accessed during load without @Requires
 
@@ -69,19 +75,26 @@ Bukkit event parameter.
 
 ## Runtime exceptions
 
-Startup problems the compiler cannot see fail fast during `enable` with an
-`IllegalStateException` or `ComponentLoadException`. weftkit then tears down whatever had
-already loaded and disables the plugin, so check the server log for the first exception.
+Startup problems the compiler cannot see fail fast during `enable` with a
+`ResolutionException` naming the component, or a `ComponentLoadException` wrapping a failed
+constructor. weftkit then tears down whatever had already loaded and disables the plugin, so
+check the server log for the first exception.
 
 ### Cannot resolve dependency ... for ...
 
 A dependency on an external type was left unbound at compile time and nothing supplied it at
-runtime. Pass an instance to `BukkitWeft.enable` as an extra ambient value.
+runtime. Supply an instance through `WeftPlugin.ambientValues` (or the extra arguments to
+`BukkitWeft.enable` or the `WeftLoader` constructor), or pass it as a call argument.
 
 ### Ambiguous argument / Ambiguous ambient value
 
 Two of the values you passed, either to `create`/`createAll` or as ambient roots, are assignable
 to the same constructor parameter. Pass a single unambiguous value or use a qualified binding.
+
+### Singleton dependency is not loaded
+
+`create` or `get` ran before `load()` or after `unload()`, or a component used its injected
+`WeftLoader` during startup to reach a singleton that loads later.
 
 ### Dependency is not available yet
 
@@ -99,8 +112,9 @@ field inside `load` before returning true.
 `create` was called with a class the registry does not know. Annotate it with `@Wired` and
 rebuild.
 
-## IDE shows WiredComponents as unresolved
+## IDE shows WeftWiring as unresolved
 
-`WiredComponents` is generated during compilation, so it does not exist in a fresh checkout
+`WeftWiring` is generated during compilation, so it does not exist in a fresh checkout
 until the first build. Enable annotation processing in your IDE so it regenerates as you edit.
 See the note in [Getting started](getting-started.md).
+

@@ -63,6 +63,12 @@ lifecycle.
 
     The processor renders your whole dependency graph to Graphviz, so you can see the plugin's structure at a glance.
 
+-   :material-eye-off:{ .lg .middle } __Internals stay internal__
+
+    ---
+
+    Package-private classes are wired like any other component, so injection never forces your internals to go public.
+
 </div>
 
 [Get started](getting-started.md){ .md-button .md-button--primary }

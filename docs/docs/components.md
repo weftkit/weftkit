@@ -107,7 +107,8 @@ dropped again.
 
 ## Reaching your components
 
-`BukkitWeft.enable` returns a `WeftLoader`. Use it to reach singletons by type.
+`WeftPlugin` hands the `WeftLoader` to `onWeftEnable`, and `loader()` returns it anywhere in
+the plugin main while the plugin is enabled. Use it to reach singletons by type.
 
 ```java
 Config config = loader.get(Config.class);
@@ -184,9 +185,13 @@ public final class BackupExporter { ... }
 
 ## Extra ambient roots
 
-Arguments to `enable` after the registry become ambient roots as well, available to every
-component by type.
+Values returned from `ambientValues` become ambient roots as well, available to every
+component by type. (With manual control, they are the arguments to `BukkitWeft.enable` after
+the registry.)
 
 ```java
-loader = BukkitWeft.enable(this, WiredComponents.INSTANCE, myExternalService);
+@Override
+protected Object[] ambientValues() {
+    return new Object[] {myExternalService};
+}
 ```

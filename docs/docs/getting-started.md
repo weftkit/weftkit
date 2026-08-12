@@ -24,9 +24,9 @@ repositories {
 dependencies {
     compileOnly("org.spigotmc:spigot-api:1.20.4-R0.1-SNAPSHOT")
 
-    implementation("org.weftkit:weftkit-bukkit:0.1.0")
-    annotationProcessor("org.weftkit:weftkit-processor:0.1.0")
-    annotationProcessor("org.weftkit:weftkit-bukkit:0.1.0")
+    implementation("org.weftkit:weftkit-bukkit:0.3.0")
+    annotationProcessor("org.weftkit:weftkit-processor:0.3.0")
+    annotationProcessor("org.weftkit:weftkit-bukkit:0.3.0")
 }
 ```
 
@@ -35,42 +35,62 @@ the graph and generate the registry during compilation.
 
 ## A minimal plugin
 
-Annotate your plugin main with `@Registry`, start weftkit in `onEnable`, and reach your
-components through the returned loader.
+Three classes make a plugin that welcomes joining players. The plugin main carries `@Registry`,
+extends `WeftPlugin`, and contains no other code:
 
 ```java
 @Registry
-public final class HelloPlugin extends JavaPlugin {
-
-    private WeftLoader loader;
+public final class HelloPlugin extends WeftPlugin {
 
     @Override
-    public void onEnable() {
-        loader = BukkitWeft.enable(this, WiredComponents.INSTANCE);
-        if (loader == null) return;
-        getLogger().info(loader.get(Greeter.class).greet("world"));
-    }
-
-    @Override
-    public void onDisable() {
-        BukkitWeft.disable(this, loader);
+    protected ComponentRegistry registry() {
+        return WeftWiring.INSTANCE;
     }
 }
 ```
+
+A component holds the logic:
 
 ```java
 @Wired
 @Singleton
-public final class Greeter {
+final class Greeter {
 
-    public String greet(String name) {
-        return "Hello, " + name;
+    public String greet(Player player) {
+        return "Welcome, " + player.getName();
     }
 }
 ```
 
-!!! note "WiredComponents is generated"
-    `WiredComponents` is produced by the annotation processor during compilation, in your plugin
+A listener uses it:
+
+```java
+@Wired
+@Singleton
+final class JoinListener implements Listener {
+
+    private final Greeter greeter;
+
+    JoinListener(Greeter greeter) {
+        this.greeter = greeter;
+    }
+
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        event.getPlayer().sendMessage(greeter.greet(event.getPlayer()));
+    }
+}
+```
+
+Build, drop the jar on a server, join, and the message appears. `WeftPlugin` loaded the graph,
+injected `Greeter` into `JoinListener`, registered the listener, and tears everything down on
+disable. Startup work goes into an `onWeftEnable(WeftLoader)` override when you need one.
+
+Neither component class is public. weftkit wires package-private classes, so nothing goes
+public just to become injectable, see [internal components](internal-components.md).
+
+!!! note "WeftWiring is generated"
+    `WeftWiring` is produced by the annotation processor during compilation, in your plugin
     main's package. It does not exist until you build once, so a fresh checkout shows it
     unresolved in the IDE until the first compile. Enable annotation processing in your IDE so it
     regenerates as you edit.

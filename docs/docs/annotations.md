@@ -9,7 +9,8 @@ validates how you use them during compilation.
 
 ## @Registry
 
-Marks the single class that anchors the wiring, usually your plugin main. The component registry
+Marks the single class that anchors the wiring, usually your plugin main extending
+`WeftPlugin`. The component registry
 is generated into its package, and the class itself is injectable as an ambient dependency along
 with any of its constructor parameters.
 
@@ -17,7 +18,10 @@ with any of its constructor parameters.
 
 Marks a class as created through the loader. Its constructor is the injection point, and the
 processor validates every parameter against the graph. A `@Wired` class must be a concrete,
-public, top-level or static nested class with exactly one public constructor.
+top-level or static nested class that is public or package-private, with exactly one accessible
+constructor. A package-private component stays invisible outside its package: the processor
+generates a small `WeftWiring` holder next to it that hands its wiring to the registry, so
+internals never need to go public just to be injectable.
 
 ## @Singleton
 
@@ -40,11 +44,25 @@ product carrying that tag.
 
 ## @StaticHolder
 
-Marks a class whose static state is set up by an initializing loader. `@Initializes` and
-`@Requires` only accept classes carrying this annotation, and the processor scans every
-component's constructor, field initializers, and `load` method, so accessing a holder in that
-window without declaring `@Requires` fails the build. The scan covers direct accesses in your own
-sources compiled with javac. Helper methods, reflection, and foreign jars stay invisible to it.
+Some plugins keep global state in static fields: a legacy config class or a static service
+accessor that other code reads directly instead of being injected. Static state is invisible to
+the dependency graph. Nothing tells weftkit that one component fills those fields during load
+and others read them, so nothing would order the load accordingly.
+
+`@StaticHolder` makes that dependency explicit. Mark the class holding the static state, let one
+`@Wired` singleton declare `@Initializes(TheHolder.class)` and fill the holder in its `load`
+hook, and let every component that reads the holder during its own construction or load declare
+`@Requires(TheHolder.class)`. Each requirement becomes a load order edge, so readers load after
+the initializer. As a safety net the processor scans every component's constructor, field
+initializers, and `load` method, and a holder access in that window without a matching
+`@Requires` fails the build.
+
+The scan sees direct accesses in your own javac-compiled sources. Reads through helper methods,
+reflection, or foreign jars stay invisible to it, which is why `@Requires` is declared explicitly
+instead of being inferred from the scan.
+
+Prefer injected components for new code. The holder annotations exist to bring existing static
+state under the managed lifecycle without rewriting everything that touches it.
 
 ## @Initializes
 

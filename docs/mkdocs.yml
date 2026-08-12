@@ -65,9 +65,13 @@ nav:
   - Home: index.md
   - Getting started: getting-started.md
   - Components: components.md
+  - Internal components: internal-components.md
   - Lifecycle: lifecycle.md
   - Listeners and commands: listeners-and-commands.md
   - Annotations: annotations.md
+  - Distribution: distribution.md
+  - Testing: testing.md
+  - Metrics: metrics.md
   - Troubleshooting: troubleshooting.md
 
 not_in_nav: |

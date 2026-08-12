@@ -4,8 +4,9 @@ description: How weftkit starts a Bukkit plugin in dependency order, tears it do
 
 # Lifecycle
 
-weftkit owns your plugin from `onEnable` to `onDisable`. `BukkitWeft.enable` starts everything up
-and `BukkitWeft.disable` shuts it down.
+weftkit owns your plugin from `onEnable` to `onDisable`. Extend `WeftPlugin` and the whole
+cycle runs itself, with `BukkitWeft.enable` and `BukkitWeft.disable` as the underlying calls for
+plugins that want manual control.
 
 ## Startup
 
@@ -17,9 +18,9 @@ singleton has loaded, weftkit registers each `@Wired` listener with the server.
 
 ```java
 @Override
-public void onEnable() {
-    loader = BukkitWeft.enable(this, WiredComponents.INSTANCE);
-    if (loader == null) return;
+protected void onWeftEnable(WeftLoader loader) {
+    // Runs once every singleton is up and the listeners are registered. When a component
+    // aborts startup, weftkit disables the plugin and this hook never runs.
 }
 ```
 
@@ -36,16 +37,16 @@ one during construction or load without declaring `@Requires` fails the build.
 
 ## Shutdown
 
-`BukkitWeft.disable` runs `unload` on every loaded singleton in reverse load order, so a
+On disable, weftkit runs `unload` on every loaded singleton in reverse load order, so a
 component is torn down before the ones it depended on, and every captured `@Provides` value is
 dropped. Teardown keeps going even if one
-component's `unload` throws, and the failures are reported together at the end. `disable` is safe
-to call when startup aborted or never ran.
+component's `unload` throws, and the failures are reported together at the end. Teardown is safe
+when startup aborted or never ran.
 
 ```java
 @Override
-public void onDisable() {
-    BukkitWeft.disable(this, loader);
+protected void onWeftDisable(WeftLoader loader) {
+    // Runs before teardown, with every component still resolvable
 }
 ```
 
@@ -88,7 +89,8 @@ A reload command is then one line: `loader.get(Config.class).reload()`. Componen
 ## Diagnostics
 
 The loader exposes what happened during startup. `loadOrder` returns the singleton load
-sequence, and `loadTimings` returns how long each singleton took to construct and load, in load
+sequence, `totalLoadTime` returns the combined startup cost for a one-line enable log, and
+`loadTimings` returns how long each singleton took to construct and load, in load
 order.
 
 ```java
