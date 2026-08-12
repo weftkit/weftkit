@@ -1,6 +1,9 @@
 ---
 title: Legal Notice
 description: Legal notice (Impressum) for the weftkit documentation website in accordance with § 5 DDG.
+search:
+  exclude: true
+robots: noindex, follow
 ---
 
 # Impressum

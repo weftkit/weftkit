@@ -4,7 +4,7 @@ description: weftkit manages the lifecycle of Bukkit plugins with compile-time w
 ---
 
 <p align="center">
-  <img src="assets/logo/png/weftkit-wordmark.png" alt="weftkit" width="440">
+  <img src="assets/logo/svg/weftkit-wordmark.svg" alt="weftkit" width="440">
 </p>
 
 # Lifecycle management for Bukkit plugins, wired at compile time

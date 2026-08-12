@@ -11,6 +11,9 @@
 {% endblock %}
 
 {% block extrahead %}
+  {% if page and page.meta and page.meta.robots %}
+    <meta name="robots" content="{{ page.meta.robots }}">
+  {% endif %}
   {% if page and page.is_homepage %}
     {% set og_title = config.site_name %}
   {% else %}
@@ -62,5 +65,14 @@
       }
     ]
   }
+  </script>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script>
+    document.querySelector('.md-search[role="dialog"]')?.setAttribute("aria-label", "Search");
+    document.querySelector('.md-dialog[role="alertdialog"]')?.setAttribute("aria-label", "Notification");
+    document.querySelector('.md-progress[role="progressbar"]')?.setAttribute("aria-label", "Page loading");
   </script>
 {% endblock %}

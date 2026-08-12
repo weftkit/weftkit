@@ -1,6 +1,9 @@
 ---
 title: Privacy Policy
 description: Privacy policy (Datenschutzerklärung) for the weftkit documentation website.
+search:
+  exclude: true
+robots: noindex, follow
 ---
 
 # Datenschutzerklärung
