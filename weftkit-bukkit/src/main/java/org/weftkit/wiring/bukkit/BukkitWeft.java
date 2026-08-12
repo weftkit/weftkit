@@ -68,6 +68,7 @@ public final class BukkitWeft {
     // Metrics must never take a plugin down. Missing bStats classes mean the consumer stripped
     // them from its jar to opt out, so both failure kinds only log quietly
     private static void startMetrics(JavaPlugin plugin) {
+        if (WeftkitMetrics.optedOut(plugin.getClass())) return;
         try {
             WeftkitMetrics metrics = new WeftkitMetrics(plugin);
             metrics.load();

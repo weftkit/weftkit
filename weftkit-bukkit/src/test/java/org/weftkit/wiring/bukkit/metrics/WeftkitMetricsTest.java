@@ -1,7 +1,9 @@
 package org.weftkit.wiring.bukkit.metrics;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -25,6 +27,17 @@ class WeftkitMetricsTest {
     @Test
     void pluginWithoutResourceHasNoVersion() {
         assertNull(WeftkitMetrics.version(pluginWithResource(null)));
+    }
+
+    @NoMetrics
+    private static final class OptedOutPlugin {}
+
+    private static final class ReportingPlugin {}
+
+    @Test
+    void noMetricsAnnotationOptsThePluginOut() {
+        assertTrue(WeftkitMetrics.optedOut(OptedOutPlugin.class));
+        assertFalse(WeftkitMetrics.optedOut(ReportingPlugin.class));
     }
 
     @Test

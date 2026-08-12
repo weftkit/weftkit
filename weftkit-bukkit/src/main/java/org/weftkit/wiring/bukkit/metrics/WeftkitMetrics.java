@@ -41,6 +41,11 @@ public final class WeftkitMetrics implements Loader {
         this.plugin = plugin;
     }
 
+    /** Returns whether the plugin class opted out of weftkit's metrics with {@link NoMetrics}. */
+    public static boolean optedOut(Class<?> plugin) {
+        return plugin.isAnnotationPresent(NoMetrics.class);
+    }
+
     @Override
     public boolean load() {
         // The literal is interned JVM-wide, so every plugin's shaded copy locks the same instance
