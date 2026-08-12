@@ -48,7 +48,7 @@ public final class WeftLoader {
             long start = System.nanoTime();
             boolean hookCompleted = false;
             try {
-                Object singleton = create(type);
+                Object singleton = build(type);
                 // Publish before the load hook runs so the hook can resolve this singleton and its products
                 singletons.put(type, singleton);
                 if (singleton instanceof Loader loader && !loader.load()) {
@@ -127,16 +127,20 @@ public final class WeftLoader {
     }
 
     /**
-     * Builds a fresh component of the type, resolving each constructor parameter from the given
-     * arguments, the ambient values, and the graph.
+     * Creates a component of the type, resolving interface bindings. Singletons resolve to their
+     * cached instance, lazy ones materializing on demand. Plain components are built fresh, each
+     * constructor parameter resolved from the given arguments, the ambient values, and the graph.
      */
     public <T> T create(Class<T> type, Object... arguments) {
-        Class<?> target = bound(type, "");
+        return type.cast(instance(bound(type, ""), arguments));
+    }
+
+    private Object build(Class<?> target, Object... arguments) {
         Object[] parameters = parameters(target).stream()
                 .map(dependency -> resolve(dependency, arguments, target))
                 .toArray();
         try {
-            return type.cast(registry.factories().get(target).apply(parameters));
+            return registry.factories().get(target).apply(parameters);
         } catch (RuntimeException ex) {
             throw new ComponentLoadException(target.getName(), ex);
         }
@@ -184,13 +188,13 @@ public final class WeftLoader {
         if (eager.contains(type)) return loaded(type);
         // The cached instance must not depend on one call site, so lazy singletons ignore arguments
         if (registry.lazySingletons().contains(type)) return lazySingleton(type);
-        return create(type, arguments);
+        return build(type, arguments);
     }
 
     private Object lazySingleton(Class<?> type) {
         Object singleton = singletons.get(type);
         if (singleton != null) return singleton;
-        Object created = create(type);
+        Object created = build(type);
         singletons.put(type, created);
         return created;
     }
