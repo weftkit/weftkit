@@ -1,27 +1,31 @@
-package org.weftkit.wiring.processor;
+package org.weftkit.wiring.processor.compiler;
 
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
 import javax.tools.Diagnostic;
 
-final class Diagnostics {
+public final class Diagnostics {
 
     private final Messager messager;
 
-    Diagnostics(ProcessingEnvironment processingEnv) {
+    public Diagnostics(ProcessingEnvironment processingEnv) {
         this.messager = processingEnv.getMessager();
     }
 
-    void error(String message) {
+    public void error(String message) {
         messager.printMessage(Diagnostic.Kind.ERROR, message);
     }
 
-    void error(Element element, String message) {
+    public void error(Element element, String message) {
         messager.printMessage(Diagnostic.Kind.ERROR, message, element);
     }
 
-    void warning(Element element, String message) {
+    public void warning(Element element, String message) {
         messager.printMessage(Diagnostic.Kind.WARNING, message, element);
+    }
+
+    public Check check(Element element) {
+        return new Check(this, element);
     }
 }

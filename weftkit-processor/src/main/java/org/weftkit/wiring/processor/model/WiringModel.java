@@ -1,4 +1,4 @@
-package org.weftkit.wiring.processor;
+package org.weftkit.wiring.processor.model;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -9,20 +9,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-class WiringModel {
-
-    record Component(boolean singleton, boolean lazy, String qualifier, List<Parameter> parameters) {}
-
-    record Parameter(
-            String erasedClass,
-            String declaredType,
-            String qualifier,
-            boolean singleton,
-            boolean internal,
-            boolean optional,
-            int index) {}
-
-    record Product(String owner, String getter) {}
+public class WiringModel {
 
     private final Map<String, Component> components = new TreeMap<>();
 
@@ -34,71 +21,85 @@ class WiringModel {
 
     private final Map<String, Map<String, String>> bindings = new TreeMap<>();
 
+    private final Map<String, String> hiddenTypes = new TreeMap<>();
+
     private final Map<String, List<String>> dependencyCache = new HashMap<>();
 
-    void addComponent(String component, Component definition) {
+    public void addComponent(String component, Component definition) {
         components.put(component, definition);
     }
 
-    Product addProduct(String product, String qualifier, Product provider) {
+    public Product addProduct(String product, String qualifier, Product provider) {
         return products.computeIfAbsent(product, key -> new TreeMap<>()).put(qualifier, provider);
     }
 
-    String addInitializer(String holder, String initializer) {
+    public String addInitializer(String holder, String initializer) {
         return initializers.put(holder, initializer);
     }
 
-    void addRequirements(String component, List<String> holders) {
+    public void addRequirements(String component, List<String> holders) {
         requirements.put(component, holders);
     }
 
-    void addBinding(String abstraction, String qualifier, String implementation) {
+    public void addBinding(String abstraction, String qualifier, String implementation) {
         bindings.computeIfAbsent(abstraction, key -> new TreeMap<>()).put(qualifier, implementation);
     }
 
-    boolean isComponent(String type) {
+    public void markHidden(String type, String packageName) {
+        hiddenTypes.put(type, packageName);
+    }
+
+    public boolean isHidden(String type) {
+        return hiddenTypes.containsKey(type);
+    }
+
+    public String hiddenPackage(String type) {
+        return hiddenTypes.get(type);
+    }
+
+    public boolean isComponent(String type) {
         return components.containsKey(type);
     }
 
-    boolean isProduct(String type, String qualifier) {
+    public boolean isProduct(String type, String qualifier) {
         return products.containsKey(type) && products.get(type).containsKey(qualifier);
     }
 
-    boolean isProductType(String type) {
+    public boolean isProductType(String type) {
         return products.containsKey(type);
     }
 
-    boolean isInitialized(String holder) {
+    public boolean isInitialized(String holder) {
         return initializers.containsKey(holder);
     }
 
-    boolean isEmpty() {
+    public boolean isEmpty() {
         return components.isEmpty();
     }
 
-    Map<String, Component> components() {
+    public Map<String, Component> components() {
         return Collections.unmodifiableMap(components);
     }
 
-    Map<String, Map<String, Product>> products() {
+    public Map<String, Map<String, Product>> products() {
         return Collections.unmodifiableMap(products);
     }
 
-    Map<String, String> initializers() {
+    public Map<String, String> initializers() {
         return Collections.unmodifiableMap(initializers);
     }
 
-    Map<String, List<String>> requirements() {
+    public Map<String, List<String>> requirements() {
         return Collections.unmodifiableMap(requirements);
     }
 
-    Map<String, Map<String, String>> bindings() {
+    public Map<String, Map<String, String>> bindings() {
         return Collections.unmodifiableMap(bindings);
     }
 
     // Cached because the graph is walked repeatedly (load order, cycle check, graph render); safe
     // because every binding, product, and requirement is recorded before any traversal begins
-    List<String> dependencies(String component) {
+    public List<String> dependencies(String component) {
         return dependencyCache.computeIfAbsent(component, this::computeDependencies);
     }
 
@@ -111,7 +112,7 @@ class WiringModel {
         return dependencies;
     }
 
-    List<String> injectionDependencies(String component) {
+    public List<String> injectionDependencies(String component) {
         List<String> dependencies = new ArrayList<>();
         for (Parameter parameter : components.get(component).parameters()) {
             String bound = binding(parameter);
@@ -128,7 +129,7 @@ class WiringModel {
         return dependencies;
     }
 
-    List<String> loadOrder() {
+    public List<String> loadOrder() {
         List<String> order = new ArrayList<>();
         Set<String> visited = new HashSet<>();
         components.forEach((component, definition) -> {
@@ -137,7 +138,7 @@ class WiringModel {
         return order;
     }
 
-    List<String> lazySingletons() {
+    public List<String> lazySingletons() {
         List<String> lazy = new ArrayList<>();
         components.forEach((component, definition) -> {
             if (definition.singleton() && definition.lazy()) lazy.add(component);

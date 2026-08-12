@@ -34,8 +34,40 @@ class WiredProcessorTest {
                         "import org.weftkit.wiring.Singleton;",
                         "@Wired @Singleton public final class Svc { public Svc(Reg reg) {} }"));
         assertThat(compilation).succeeded();
-        assertThat(compilation).generatedSourceFile("test.WiredComponents");
+        assertThat(compilation).generatedSourceFile("test.WeftWiring");
         assertThat(compilation).generatedFile(StandardLocation.SOURCE_OUTPUT, "test", "weftkit-graph.dot");
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .doesNotContain("@SuppressWarnings");
+    }
+
+    @Test
+    void suppressesUncheckedOnlyForParameterizedCasts() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Prov",
+                        "package test;",
+                        "import java.util.List;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Provides;",
+                        "@Wired @Singleton public final class Prov {",
+                        "  public Prov() {}",
+                        "  @Provides public List<String> names() { return List.of(); }",
+                        "}"),
+                JavaFileObjects.forSourceLines(
+                        "test.Uses",
+                        "package test;",
+                        "import java.util.List;",
+                        "import org.weftkit.wiring.Wired;",
+                        "@Wired public final class Uses { public Uses(List<String> names) {} }"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("@SuppressWarnings(\"unchecked\")");
     }
 
     @Test
@@ -146,7 +178,7 @@ class WiredProcessorTest {
                         "import org.weftkit.wiring.Wired;",
                         "import org.weftkit.wiring.Singleton;",
                         "@Wired @Singleton public final class C { public C(B b) {} }"));
-        // A is only the tail the search walked through; the reported cycle starts at its first member
+        // A merely leads into the cycle, so the reported cycle starts at its first actual member
         assertThat(compilation).hadErrorContaining("Component dependency cycle: test.B -> test.C -> test.B");
     }
 
@@ -376,7 +408,7 @@ class WiredProcessorTest {
                         "@Wired @Singleton public final class Uses { public Uses(ExternalStore store) {} }"));
         assertThat(compilation).succeeded();
         assertThat(compilation)
-                .generatedSourceFile("test.WiredComponents")
+                .generatedSourceFile("test.WeftWiring")
                 .contentsAsUtf8String()
                 .contains("org.weftkit.wiring.processor.fixture.ExternalStore.class");
     }
@@ -629,6 +661,136 @@ class WiredProcessorTest {
                         "@Wired @Singleton @Requires(Plain.class)",
                         "public final class Svc { public Svc() {} }"));
         assertThat(compilation).hadErrorContaining("Holder must be annotated with @StaticHolder: test.Plain");
+    }
+
+    @Test
+    void wiresPackagePrivateComponentThroughItsPackageFragment() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines("test.Store", "package test;", "public interface Store {}"),
+                JavaFileObjects.forSourceLines(
+                        "test.storage.SqlStore",
+                        "package test.storage;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton final class SqlStore implements test.Store { SqlStore() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Uses",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton public final class Uses { public Uses(Store store) {} }"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.storage.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("Map.entry(test.storage.SqlStore.class, arguments -> new test.storage.SqlStore())");
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("Registries.merge(Map.ofEntries(");
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("Registries.type(FACTORIES, \"test.storage.SqlStore\")");
+    }
+
+    @Test
+    void wiresPackagePrivateComponentInTheRegistryPackageDirectly() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Hidden",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton final class Hidden { Hidden() {} }"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("test.Hidden.class");
+    }
+
+    @Test
+    void wiresPublicFacadeWithPackagePrivateDependency() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.storage.Pool",
+                        "package test.storage;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton final class Pool { Pool() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.storage.Facade",
+                        "package test.storage;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton public final class Facade { public Facade(Pool pool) {} }"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.storage.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("new test.storage.Facade((test.storage.Pool) arguments[0])");
+    }
+
+    @Test
+    void exposesProductOfPackagePrivateOwnerThroughItsFragment() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.storage.Prov",
+                        "package test.storage;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Provides;",
+                        "@Wired @Singleton final class Prov {",
+                        "  Prov() {}",
+                        "  @Provides public String token() { return \"\"; }",
+                        "}"),
+                JavaFileObjects.forSourceLines(
+                        "test.Uses",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton public final class Uses { public Uses(String token) {} }"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.storage.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("owner -> ((test.storage.Prov) owner).token()");
+    }
+
+    @Test
+    void rejectsPrivateNestedComponent() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Outer",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "public final class Outer {",
+                        "  @Wired private static final class Inner { public Inner() {} }",
+                        "}"));
+        assertThat(compilation)
+                .hadErrorContaining("@Wired classes must be top-level or static nested and at least package visible");
+    }
+
+    @Test
+    void rejectsFragmentNameCollision() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.storage.WeftWiring", "package test.storage;", "public final class WeftWiring {}"),
+                JavaFileObjects.forSourceLines(
+                        "test.storage.Hidden",
+                        "package test.storage;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton final class Hidden { Hidden() {} }"));
+        assertThat(compilation)
+                .hadErrorContaining("weftkit cannot generate test.storage.WeftWiring because the class already exists");
     }
 
     @Test

@@ -20,6 +20,10 @@ import org.weftkit.wiring.Requires;
 import org.weftkit.wiring.Singleton;
 import org.weftkit.wiring.StaticHolder;
 import org.weftkit.wiring.Wired;
+import org.weftkit.wiring.processor.generate.GraphGenerator;
+import org.weftkit.wiring.processor.generate.RegistryGenerator;
+import org.weftkit.wiring.processor.model.WiringModel;
+import org.weftkit.wiring.processor.validate.WiredValidator;
 
 @AutoService(Processor.class)
 public class WiredProcessor extends AbstractProcessor {

@@ -9,12 +9,15 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.weftkit.wiring.runtime.ComponentLoadException;
+import org.weftkit.wiring.runtime.ResolutionException;
 import org.weftkit.wiring.runtime.WeftLoader;
+import org.weftkit.wiring.runtime.sample.internal.Machine;
 
 class WeftLoaderIntegrationTest {
 
@@ -28,7 +31,7 @@ class WeftLoaderIntegrationTest {
     }
 
     private WeftLoader newLoader() {
-        return new WeftLoader(WiredComponents.INSTANCE, wiring, probe);
+        return new WeftLoader(WeftWiring.INSTANCE, wiring, probe);
     }
 
     @Test
@@ -123,8 +126,8 @@ class WeftLoaderIntegrationTest {
 
     @Test
     void rejectsAmbiguousAmbientValue() {
-        WeftLoader loader = new WeftLoader(WiredComponents.INSTANCE, wiring, probe, new Sample.Probe());
-        IllegalStateException ex = assertThrows(IllegalStateException.class, loader::load);
+        WeftLoader loader = new WeftLoader(WeftWiring.INSTANCE, wiring, probe, new Sample.Probe());
+        ResolutionException ex = assertThrows(ResolutionException.class, loader::load);
         assertTrue(ex.getMessage().contains("Ambiguous ambient value"));
     }
 
@@ -145,8 +148,19 @@ class WeftLoaderIntegrationTest {
     void exposesLoadOrderAndTimings() {
         WeftLoader loader = newLoader();
         loader.load();
-        assertEquals(WiredComponents.INSTANCE.loadOrder(), loader.loadOrder());
+        assertEquals(WeftWiring.INSTANCE.loadOrder(), loader.loadOrder());
         assertEquals(loader.loadOrder(), List.copyOf(loader.loadTimings().keySet()));
+        assertEquals(
+                loader.loadTimings().values().stream().reduce(Duration.ZERO, Duration::plus), loader.totalLoadTime());
+        assertFalse(loader.totalLoadTime().isNegative());
+    }
+
+    @Test
+    void wiresPackagePrivateComponentsThroughTheirPackageFragment() {
+        WeftLoader loader = newLoader();
+        assertTrue(loader.load());
+        Machine machine = loader.get(Machine.class);
+        assertEquals("engine+machine", machine.signature());
     }
 
     @Test
@@ -203,7 +217,7 @@ class WeftLoaderIntegrationTest {
     @Test
     void qualifiedDependencyIgnoresAmbientOfSameType() {
         Sample.Notifier ambientNotifier = new Sample.Notifier() {};
-        WeftLoader loader = new WeftLoader(WiredComponents.INSTANCE, wiring, probe, ambientNotifier);
+        WeftLoader loader = new WeftLoader(WeftWiring.INSTANCE, wiring, probe, ambientNotifier);
         loader.load();
         assertSame(
                 loader.get(Sample.ChatNotifier.class),
