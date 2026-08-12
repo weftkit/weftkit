@@ -9,6 +9,7 @@ spotless = "8.8.0"
 # The Bukkit API is only published as snapshots; the timestamped build is immutable, so the
 # compatibility floor cannot silently change or break reproducibility (last 1.8-R0.1 build)
 bukkit = { module = "org.bukkit:bukkit", version = "1.8-R0.1-20150227.224714-194" }
+bstats = { module = "org.bstats:bstats-bukkit", version = "3.1.0" }
 auto-service = { module = "com.google.auto.service:auto-service", version.ref = "auto-service" }
 auto-service-annotations = { module = "com.google.auto.service:auto-service-annotations", version.ref = "auto-service" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
