@@ -10,11 +10,13 @@ plugins that want manual control.
 
 ## Startup
 
-`BukkitWeft.enable` builds the loader and brings up every `@Singleton` in dependency order. As
-each singleton is created, if it implements `Loader` its `load` method runs. Returning `false`
+`BukkitWeft.enable` builds the loader and brings up every [`@Singleton`](components.md) in
+dependency order. As each singleton is created, if it implements `Loader` its `load` method
+runs. Returning `false`
 from `load` aborts startup: weftkit tears down everything it has already loaded, in reverse
 order, and disables the plugin, so you never run in a half initialized state. Once every
-singleton has loaded, weftkit registers each `@Wired` listener with the server.
+singleton has loaded, weftkit registers each `@Wired`
+[listener](listeners-and-commands.md) with the server.
 
 ```java
 @Override

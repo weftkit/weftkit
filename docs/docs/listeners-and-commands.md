@@ -6,8 +6,8 @@ description: Bukkit listeners register themselves during enable, and commands ar
 
 ## Listeners
 
-Any `@Wired` component that implements `Listener` is registered with the server automatically
-during enable. Make it a `@Singleton` so it is registered as a single instance, and
+Any [`@Wired` component](components.md) that implements `Listener` is registered with the
+server automatically during [enable](lifecycle.md#startup). Make it a `@Singleton` so it is registered as a single instance, and
 weftkit's compile-time rule checks that each `@EventHandler` method is well formed.
 
 ```java

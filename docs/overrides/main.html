@@ -2,7 +2,7 @@
 
 {% block htmltitle %}
   {% if page and page.is_homepage %}
-    <title>{{ config.site_name }} - {{ config.site_description }}</title>
+    <title>{{ config.site_name }} - Bukkit plugin lifecycle and dependency injection</title>
   {% elif page and page.title %}
     <title>{{ page.title }} - {{ config.site_name }}</title>
   {% else %}
@@ -24,7 +24,7 @@
   {% else %}
     {% set og_description = config.site_description %}
   {% endif %}
-  {% set og_image = config.site_url ~ "assets/logo/png/weftkit-wordmark.png" %}
+  {% set og_image = config.site_url ~ "assets/logo/png/weftkit-card.png" %}
   <link rel="apple-touch-icon" sizes="180x180" href="{{ 'assets/favicon/apple-touch-icon.png' | url }}">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="{{ config.site_name }}">
@@ -33,8 +33,8 @@
   <meta property="og:url" content="{{ page.canonical_url }}">
   <meta property="og:locale" content="en">
   <meta property="og:image" content="{{ og_image }}">
-  <meta property="og:image:width" content="1600">
-  <meta property="og:image:height" content="436">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="{{ config.site_name }} wordmark">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="{{ og_title }}">
@@ -61,6 +61,8 @@
         "codeRepository": "{{ config.repo_url }}",
         "programmingLanguage": "Java",
         "runtimePlatform": "Java",
+        "license": "https://www.apache.org/licenses/LICENSE-2.0",
+        "keywords": "Bukkit, Spigot, Paper, Minecraft plugin, dependency injection, lifecycle framework",
         "sameAs": "{{ config.repo_url }}"
       }
     ]

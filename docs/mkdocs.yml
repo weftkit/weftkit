@@ -1,5 +1,5 @@
 site_name: weftkit
-site_description: Lifecycle management for Bukkit plugins, wired at compile time.
+site_description: Lifecycle and dependency injection framework for Bukkit plugins, wired at compile time.
 site_url: https://weftkit.org
 repo_url: https://github.com/weftkit/weftkit
 repo_name: weftkit/weftkit

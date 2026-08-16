@@ -4,8 +4,10 @@ description: Constructor injection in weftkit - singletons, interface bindings, 
 
 # Components
 
-A component is a plain class that weftkit constructs for you. `@Wired` marks a class as part of
-the graph, and its constructor is the injection point.
+A component is a plain class that weftkit's compile-time dependency injection constructs for
+you. `@Wired` marks a class as part of the [dependency graph](lifecycle.md#load-order), and its
+constructor is the injection point. The [annotations reference](annotations.md) lists every
+annotation's exact contract.
 
 ## Singletons and plain components
 
@@ -68,8 +70,9 @@ public final class SpawnerService {
 }
 ```
 
-Swapping the SQL implementation for a file based one is a one class change, and tests can
-construct `SpawnerService` with a fake directly since components are plain classes. `get` also
+Swapping the SQL implementation for a file based one is a one class change, and
+[tests](testing.md) can construct `SpawnerService` with a fake directly since components are
+plain classes. `get` also
 resolves through bindings, so `loader.get(SpawnerStorage.class)` returns the bound singleton.
 
 ## Products with @Provides

@@ -4,10 +4,10 @@ description: weftkit wires package-private classes, so a plugin's internals stay
 
 # Internal components
 
-Most dependency injection setups quietly force every component to be `public`, because the
+Most dependency injection frameworks quietly force every component to be `public`, because the
 generated wiring lives in one package and must reach all of them. That turns internals into API:
 helper classes that were deliberately package-private have to be opened up just to become
-injectable.
+[injectable](components.md).
 
 weftkit wires package-private classes. A component may be package-private, and so may its
 constructor, its constructor parameter types, and its `@Provides` product types, as long as the
@@ -40,7 +40,8 @@ final class LocaleFiles {
 ```
 
 `LocaleFiles` stays invisible outside its package, yet it is constructor-injected, singleton
-scoped, and torn down with everything else. Because your tests live in the same package, they
+scoped, and torn down with everything else. Because your [tests](testing.md) live in the same
+package, they
 can construct it directly or replace it, which is the main practical win over `new` inside the
 facade.
 
