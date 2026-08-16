@@ -29,15 +29,52 @@ class WeftkitMetricsTest {
         assertNull(WeftkitMetrics.version(pluginWithResource(null)));
     }
 
-    @NoMetrics
+    @WeftMetrics(enabled = false)
     private static final class OptedOutPlugin {}
 
-    private static final class ReportingPlugin {}
+    private static final class UnannotatedPlugin {}
+
+    @WeftMetrics
+    private static final class DefaultConfiguredPlugin {}
+
+    @WeftMetrics(reportName = true)
+    private static final class NamedPlugin {}
+
+    @SuppressWarnings("removal")
+    @NoMetrics
+    private static final class LegacyOptedOutPlugin {}
 
     @Test
-    void noMetricsAnnotationOptsThePluginOut() {
+    void metricsAnnotationDisablesReporting() {
         assertTrue(WeftkitMetrics.optedOut(OptedOutPlugin.class));
-        assertFalse(WeftkitMetrics.optedOut(ReportingPlugin.class));
+        assertFalse(WeftkitMetrics.optedOut(UnannotatedPlugin.class));
+        assertFalse(WeftkitMetrics.optedOut(DefaultConfiguredPlugin.class));
+        assertFalse(WeftkitMetrics.optedOut(NamedPlugin.class));
+    }
+
+    @Test
+    void deprecatedNoMetricsAnnotationStillOptsOut() {
+        assertTrue(WeftkitMetrics.optedOut(LegacyOptedOutPlugin.class));
+    }
+
+    @Test
+    void metricsAnnotationOptsIntoNameReporting() {
+        assertTrue(WeftkitMetrics.reportsName(NamedPlugin.class));
+        assertFalse(WeftkitMetrics.reportsName(OptedOutPlugin.class));
+        assertFalse(WeftkitMetrics.reportsName(UnannotatedPlugin.class));
+        assertFalse(WeftkitMetrics.reportsName(DefaultConfiguredPlugin.class));
+    }
+
+    @Test
+    void nameReportingFollowsTheRegisteredOptIn() {
+        String key = WeftkitMetrics.NAME_KEY_PREFIX + "SomePlugin";
+        try {
+            assertFalse(WeftkitMetrics.named("SomePlugin"));
+            System.setProperty(key, "true");
+            assertTrue(WeftkitMetrics.named("SomePlugin"));
+        } finally {
+            System.clearProperty(key);
+        }
     }
 
     @Test

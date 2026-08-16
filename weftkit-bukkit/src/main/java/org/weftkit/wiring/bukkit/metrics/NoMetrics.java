@@ -7,9 +7,10 @@ import java.lang.annotation.Target;
 
 /**
  * Opts the annotated plugin out of weftkit's anonymous bStats metrics, see {@link WeftkitMetrics}.
- * Place it on the plugin main next to {@code @Registry}. Only this plugin stops reporting, other
- * weftkit plugins on the server and the plugin's own bStats integration are unaffected.
+ *
+ * @deprecated use {@link WeftMetrics} with {@code enabled = false} instead
  */
+@Deprecated(since = "0.4.0", forRemoval = true)
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface NoMetrics {}

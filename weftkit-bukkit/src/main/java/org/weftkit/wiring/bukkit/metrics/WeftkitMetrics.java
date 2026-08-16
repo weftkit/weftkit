@@ -19,7 +19,9 @@ import org.weftkit.wiring.Loader;
  * never create this themselves. The first weftkit plugin to enable claims a JVM-wide submitter
  * role and reports every enabled plugin that ships weftkit, recognized by the version resource in
  * its jar, so a server reports each plugin once no matter how many weftkit plugins it runs.
- * Consumers opt out by excluding org.bstats from their jar.
+ * Plugin names are only reported for plugins whose main opts in with
+ * {@link WeftMetrics#reportName()}, all others stay anonymous counts. Consumers opt out with
+ * {@link WeftMetrics#enabled()} or by excluding org.bstats from their jar.
  */
 public final class WeftkitMetrics implements Loader {
 
@@ -31,6 +33,10 @@ public final class WeftkitMetrics implements Loader {
     // must stay identical across every plugin's copy to act as the JVM-wide claim and its lock
     static final String CLAIM_KEY = "weftkit.bstats.submitter";
 
+    // Same relocation-proof trick as CLAIM_KEY - every plugin's shaded copy registers its name
+    // opt-in under this prefix, where the submitter's copy can see it
+    static final String NAME_KEY_PREFIX = "weftkit.bstats.named.";
+
     private final JavaPlugin plugin;
 
     private Metrics metrics;
@@ -41,13 +47,30 @@ public final class WeftkitMetrics implements Loader {
         this.plugin = plugin;
     }
 
-    /** Returns whether the plugin class opted out of weftkit's metrics with {@link NoMetrics}. */
+    /**
+     * Returns whether the plugin class disabled weftkit's metrics with {@link WeftMetrics} or the
+     * deprecated {@link NoMetrics}.
+     */
+    @SuppressWarnings("removal")
     public static boolean optedOut(Class<?> plugin) {
-        return plugin.isAnnotationPresent(NoMetrics.class);
+        if (plugin.isAnnotationPresent(NoMetrics.class)) return true;
+        WeftMetrics config = plugin.getAnnotation(WeftMetrics.class);
+        return config != null && !config.enabled();
+    }
+
+    /** Returns whether the plugin class opted into name reporting with {@link WeftMetrics}. */
+    public static boolean reportsName(Class<?> plugin) {
+        WeftMetrics config = plugin.getAnnotation(WeftMetrics.class);
+        return config != null && config.reportName();
+    }
+
+    static boolean named(String pluginName) {
+        return System.getProperty(NAME_KEY_PREFIX + pluginName) != null;
     }
 
     @Override
     public boolean load() {
+        if (reportsName(plugin.getClass())) System.setProperty(NAME_KEY_PREFIX + plugin.getName(), "true");
         // The literal is interned JVM-wide, so every plugin's shaded copy locks the same instance
         synchronized (CLAIM_KEY) {
             if (System.getProperty(CLAIM_KEY) == null) {
@@ -61,6 +84,7 @@ public final class WeftkitMetrics implements Loader {
 
     @Override
     public void unload() {
+        System.clearProperty(NAME_KEY_PREFIX + plugin.getName());
         if (submitter) releaseClaim();
         if (metrics != null) {
             metrics.shutdown();
@@ -73,7 +97,7 @@ public final class WeftkitMetrics implements Loader {
             metrics = new Metrics(plugin, SERVICE_ID);
             metrics.addCustomChart(new SimplePie(
                     "plugins_per_server", () -> bucket(weftkitPlugins().size())));
-            metrics.addCustomChart(new AdvancedPie("plugins", this::countByPlugin));
+            metrics.addCustomChart(new AdvancedPie("named_plugins", this::countByPlugin));
             metrics.addCustomChart(new AdvancedPie("weftkit_versions", this::countByVersion));
         } catch (LinkageError ex) {
             // Missing bStats classes mean the consumer stripped them to opt out, so stay quiet
@@ -95,7 +119,9 @@ public final class WeftkitMetrics implements Loader {
 
     private Map<String, Integer> countByPlugin() {
         Map<String, Integer> counts = new LinkedHashMap<>();
-        weftkitPlugins().keySet().forEach(name -> counts.put(name, 1));
+        weftkitPlugins().keySet().forEach(name -> {
+            if (named(name)) counts.put(name, 1);
+        });
         return counts;
     }
 
