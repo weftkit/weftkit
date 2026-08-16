@@ -8,7 +8,8 @@ import org.weftkit.wiring.processor.compiler.Diagnostics;
 import org.weftkit.wiring.processor.compiler.Mirrors;
 import org.weftkit.wiring.processor.model.ModelCollector;
 
-// A @Requires component defers to a holder's initializer, so it must load eagerly after it
+// A @Requires component defers to a holder's initializer, ordered after it in the load order or
+// materializing it before building
 public final class RequiresRule extends HolderRule {
 
     public RequiresRule(Mirrors mirrors, Diagnostics diagnostics, ModelCollector collector) {
@@ -20,7 +21,6 @@ public final class RequiresRule extends HolderRule {
         boolean valid = diagnostics
                 .check(component)
                 .require(component.getAnnotation(Wired.class) != null, "@Requires classes must be @Wired")
-                .require(!mirrors.isLazy(component), "@Requires cannot be used on a lazy singleton")
                 .passed();
         if (!valid) return;
         List<String> holders = mirrors.holders(component.getAnnotation(Requires.class)::value);

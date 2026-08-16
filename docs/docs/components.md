@@ -176,15 +176,21 @@ arguments, ambient roots, and the loader itself carry no qualifier, so they neve
 ## Lazy singletons
 
 `@Singleton(lazy = true)` defers creation to the first injection instead of building the
-component during load. Use it for expensive components that are rarely needed. A lazy singleton
-cannot implement `Loader` or carry `@Provides`, `@Initializes`, or `@Requires`, since it has no
-slot in the load order.
+component during load. Use it for expensive components that are rarely needed.
 
 ```java
 @Wired
 @Singleton(lazy = true)
 public final class BackupExporter { ... }
 ```
+
+A lazy singleton takes part in the full lifecycle. A `Loader` implementation runs its `load`
+hook at materialization: a false return or exception drops the half-built singleton and
+propagates to the injection site, the rest of the graph stays loaded, and the next injection
+retries. `unload` runs on shutdown in reverse creation order, interleaved with the eager
+singletons. A `@Provides` product materializes its lazy owner on demand, even when injected as
+an `Optional`. `@Requires` works as usual, and a lazy `@Initializes` initializer is
+materialized before any component that requires its holder.
 
 ## Extra ambient roots
 

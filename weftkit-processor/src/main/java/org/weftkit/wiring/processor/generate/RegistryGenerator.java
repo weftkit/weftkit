@@ -181,12 +181,17 @@ public class RegistryGenerator {
                             section.type(), section.constant(), Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
                     .initializer(centralInitializer(section))
                     .build());
-            // The load order must initialize after FACTORIES, whose keys resolve hidden names
-            if (section.accessor().equals(FACTORIES_SECTION)) type.addField(loadOrderField());
+            // Load order and requirements must initialize after FACTORIES, whose keys resolve
+            // hidden names
+            if (section.accessor().equals(FACTORIES_SECTION)) {
+                type.addField(loadOrderField());
+                type.addField(requirementsField());
+            }
         }
         type.addMethod(
                 MethodSpec.constructorBuilder().addModifiers(Modifier.PRIVATE).build());
         type.addMethod(accessor("loadOrder", CLASS_LIST, "LOAD_ORDER"));
+        type.addMethod(accessor("requirements", mapOf(CLASS_LIST), "REQUIREMENTS"));
         for (Section section : sections)
             type.addMethod(accessor(section.accessor(), section.type(), section.constant()));
         for (Element element : originating) type.addOriginatingElement(element);
@@ -234,6 +239,32 @@ public class RegistryGenerator {
                 .build();
     }
 
+    // Requirements render centrally only: an entry may name hidden types from several packages,
+    // which no single fragment could reference, so hidden names resolve through the factories map
+    private FieldSpec requirementsField() {
+        return FieldSpec.builder(mapOf(CLASS_LIST), "REQUIREMENTS", Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
+                .initializer("$T.ofEntries(\n$L)", Map.class, requirementEntries())
+                .build();
+    }
+
+    private CodeBlock requirementEntries() {
+        return model.componentRequirements().entrySet().stream()
+                .map(entry -> CodeBlock.of(
+                        "$T.entry($L, $L)", Map.class, componentRef(entry.getKey()), initializerList(entry.getValue())))
+                .collect(CodeBlock.joining(",\n"));
+    }
+
+    private CodeBlock initializerList(List<String> initializers) {
+        CodeBlock entries = initializers.stream().map(this::componentRef).collect(CodeBlock.joining(", "));
+        return CodeBlock.of("$T.<$T>of($L)", List.class, ANY_CLASS, entries);
+    }
+
+    private CodeBlock componentRef(String type) {
+        return fragments.fragmentPackage(type) == null
+                ? classLiteral(type)
+                : CodeBlock.of("$T.type($L, $S)", REGISTRIES, Section.constantFor(FACTORIES_SECTION), binaryName(type));
+    }
+
     private static MethodSpec accessor(String name, TypeName type, String constant) {
         return MethodSpec.methodBuilder(name)
                 .addAnnotation(Override.class)
@@ -279,15 +310,7 @@ public class RegistryGenerator {
     }
 
     private CodeBlock loadOrderEntries() {
-        return model.loadOrder().stream()
-                .map(singleton -> fragments.fragmentPackage(singleton) == null
-                        ? CodeBlock.of("$L.class", singleton)
-                        : CodeBlock.of(
-                                "$T.type($L, $S)",
-                                REGISTRIES,
-                                Section.constantFor(FACTORIES_SECTION),
-                                binaryName(singleton)))
-                .collect(CodeBlock.joining(",\n"));
+        return model.loadOrder().stream().map(this::componentRef).collect(CodeBlock.joining(",\n"));
     }
 
     // Class.getName returns binary names, so nested hidden types need their dots swapped for dollars

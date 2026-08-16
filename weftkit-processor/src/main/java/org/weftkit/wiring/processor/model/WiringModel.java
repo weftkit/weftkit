@@ -146,6 +146,23 @@ public class WiringModel {
         return lazy;
     }
 
+    // Consumed by the runtime to create initializers before their dependents. Eager initializers
+    // are included on purpose, turning a creation before their load into an explicit error
+    // instead of a silently empty holder
+    public Map<String, List<String>> componentRequirements() {
+        Map<String, List<String>> resolved = new TreeMap<>();
+        requirements.forEach((component, holders) -> {
+            List<String> loaders = new ArrayList<>();
+            for (String holder : holders) {
+                String initializer = initializers.get(holder);
+                if (initializer != null && isComponent(initializer) && !loaders.contains(initializer))
+                    loaders.add(initializer);
+            }
+            if (!loaders.isEmpty()) resolved.put(component, loaders);
+        });
+        return resolved;
+    }
+
     private String binding(Parameter parameter) {
         Map<String, String> qualified = bindings.get(parameter.erasedClass());
         return qualified == null ? null : qualified.get(parameter.qualifier());

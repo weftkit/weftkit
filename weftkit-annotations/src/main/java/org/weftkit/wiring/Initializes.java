@@ -7,8 +7,8 @@ import java.lang.annotation.Target;
 
 /**
  * Declares the static holders a wired loader initializes during load. Components marked as
- * {@link Requires requiring} such a holder load after its initializer. Class retention is required
- * for incremental annotation processing.
+ * {@link Requires requiring} such a holder load after its initializer, materializing a lazy one
+ * on demand. Class retention is required for incremental annotation processing.
  */
 @Retention(RetentionPolicy.CLASS)
 @Target(ElementType.TYPE)

@@ -16,6 +16,14 @@ public interface ComponentRegistry {
 
     Set<Class<?>> lazySingletons();
 
+    /**
+     * Maps a component to the initializer components of its required static holders, created
+     * before the component itself is built. Defaults to empty for hand-built registries.
+     */
+    default Map<Class<?>, List<Class<?>>> requirements() {
+        return Map.of();
+    }
+
     Map<Class<?>, List<Dependency>> parameters();
 
     Map<Class<?>, Function<Object[], Object>> factories();

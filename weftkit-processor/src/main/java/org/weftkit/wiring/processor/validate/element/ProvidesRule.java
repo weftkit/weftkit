@@ -11,7 +11,8 @@ import org.weftkit.wiring.processor.model.ModelCollector;
 import org.weftkit.wiring.processor.model.Product;
 
 // A @Provides getter delivers a value the loader cannot build itself, so it must be readable
-// whenever its eager singleton owner is loaded
+// once its singleton owner has loaded, at startup for an eager owner and at first
+// materialization for a lazy one
 public final class ProvidesRule extends ElementRule<ExecutableElement> {
 
     public ProvidesRule(Mirrors mirrors, Diagnostics diagnostics, ModelCollector collector) {
@@ -32,7 +33,6 @@ public final class ProvidesRule extends ElementRule<ExecutableElement> {
                 .require(
                         owner.getAnnotation(Wired.class) != null && mirrors.isSingleton(owner),
                         "@Provides getters must live on a @Wired singleton")
-                .require(!mirrors.isLazy(owner), "@Provides getters cannot live on a lazy singleton")
                 .require(
                         mirrors.isReferencable(getter.getReturnType())
                                 || mirrors.isAccessibleFrom(getter.getReturnType(), mirrors.packageName(owner)),

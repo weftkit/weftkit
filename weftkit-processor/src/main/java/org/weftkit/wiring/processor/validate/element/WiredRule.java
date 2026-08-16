@@ -55,7 +55,6 @@ public final class WiredRule extends ElementRule<TypeElement> {
                 .require(constructors.size() == 1, "@Wired components need exactly one accessible constructor")
                 // A per-injection component would never have its load() called
                 .require(!loader || mirrors.isSingleton(component), "Loader implementations must be @Singleton")
-                .require(!(loader && mirrors.isLazy(component)), "Lazy singletons cannot implement Loader")
                 .passed();
         if (!valid) return;
         for (ComponentRule rule : rules) rule.validate(component, processingEnv);

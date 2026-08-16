@@ -27,14 +27,16 @@ internals never need to go public just to be injectable.
 
 Marks a `@Wired` component as created once and injected by type from then on. A plain `@Wired`
 component is created fresh for every injection instead. With `lazy = true` the singleton is
-created on its first injection instead of during load, and it cannot implement `Loader` or carry
-`@Provides`, `@Initializes`, or `@Requires`.
+created on its first injection instead of during load. `Loader` hooks, `@Provides`,
+`@Initializes`, and `@Requires` work on lazy singletons too, running at materialization. The
+details are in [Lazy singletons](components.md#lazy-singletons).
 
 ## @Provides
 
 Marks a public no-argument getter on a `@Wired` singleton. Its return value becomes an injectable
-dependency once the owner has loaded. The value is captured right after `load`, and a getter that
-still returns null at that point fails startup.
+dependency once the owner has loaded. The value is captured right after `load`, at startup for an
+eager owner and at first materialization for a lazy one, and a getter that still returns null at
+that point fails the load. Injecting a lazy owner's product materializes the owner on demand.
 
 ## @Qualified
 
@@ -112,7 +114,8 @@ final class Spawner {
 ## @Initializes
 
 Declares the `@StaticHolder` classes a `@Wired` singleton initializes during load. Components
-that require those holders load after it.
+that require those holders load after it. A lazy initializer is materialized before its
+requiring components build instead.
 
 ## @Requires
 
@@ -124,6 +127,7 @@ which compiler ran. `@Requires` drives the graph, the scan only catches forgotte
 ## Loader
 
 Implement `Loader` to hook the lifecycle. `load` runs when the singleton is created, and
-returning `false` aborts startup. `unload` runs on shutdown in reverse load order. Only
-singletons may implement `Loader`, since a per-injection component would never have its `load`
-called.
+returning `false` aborts startup. On a lazy singleton `load` runs at first materialization, and
+a false return or exception fails only that injection, with the rest of the graph staying
+loaded. `unload` runs on shutdown in reverse creation order. Only singletons may implement
+`Loader`, since a per-injection component would never have its `load` called.

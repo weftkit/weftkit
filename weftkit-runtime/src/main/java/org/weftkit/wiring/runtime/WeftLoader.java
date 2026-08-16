@@ -1,6 +1,7 @@
 package org.weftkit.wiring.runtime;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -13,9 +14,12 @@ import org.weftkit.wiring.Loader;
 /**
  * Instantiates and injects the components of a {@link ComponentRegistry}. Eager singletons are
  * created by {@link #load()} in dependency order, lazy singletons on their first injection, and
- * plain components fresh for every {@link #create}. Not thread safe: drive it from a single
- * thread, on Bukkit the server main thread. The loader injects itself, so a component may declare
- * a {@code WeftLoader} constructor parameter to reach the graph at runtime.
+ * plain components fresh for every {@link #create}. A lazy singleton runs its {@link Loader}
+ * hooks too: {@code load()} at materialization, where a false return or exception drops the
+ * singleton and propagates to the injection site while the rest of the graph stays loaded, so
+ * the next injection retries. Not thread safe: drive it from a single thread, on Bukkit the
+ * server main thread. The loader injects itself, so a component may declare a {@code WeftLoader}
+ * constructor parameter to reach the graph at runtime.
  */
 public final class WeftLoader {
 
@@ -26,6 +30,11 @@ public final class WeftLoader {
     private final Set<Class<?>> eager;
 
     private final Map<Class<?>, Object> singletons = new HashMap<>();
+
+    // Completion order of singleton creation, eager and lazy interleaved, driving reverse-order
+    // unload. Insertion order of the singletons map would not do: a hook-materialized lazy
+    // singleton is inserted after its consumer but completes before it
+    private final List<Class<?>> creationOrder = new ArrayList<>();
 
     private final Map<Class<?>, Duration> timings = new LinkedHashMap<>();
 
@@ -61,6 +70,7 @@ public final class WeftLoader {
                     return false;
                 }
                 hookCompleted = true;
+                creationOrder.add(type);
                 captureProducts(type, singleton);
             } catch (RuntimeException ex) {
                 // A singleton whose hook never completed is treated like an abort and not unloaded
@@ -78,12 +88,13 @@ public final class WeftLoader {
     }
 
     /**
-     * Runs the {@link Loader} teardown hooks in reverse load order and drops every cached
-     * singleton. Teardown continues past failures, rethrowing the first with the rest suppressed.
-     * Safe to call repeatedly.
+     * Runs the {@link Loader} teardown hooks in reverse creation order, lazy singletons
+     * interleaved where they materialized, and drops every cached singleton. Teardown continues
+     * past failures, rethrowing the first with the rest suppressed. Safe to call repeatedly. A
+     * component materialized by an unload hook during teardown is dropped without its own hook.
      */
     public void unload() {
-        List<Class<?>> order = registry.loadOrder();
+        List<Class<?>> order = List.copyOf(creationOrder);
         RuntimeException failure = null;
         for (int index = order.size() - 1; index >= 0; index--) {
             if (!(singletons.remove(order.get(index)) instanceof Loader loader)) continue;
@@ -95,6 +106,7 @@ public final class WeftLoader {
             }
         }
         singletons.clear();
+        creationOrder.clear();
         products.clear();
         if (failure != null) throw failure;
     }
@@ -112,12 +124,15 @@ public final class WeftLoader {
         return registry.loadOrder();
     }
 
-    /** Returns how long each eager singleton took to create and load, in load order. */
+    /**
+     * Returns how long each singleton took to create and load, in creation order. An eager
+     * entry includes the time of any lazy materialization its own creation triggered.
+     */
     public Map<Class<?>, Duration> loadTimings() {
         return Collections.unmodifiableMap(timings);
     }
 
-    /** Returns the combined creation and load time of every eager singleton. */
+    /** Returns the combined creation and load time of every singleton created so far. */
     public Duration totalLoadTime() {
         return timings.values().stream().reduce(Duration.ZERO, Duration::plus);
     }
@@ -145,6 +160,8 @@ public final class WeftLoader {
     }
 
     private Object build(Class<?> target, Object... arguments) {
+        // Initializers of required static holders must have filled them before the target runs
+        for (Class<?> initializer : registry.requirements().getOrDefault(target, List.of())) instance(initializer);
         Object[] parameters = parameters(target).stream()
                 .map(dependency -> resolve(dependency, arguments, target))
                 .toArray();
@@ -203,9 +220,44 @@ public final class WeftLoader {
     private Object lazySingleton(Class<?> type) {
         Object singleton = singletons.get(type);
         if (singleton != null) return singleton;
+        long start = System.nanoTime();
         Object created = build(type);
+        // Publish before the load hook runs so the hook can resolve this singleton and its products
         singletons.put(type, created);
+        boolean hookCompleted = false;
+        try {
+            if (created instanceof Loader loader && !loader.load()) throw new ComponentLoadException(type.getName());
+            hookCompleted = true;
+            creationOrder.add(type);
+            captureProducts(type, created);
+        } catch (RuntimeException ex) {
+            // Only this singleton is dropped, the graph stays up and the next injection retries
+            if (hookCompleted) {
+                if (created instanceof Loader loader) {
+                    try {
+                        loader.unload();
+                    } catch (RuntimeException teardown) {
+                        ex.addSuppressed(teardown);
+                    }
+                }
+                creationOrder.remove(type);
+                dropProducts(type);
+            }
+            singletons.remove(type);
+            throw ex;
+        }
+        timings.put(type, Duration.ofNanos(System.nanoTime() - start));
         return created;
+    }
+
+    // Purges partially captured products so a failed materialization leaves no stale entries
+    private void dropProducts(Class<?> owner) {
+        registry.productOwners()
+                .forEach((product, qualified) -> qualified.forEach((qualifier, type) -> {
+                    if (!type.equals(owner)) return;
+                    Map<String, Object> captured = products.get(product);
+                    if (captured != null) captured.remove(qualifier);
+                }));
     }
 
     private Object product(Class<?> type, Dependency dependency) {
@@ -217,6 +269,8 @@ public final class WeftLoader {
         if (cached != null) return cached;
         // The owner may still be inside its own load hook, so fall back to the live getter
         Object provider = singletons.get(owner);
+        // Deliberate for optional product dependencies too, they materialize instead of staying empty
+        if (provider == null && registry.lazySingletons().contains(owner)) provider = lazySingleton(owner);
         Object product = provider == null
                 ? null
                 : registry.productGetters()

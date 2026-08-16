@@ -25,6 +25,9 @@ public final class Sample {
         public boolean throwOnLoad = false;
         public boolean faultOnUnload = false;
         public boolean explode = false;
+        public boolean lazyProceed = true;
+        public boolean lazyThrowOnLoad = false;
+        public boolean lazyNullProduct = false;
         public int flagValue;
     }
 
@@ -369,6 +372,178 @@ public final class Sample {
 
         public void unload() {
             probe.unloads.add("Reader");
+        }
+    }
+
+    // The lazy members below have no eager dependents, so load() itself never materializes them
+
+    @Wired
+    @Singleton(lazy = true)
+    public static final class Frost implements Loader {
+        private final Probe probe;
+
+        public Frost(Probe probe) {
+            this.probe = probe;
+        }
+
+        public boolean load() {
+            probe.loads.add("Frost");
+            if (probe.lazyThrowOnLoad) throw new IllegalStateException("lazy load failed");
+            return probe.lazyProceed;
+        }
+
+        public void unload() {
+            probe.unloads.add("Frost");
+        }
+    }
+
+    @Wired
+    public static final class FrostUser {
+        private final Frost frost;
+
+        public FrostUser(Frost frost) {
+            this.frost = frost;
+        }
+
+        public Frost frost() {
+            return frost;
+        }
+    }
+
+    public static final class Gear {}
+
+    @Wired
+    @Singleton(lazy = true)
+    public static final class GearProvider implements Loader {
+        private final Probe probe;
+        private final Gear gear = new Gear();
+        private final Gear spare = new Gear();
+
+        public GearProvider(Probe probe) {
+            this.probe = probe;
+        }
+
+        public boolean load() {
+            probe.loads.add("GearProvider");
+            return true;
+        }
+
+        public void unload() {
+            probe.unloads.add("GearProvider");
+        }
+
+        @Provides
+        public Gear gear() {
+            return probe.lazyNullProduct ? null : gear;
+        }
+
+        @Provides
+        @Qualified("spareGear")
+        public Gear spareGear() {
+            return spare;
+        }
+    }
+
+    @Wired
+    public static final class GearUser {
+        private final Gear gear;
+
+        public GearUser(Gear gear) {
+            this.gear = gear;
+        }
+
+        public Gear gear() {
+            return gear;
+        }
+    }
+
+    @Wired
+    public static final class SpareGearUser {
+        private final Gear gear;
+
+        public SpareGearUser(@Qualified("spareGear") Gear gear) {
+            this.gear = gear;
+        }
+
+        public Gear gear() {
+            return gear;
+        }
+    }
+
+    @Wired
+    public static final class OptionalGearUser {
+        private final Optional<Gear> gear;
+
+        public OptionalGearUser(Optional<Gear> gear) {
+            this.gear = gear;
+        }
+
+        public Optional<Gear> gear() {
+            return gear;
+        }
+    }
+
+    @Wired
+    @Singleton(lazy = true)
+    public static final class Chain implements Loader {
+        private final WeftLoader loader;
+        private final Probe probe;
+
+        public Chain(WeftLoader loader, Probe probe) {
+            this.loader = loader;
+            this.probe = probe;
+        }
+
+        public boolean load() {
+            probe.loads.add("Chain");
+            // Materialize another lazy singleton from inside the load hook
+            loader.create(FrostUser.class);
+            return true;
+        }
+
+        public void unload() {
+            probe.unloads.add("Chain");
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    @StaticHolder
+    static final class LazyFlag {
+        static int value;
+    }
+
+    @Wired
+    @Singleton(lazy = true)
+    @Initializes(LazyFlag.class)
+    public static final class LazyIniter implements Loader {
+        private final Probe probe;
+
+        public LazyIniter(Probe probe) {
+            this.probe = probe;
+        }
+
+        public boolean load() {
+            probe.loads.add("LazyIniter");
+            LazyFlag.value = 7;
+            return true;
+        }
+
+        public void unload() {
+            probe.unloads.add("LazyIniter");
+        }
+    }
+
+    @Wired
+    @Requires(LazyFlag.class)
+    public static final class LazyReader {
+        private final int seen;
+
+        public LazyReader() {
+            this.seen = LazyFlag.value;
+        }
+
+        public int seen() {
+            return seen;
         }
     }
 }

@@ -248,4 +248,131 @@ class WeftLoaderIntegrationTest {
                 IllegalStateException.class,
                 () -> loader.create(Sample.Consumer.class, new Sample.Widget(), new Sample.Widget()));
     }
+
+    @Test
+    void runsLazyLoaderHookOnFirstMaterializationOnly() {
+        WeftLoader loader = newLoader();
+        loader.load();
+        assertFalse(probe.loads.contains("Frost"));
+        Sample.Frost frost = loader.create(Sample.FrostUser.class).frost();
+        assertSame(frost, loader.create(Sample.FrostUser.class).frost());
+        assertSame(frost, loader.get(Sample.Frost.class));
+        assertEquals(1, probe.loads.stream().filter("Frost"::equals).count());
+    }
+
+    @Test
+    void lazyHookAbortThrowsAndLeavesGraphUpForRetry() {
+        WeftLoader loader = newLoader();
+        loader.load();
+        probe.lazyProceed = false;
+        ComponentLoadException ex =
+                assertThrows(ComponentLoadException.class, () -> loader.create(Sample.FrostUser.class));
+        assertTrue(ex.getMessage().contains("aborted"));
+        assertNull(loader.get(Sample.Frost.class));
+        assertSame(loader.get(Sample.Alpha.class), loader.get(Sample.Alpha.class));
+        assertTrue(probe.unloads.isEmpty());
+        probe.lazyProceed = true;
+        assertSame(loader.create(Sample.FrostUser.class).frost(), loader.get(Sample.Frost.class));
+        assertEquals(2, probe.loads.stream().filter("Frost"::equals).count());
+    }
+
+    @Test
+    void lazyHookThrowDropsTheSingletonWithoutItsUnloadHook() {
+        WeftLoader loader = newLoader();
+        loader.load();
+        probe.lazyThrowOnLoad = true;
+        assertThrows(IllegalStateException.class, () -> loader.create(Sample.FrostUser.class));
+        assertFalse(probe.unloads.contains("Frost"));
+        assertNull(loader.get(Sample.Frost.class));
+        probe.lazyThrowOnLoad = false;
+        assertSame(loader.create(Sample.FrostUser.class).frost(), loader.get(Sample.Frost.class));
+    }
+
+    @Test
+    void unloadsLazySingletonsInReverseCreationOrder() {
+        WeftLoader loader = newLoader();
+        loader.load();
+        loader.create(Sample.FrostUser.class);
+        loader.unload();
+        assertTrue(probe.unloads.contains("Frost"));
+        // Frost materialized after load, so it is torn down before every eager loader
+        assertTrue(probe.unloads.indexOf("Frost") < probe.unloads.indexOf("Gate"));
+        assertTrue(probe.unloads.indexOf("Gate") < probe.unloads.indexOf("Beta"));
+        assertTrue(probe.unloads.indexOf("Beta") < probe.unloads.indexOf("Alpha"));
+    }
+
+    @Test
+    void materializesLazyOwnerForItsProduct() {
+        WeftLoader loader = newLoader();
+        loader.load();
+        assertFalse(probe.loads.contains("GearProvider"));
+        Sample.Gear gear = loader.create(Sample.GearUser.class).gear();
+        assertSame(loader.get(Sample.GearProvider.class).gear(), gear);
+        assertSame(gear, loader.create(Sample.GearUser.class).gear());
+        assertEquals(1, probe.loads.stream().filter("GearProvider"::equals).count());
+    }
+
+    @Test
+    void reMaterializesLazyOwnerAfterUnload() {
+        WeftLoader loader = newLoader();
+        loader.load();
+        Sample.Gear first = loader.create(Sample.GearUser.class).gear();
+        loader.unload();
+        assertNotSame(first, loader.create(Sample.GearUser.class).gear());
+    }
+
+    @Test
+    void nullLazyProductFailsMaterializationAndLeavesNoStaleState() {
+        WeftLoader loader = newLoader();
+        loader.load();
+        probe.lazyNullProduct = true;
+        ResolutionException ex = assertThrows(ResolutionException.class, () -> loader.create(Sample.GearUser.class));
+        assertTrue(ex.getMessage().contains("null after load"));
+        // The hook completed before the capture failed, so the owner was torn down again
+        assertTrue(probe.unloads.contains("GearProvider"));
+        assertNull(loader.get(Sample.GearProvider.class));
+        probe.lazyNullProduct = false;
+        Sample.Gear spare = loader.create(Sample.SpareGearUser.class).gear();
+        assertSame(loader.get(Sample.GearProvider.class).spareGear(), spare);
+    }
+
+    @Test
+    void optionalLazyProductMaterializesItsOwner() {
+        WeftLoader loader = newLoader();
+        loader.load();
+        Optional<Sample.Gear> gear =
+                loader.create(Sample.OptionalGearUser.class).gear();
+        assertTrue(gear.isPresent());
+        assertTrue(probe.loads.contains("GearProvider"));
+    }
+
+    @Test
+    void lazyHookMaterializingAnotherLazyUnloadsTheConsumerFirst() {
+        WeftLoader loader = newLoader();
+        loader.load();
+        loader.create(Sample.Chain.class);
+        assertEquals(1, probe.loads.stream().filter("Frost"::equals).count());
+        loader.unload();
+        // Frost completed inside Chain's hook, so Chain tears down first
+        assertTrue(probe.unloads.indexOf("Chain") < probe.unloads.indexOf("Frost"));
+    }
+
+    @Test
+    void lazyInitializerMaterializesBeforeItsRequiringComponent() {
+        WeftLoader loader = newLoader();
+        loader.load();
+        assertFalse(probe.loads.contains("LazyIniter"));
+        assertEquals(7, loader.create(Sample.LazyReader.class).seen());
+        loader.create(Sample.LazyReader.class);
+        assertEquals(1, probe.loads.stream().filter("LazyIniter"::equals).count());
+    }
+
+    @Test
+    void recordsLazyMaterializationTimings() {
+        WeftLoader loader = newLoader();
+        loader.load();
+        assertFalse(loader.loadTimings().containsKey(Sample.Frost.class));
+        loader.create(Sample.FrostUser.class);
+        assertTrue(loader.loadTimings().containsKey(Sample.Frost.class));
+    }
 }

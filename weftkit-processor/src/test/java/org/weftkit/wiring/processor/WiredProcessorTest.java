@@ -285,7 +285,7 @@ class WiredProcessorTest {
     }
 
     @Test
-    void rejectsLazyLoaderImplementation() {
+    void acceptsLazyLoaderImplementation() {
         Compilation compilation = compile(
                 registry(),
                 JavaFileObjects.forSourceLines(
@@ -298,11 +298,12 @@ class WiredProcessorTest {
                         "  public Svc() {}",
                         "  public boolean load() { return true; }",
                         "}"));
-        assertThat(compilation).hadErrorContaining("Lazy singletons cannot implement Loader");
+        assertThat(compilation).succeeded();
+        assertThat(compilation).generatedSourceFile("test.WeftWiring");
     }
 
     @Test
-    void rejectsProvidesOnLazySingleton() {
+    void acceptsProvidesOnLazySingleton() {
         Compilation compilation = compile(
                 registry(),
                 JavaFileObjects.forSourceLines(
@@ -315,7 +316,79 @@ class WiredProcessorTest {
                         "  public Prov() {}",
                         "  @Provides public String thing() { return \"\"; }",
                         "}"));
-        assertThat(compilation).hadErrorContaining("@Provides getters cannot live on a lazy singleton");
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("owner -> ((test.Prov) owner).thing()");
+    }
+
+    @Test
+    void acceptsRequiresOnLazySingletonAndEmitsTheRequirement() {
+        Compilation compilation = compile(
+                registry(),
+                settingsHolder(),
+                JavaFileObjects.forSourceLines(
+                        "test.Init",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Initializes;",
+                        "import org.weftkit.wiring.Loader;",
+                        "@Wired @Singleton @Initializes(Settings.class)",
+                        "public final class Init implements Loader {",
+                        "  public Init() {}",
+                        "  public boolean load() { Settings.LIMIT = 5; return true; }",
+                        "}"),
+                JavaFileObjects.forSourceLines(
+                        "test.Svc",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Requires;",
+                        "import org.weftkit.wiring.Loader;",
+                        "@Wired @Singleton(lazy = true) @Requires(Settings.class)",
+                        "public final class Svc implements Loader {",
+                        "  public Svc() {}",
+                        "  public boolean load() { return Settings.LIMIT > 0; }",
+                        "}"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("Map.entry(test.Svc.class, List.<Class<?>>of(test.Init.class))");
+    }
+
+    @Test
+    void acceptsInitializesOnLazySingletonAndEmitsTheRequirement() {
+        Compilation compilation = compile(
+                registry(),
+                settingsHolder(),
+                JavaFileObjects.forSourceLines(
+                        "test.Init",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Initializes;",
+                        "import org.weftkit.wiring.Loader;",
+                        "@Wired @Singleton(lazy = true) @Initializes(Settings.class)",
+                        "public final class Init implements Loader {",
+                        "  public Init() {}",
+                        "  public boolean load() { Settings.LIMIT = 5; return true; }",
+                        "}"),
+                JavaFileObjects.forSourceLines(
+                        "test.Svc",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Requires;",
+                        "@Wired @Singleton @Requires(Settings.class)",
+                        "public final class Svc { public Svc() {} }"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("Map.entry(test.Svc.class, List.<Class<?>>of(test.Init.class))");
     }
 
     @Test

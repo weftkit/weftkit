@@ -39,7 +39,8 @@ one during construction or load without declaring `@Requires` fails the build.
 
 ## Shutdown
 
-On disable, weftkit runs `unload` on every loaded singleton in reverse load order, so a
+On disable, weftkit runs `unload` on every loaded singleton in reverse creation order, lazy
+singletons interleaved where they materialized, so a
 component is torn down before the ones it depended on, and every captured `@Provides` value is
 dropped. Teardown keeps going even if one
 component's `unload` throws, and the failures are reported together at the end. Teardown is safe
@@ -127,7 +128,7 @@ public final class Metrics implements Loader {
 
     @Override
     public void unload() {
-        // release resources here, runs in reverse load order
+        // release resources here, runs in reverse creation order
     }
 }
 ```

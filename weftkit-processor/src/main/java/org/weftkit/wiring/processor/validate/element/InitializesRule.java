@@ -7,7 +7,8 @@ import org.weftkit.wiring.processor.compiler.Diagnostics;
 import org.weftkit.wiring.processor.compiler.Mirrors;
 import org.weftkit.wiring.processor.model.ModelCollector;
 
-// An @Initializes loader owns a holder's setup, so it must run eagerly and exclusively
+// An @Initializes loader owns a holder's setup exclusively. A lazy one is materialized before
+// its requiring components build
 public final class InitializesRule extends HolderRule {
 
     public InitializesRule(Mirrors mirrors, Diagnostics diagnostics, ModelCollector collector) {
@@ -21,7 +22,6 @@ public final class InitializesRule extends HolderRule {
                 .require(
                         component.getAnnotation(Wired.class) != null && mirrors.isSingleton(component),
                         "@Initializes requires a @Wired singleton")
-                .require(!mirrors.isLazy(component), "@Initializes cannot be used on a lazy singleton")
                 .passed();
         if (!valid) return;
         for (String holder : mirrors.holders(component.getAnnotation(Initializes.class)::value)) {
