@@ -91,6 +91,7 @@ class StaticHolderCheck {
             return super.visitMemberSelect(tree, unused);
         }
 
+        @SuppressWarnings("deprecation")
         private void inspect() {
             Element element = trees.getElement(getCurrentPath());
             if (element == null || !element.getModifiers().contains(Modifier.STATIC)) return;

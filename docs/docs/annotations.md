@@ -61,8 +61,53 @@ The scan sees direct accesses in your own javac-compiled sources. Reads through 
 reflection, or foreign jars stay invisible to it, which is why `@Requires` is declared explicitly
 instead of being inferred from the scan.
 
-Prefer injected components for new code. The holder annotations exist to bring existing static
-state under the managed lifecycle without rewriting everything that touches it.
+### Migration only
+
+The holder annotations are a bridge for plugins adopting weftkit: annotating the existing
+static state brings it into the managed load order without touching the legacy code that
+reads it. `@StaticHolder` is deprecated without a removal plan to mark the bridge as
+temporary. New components use constructor injection from the start, and each holder carries
+the deprecation warning until its readers are migrated. Suppress it per holder with
+`@SuppressWarnings("deprecation")` for as long as the holder is needed.
+
+Finishing the migration means rewriting the readers that adoption deferred. Move the static
+fields into the singleton that fills them, with the `load` hook and its parsing logic staying
+as they are, and let each reader inject the singleton and call a getter instead of reading
+static state. `@Initializes` and `@Requires` disappear, since the constructor dependency
+already orders the load. Reading through the owner also keeps every reader current if the
+plugin later adds an in-place [reload](lifecycle.md#reloading):
+
+```java
+// The initializer after the migration: the former holder's fields are its own now
+@Wired
+@Singleton
+public final class Config implements Loader {
+
+    private Settings settings;
+
+    @Override
+    public boolean load() {
+        settings = parse();
+        return true;
+    }
+
+    public Settings settings() {
+        return settings;
+    }
+}
+
+// A former @Requires reader, ordered by its constructor dependency instead
+@Wired
+@Singleton
+final class Spawner {
+
+    private final Config config;
+
+    Spawner(Config config) {
+        this.config = config;
+    }
+}
+```
 
 ## @Initializes
 

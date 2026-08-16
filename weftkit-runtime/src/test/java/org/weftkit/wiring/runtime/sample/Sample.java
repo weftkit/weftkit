@@ -30,6 +30,7 @@ public final class Sample {
 
     public static final class Widget {}
 
+    @SuppressWarnings("deprecation")
     @StaticHolder
     static final class Flag {
         static int value;

@@ -12,7 +12,12 @@ import java.lang.annotation.Target;
  * load after it, and the processor flags a component that accesses a holder during construction
  * or load without declaring {@link Requires}. Class retention is required for incremental
  * annotation processing.
+ *
+ * @deprecated permanently, without a removal plan: holders are a migration aid for legacy static
+ *     state, new components should use constructor injection. Details and how to silence the
+ *     warnings: <a href="https://weftkit.org/go/static-holder">weftkit.org/go/static-holder</a>
  */
+@Deprecated(since = "0.4.0")
 @Retention(RetentionPolicy.CLASS)
 @Target(ElementType.TYPE)
 public @interface StaticHolder {}

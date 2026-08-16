@@ -41,6 +41,7 @@ public class WiredProcessor extends AbstractProcessor {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public Set<String> getSupportedAnnotationTypes() {
         return Set.of(
                 Registry.class.getCanonicalName(),

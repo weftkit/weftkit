@@ -13,6 +13,7 @@ abstract class HolderRule extends ElementRule<TypeElement> {
         super(mirrors, diagnostics, collector);
     }
 
+    @SuppressWarnings("deprecation")
     final void requireStaticHolder(TypeElement anchor, String holder) {
         TypeElement element = mirrors.typeElement(holder);
         if (element != null && element.getAnnotation(StaticHolder.class) == null)

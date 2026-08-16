@@ -42,6 +42,13 @@ theme:
     - search.share
     - toc.follow
 
+plugins:
+  - search
+  # The /go/ short links are permanent - never delete an entry, only repoint its target
+  - redirects:
+      redirect_maps:
+        go/static-holder.md: annotations.md#migration-only
+
 hooks:
   - hooks/sitemap.py
 
