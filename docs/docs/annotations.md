@@ -42,7 +42,9 @@ that point fails the load. Injecting a lazy owner's product materializes the own
 
 Distinguishes multiple dependencies of the same type. On a `@Wired` class or a `@Provides`
 getter it tags what is offered, and on a constructor parameter it selects the implementation or
-product carrying that tag.
+product carrying that tag. On a field the processor ignores it. The position exists so
+constructor generators can copy the tag onto the parameter they generate, see
+[Qualifiers](components.md#qualifiers).
 
 ## @StaticHolder
 

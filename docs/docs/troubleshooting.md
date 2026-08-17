@@ -14,7 +14,9 @@ most likely to meet, what they mean, and how to fix them.
 
 A constructor parameter declares a type from your own sources that nothing provides. Annotate
 the class with `@Wired`, expose a value of that type with `@Provides`, or make the parameter
-`Optional<X>` if the dependency is genuinely optional.
+`Optional<X>` if the dependency is genuinely optional. If the parameter was supposed to carry a
+qualifier from a `@Qualified` field, the tag never reached the generated constructor. Register
+the annotation as copyable, see [Qualifiers](components.md#qualifiers).
 
 ### Component dependency cycle
 

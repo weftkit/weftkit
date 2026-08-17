@@ -173,6 +173,14 @@ public DataSource archive() { ... }
 A qualified parameter resolves only through its tagged implementation or product. Explicit
 arguments, ambient roots, and the loader itself carry no qualifier, so they never satisfy one.
 
+`@Qualified` may also sit on a field, where the processor ignores it. That position exists for
+constructor generators: with Lombok, register the annotation as copyable and
+`@RequiredArgsConstructor` carries the tag onto the generated constructor parameter.
+
+```properties title="lombok.config"
+lombok.copyableAnnotations += org.weftkit.wiring.Qualified
+```
+
 ## Lazy singletons
 
 `@Singleton(lazy = true)` defers creation to the first injection instead of building the

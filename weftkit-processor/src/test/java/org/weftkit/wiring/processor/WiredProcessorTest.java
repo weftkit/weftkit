@@ -786,6 +786,22 @@ class WiredProcessorTest {
     }
 
     @Test
+    void ignoresQualifiedOnFields() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Holder",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Qualified;",
+                        "@Wired public final class Holder {",
+                        "  @Qualified(\"spare\") private String note;",
+                        "  public Holder() {}",
+                        "}"));
+        assertThat(compilation).succeeded();
+    }
+
+    @Test
     void wiresPublicFacadeWithPackagePrivateDependency() {
         Compilation compilation = compile(
                 registry(),
