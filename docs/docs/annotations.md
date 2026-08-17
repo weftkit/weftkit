@@ -33,7 +33,8 @@ details are in [Lazy singletons](components.md#lazy-singletons).
 
 ## @Provides
 
-Marks a public no-argument getter on a `@Wired` singleton. Its return value becomes an injectable
+Marks a no-argument getter on a `@Wired` singleton, public unless the owner is package-private,
+where package visibility suffices. Its return value becomes an injectable
 dependency once the owner has loaded. The value is captured right after `load`, at startup for an
 eager owner and at first materialization for a lazy one, and a getter that still returns null at
 that point fails the load. Injecting a lazy owner's product materializes the owner on demand.

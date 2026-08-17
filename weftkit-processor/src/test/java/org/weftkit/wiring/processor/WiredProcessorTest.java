@@ -786,6 +786,45 @@ class WiredProcessorTest {
     }
 
     @Test
+    void acceptsPackageVisibleGetterOnHiddenOwner() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.parts.Gears",
+                        "package test.parts;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Provides;",
+                        "@Wired @Singleton final class Gears {",
+                        "  Gears() {}",
+                        "  @Provides String gear() { return \"\"; }",
+                        "}"),
+                JavaFileObjects.forSourceLines(
+                        "test.parts.GearUser",
+                        "package test.parts;",
+                        "import org.weftkit.wiring.Wired;",
+                        "@Wired public final class GearUser { public GearUser(String gear) {} }"));
+        assertThat(compilation).succeeded();
+    }
+
+    @Test
+    void rejectsPackageVisibleGetterOnPublicOwner() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Prov",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Provides;",
+                        "@Wired @Singleton public final class Prov {",
+                        "  public Prov() {}",
+                        "  @Provides String thing() { return \"\"; }",
+                        "}"));
+        assertThat(compilation).hadErrorContaining("public unless the owner is hidden");
+    }
+
+    @Test
     void ignoresQualifiedOnFields() {
         Compilation compilation = compile(
                 registry(),

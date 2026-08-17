@@ -68,6 +68,8 @@ visible at a glance.
   package-private class: a `public` one is capped by the class visibility anyway and only
   misstates the intent (with Lombok, use
   `@RequiredArgsConstructor(access = AccessLevel.PACKAGE)`).
+- `@Provides` getters on a package-private component may be package-private as well. Public
+  components keep public getters, the central registry calls them from another package.
 - Constructor parameter types and product types must be public or live in the component's own
   package.
 

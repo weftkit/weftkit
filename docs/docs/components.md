@@ -77,9 +77,10 @@ resolves through bindings, so `loader.get(SpawnerStorage.class)` returns the bou
 
 ## Products with @Provides
 
-A public no-argument getter on a singleton, annotated `@Provides`, exposes its return value to
+A no-argument getter on a singleton, annotated `@Provides`, exposes its return value to
 the graph once the owner has loaded. This is how you inject values you build at runtime rather
-than wire by type.
+than wire by type. The getter is public, or merely package-visible on a
+[package-private owner](internal-components.md).
 
 ```java
 @Wired
