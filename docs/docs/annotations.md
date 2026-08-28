@@ -12,7 +12,8 @@ validates how you use them during compilation.
 Marks the single class that anchors the wiring, usually your plugin main extending
 `WeftPlugin`. The component registry
 is generated into its package, and the class itself is injectable as an ambient dependency along
-with any of its constructor parameters.
+with any of its constructor parameters. `modules` declares third-party [modules](modules.md) to
+weave in, and `disable` opts out of modules by id.
 
 ## @Wired
 
@@ -30,6 +31,26 @@ component is created fresh for every injection instead. With `lazy = true` the s
 created on its first injection instead of during load. `Loader` hooks, `@Provides`,
 `@Initializes`, and `@Requires` work on lazy singletons too, running at materialization. The
 details are in [Lazy singletons](components.md#lazy-singletons).
+
+## @WeftModule
+
+Marks a class as a [module](modules.md), woven into consuming graphs as an eager singleton with
+constructor injection. `id` names it for `@Registry(disable = ...)`, `components` lists the
+`@Wired` classes the module ships. Implement `ModuleLifecycle` for `activate` and `deactivate`
+hooks around the fully loaded graph.
+
+## @ModuleSettings
+
+Marks an interface as consumer configuration for a module, injected as a plain constructor
+parameter. Every method needs a default; the processor generates an all-defaults implementation
+when the consumer wires none. See [module settings](modules.md#module-settings).
+
+## @FeatureFlag
+
+Gates a component behind a named flag. An off flag gates construction: the component is never
+created and module enumeration skips it, so nothing may depend on a flagged component. Flags
+resolve against a `FeatureFlags` implementation, wired or ambient, falling back to
+`enabledByDefault`. See [feature flags](modules.md#feature-flags).
 
 ## @Provides
 

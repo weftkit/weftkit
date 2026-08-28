@@ -42,3 +42,8 @@ Two boundaries to know:
 - Components that inject the plugin cannot run headless, since a `JavaPlugin` only exists on a
   server (or under a server mock like MockBukkit). Keeping direct plugin dependencies rare keeps
   most of the graph testable without one.
+- `load()` does not activate [modules](modules.md). A test that needs their hooks drives them
+  with `Modules.activate(loader)` and `Modules.deactivate(loader)`.
+
+An ambient `FeatureFlags` pins [feature flags](modules.md#feature-flags) for a test, since an
+ambient value wins over a wired implementation.

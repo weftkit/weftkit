@@ -7,8 +7,11 @@ description: Bukkit listeners register themselves during enable, and commands ar
 ## Listeners
 
 Any [`@Wired` component](components.md) that implements `Listener` is registered with the
-server automatically during [enable](lifecycle.md#startup). Make it a `@Singleton` so it is registered as a single instance, and
-weftkit's compile-time rule checks that each `@EventHandler` method is well formed.
+server automatically during [enable](lifecycle.md#startup), by the bundled listener
+[module](modules.md). Make it a `@Singleton` so it is registered as a single instance, and
+weftkit's compile-time rule checks that each `@EventHandler` method is well formed. A listener
+gated by a [`@FeatureFlag`](modules.md#feature-flags) is only created and registered while its
+flag is on.
 
 ```java
 @Wired
@@ -65,3 +68,8 @@ commands:
   hello:
     description: Greet the sender
 ```
+
+The [join-leave-messages example](https://github.com/weftkit/weftkit/tree/main/examples/bukkit/join-leave-messages)
+is a runnable plugin around one wired listener, and
+[player-homes](https://github.com/weftkit/weftkit/tree/main/examples/bukkit/player-homes) wires
+two commands this way.

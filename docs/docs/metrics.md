@@ -26,35 +26,66 @@ The collected data is publicly visible on the weftkit bStats page.
 ## Reporting your plugin's name
 
 Plugin names are never reported by default, so the names of private plugins stay off the public
-bStats page. If you want your plugin to appear on weftkit's plugins chart, annotate your plugin
-main with `@WeftMetrics(reportName = true)`:
+bStats page. If you want your plugin to appear on weftkit's plugins chart, wire a
+`MetricsSettings` component that opts in:
 
 ```java
-@Registry
-@WeftMetrics(reportName = true)
-public final class HelloPlugin extends WeftPlugin {
-    ...
+@Wired
+@Singleton
+final class MyMetricsSettings implements MetricsSettings {
+
+    @Override
+    public boolean reportName() {
+        return true;
+    }
 }
 ```
+
+Like any component, the implementation can stay package-private, see
+[internal components](internal-components.md).
 
 The setting only affects the name. With or without it, your plugin counts toward the
 per-server and version numbers above.
 
 ## Opting out as a plugin author
 
-Annotate your plugin main with `@WeftMetrics(enabled = false)`:
+The reporting runs as the bundled `bukkit:metrics` [module](modules.md), so the module levers
+apply. Disable it outright on the registry:
 
 ```java
-@Registry
-@WeftMetrics(enabled = false)
+@Registry(disable = BukkitModules.METRICS)
 public final class HelloPlugin extends WeftPlugin {
     ...
 }
 ```
 
+The module and the bStats reporting are then absent from your generated wiring entirely.
+
+Or decide at runtime through the same `MetricsSettings` component as above, backed by whatever
+you like:
+
+```java
+@Wired
+@Singleton
+final class MyMetricsSettings implements MetricsSettings {
+
+    private final JavaPlugin plugin;
+
+    MyMetricsSettings(JavaPlugin plugin) {
+        this.plugin = plugin;
+    }
+
+    @Override
+    public boolean enabled() {
+        return plugin.getConfig().getBoolean("weftkit-metrics", true);
+    }
+}
+```
+
 Only your plugin stops reporting. Other weftkit plugins on the server and your plugin's own
-bStats integration, if it has one, are unaffected. The `@NoMetrics` annotation from 0.3 still
-works but is deprecated in favor of `@WeftMetrics(enabled = false)`.
+bStats integration, if it has one, are unaffected. `MetricsSettings` is a
+[module settings](modules.md#module-settings) interface: without a wired implementation the
+generated defaults apply, metrics on, name off.
 
 To keep the bStats classes out of your jar entirely, exclude them when shading:
 

@@ -24,9 +24,9 @@ repositories {
 dependencies {
     compileOnly("org.spigotmc:spigot-api:1.20.4-R0.1-SNAPSHOT")
 
-    implementation("org.weftkit:weftkit-bukkit:0.3.0")
-    annotationProcessor("org.weftkit:weftkit-processor:0.3.0")
-    annotationProcessor("org.weftkit:weftkit-bukkit:0.3.0")
+    implementation("org.weftkit:weftkit-bukkit:0.6.0")
+    annotationProcessor("org.weftkit:weftkit-processor:0.6.0")
+    annotationProcessor("org.weftkit:weftkit-bukkit:0.6.0")
 }
 ```
 
@@ -117,6 +117,8 @@ malformed listener stops the build.
 
 ## Next steps
 
+- The [examples](https://github.com/weftkit/weftkit/tree/main/examples) are complete runnable
+  plugins, from the smallest wired listener to a module with feature flags.
 - [Components](components.md) covers injection, singletons, products, and reaching your objects.
 - [Lifecycle](lifecycle.md) covers startup, shutdown, and load order.
 - [Listeners and commands](listeners-and-commands.md) covers Bukkit event and command wiring.

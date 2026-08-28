@@ -22,8 +22,14 @@ the annotation as copyable, see [Qualifiers](components.md#qualifiers).
 
 Two or more components depend on each other, directly or through `@Provides` products and
 `@Requires` holders. The message shows the cycle, for example `A -> B -> A`. Break it by
-inverting one edge: extract the shared piece into its own component, or have one side reach the
-other at runtime through an injected `WeftLoader` instead of a constructor parameter.
+inverting one edge: extract the shared piece into its own component, or have the plugin main
+connect the two after startup instead of a constructor parameter.
+
+### WeftLoader is not injectable
+
+A component declared a `WeftLoader` constructor parameter, which 0.6 removed. Inject
+[`Weft`](modules.md) to enumerate components by supertype; for anything else, reach the
+component from the plugin main, which holds the loader.
 
 ### Ambiguous dependency, implemented by ...
 
@@ -95,8 +101,8 @@ to the same constructor parameter. Pass a single unambiguous value or use a qual
 
 ### Singleton dependency is not loaded
 
-`create` or `get` ran before `load()` or after `unload()`, or a component used its injected
-`WeftLoader` during startup to reach a singleton that loads later.
+`create` or `get` ran before `load()` or after `unload()`, or reached during startup for a
+singleton that loads later.
 
 ### Dependency is not available yet
 

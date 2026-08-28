@@ -126,8 +126,10 @@ Report report = loader.create(Report.class);
 List<Rule> rules = loader.createAll(Rule.class);
 ```
 
-The loader also injects itself, so a component can declare a `WeftLoader` constructor parameter
-to reach the graph at runtime, for example to build reports over the load order and timings.
+The loader itself is not injectable, and a `WeftLoader` constructor parameter fails the build.
+A component that needs to enumerate the graph injects [`Weft`](modules.md) instead; everything
+else stays with the plugin main, which can hand the loader on after startup where a component
+genuinely needs it.
 
 ## Optional dependencies
 

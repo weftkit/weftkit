@@ -78,6 +78,7 @@ nav:
   - Internal components: internal-components.md
   - Lifecycle: lifecycle.md
   - Listeners and commands: listeners-and-commands.md
+  - Modules: modules.md
   - Annotations: annotations.md
   - Distribution: distribution.md
   - Testing: testing.md

@@ -15,8 +15,9 @@ dependency order. As each singleton is created, if it implements `Loader` its `l
 runs. Returning `false`
 from `load` aborts startup: weftkit tears down everything it has already loaded, in reverse
 order, and disables the plugin, so you never run in a half initialized state. Once every
-singleton has loaded, weftkit registers each `@Wired`
-[listener](listeners-and-commands.md) with the server.
+singleton has loaded, the [modules](modules.md) activate in load order; the bundled listener
+module registers each `@Wired` [listener](listeners-and-commands.md) with the server. A module
+that aborts activation triggers the same full teardown as a failed `load`.
 
 ```java
 @Override
@@ -39,8 +40,9 @@ one during construction or load without declaring `@Requires` fails the build.
 
 ## Shutdown
 
-On disable, weftkit runs `unload` on every loaded singleton in reverse creation order, lazy
-singletons interleaved where they materialized, so a
+On disable, the modules deactivate in reverse activation order, the listener module
+unregistering exactly the listeners it registered. weftkit then runs `unload` on every loaded
+singleton in reverse creation order, lazy singletons interleaved where they materialized, so a
 component is torn down before the ones it depended on, and every captured `@Provides` value is
 dropped. Teardown keeps going even if one
 component's `unload` throws, and the failures are reported together at the end. Teardown is safe
@@ -103,11 +105,24 @@ loader.loadTimings().forEach((type, duration) ->
 
 The processor also writes the full dependency graph as `weftkit-graph.dot` next to the generated
 registry sources (under `build/generated/sources/annotationProcessor`). Render it with Graphviz
-to see your plugin's wiring: singletons are boxes, and every edge points at a dependency.
+to see your plugin's wiring, where every edge points at a dependency:
 
 ```sh
 dot -Tsvg weftkit-graph.dot -o weftkit-graph.svg
 ```
+
+The nodes and edges carry a small visual vocabulary:
+
+| Element | Meaning |
+| --- | --- |
+| Indigo box | A plain `@Wired` component, created fresh for every injection. |
+| Amber box, thicker border | A `@Singleton`, created once. |
+| Teal box, thicker border | A [module](modules.md), an eager singleton with activation hooks. |
+| Grey dashed box | A static holder ordered through `@Requires` / `@Initializes`. |
+| Dashed border | A [package-private component](internal-components.md), kept off your public surface. |
+| `feature: name` badge | The component is gated by a `@FeatureFlag`; the badge names the flag. |
+| Solid edge | A constructor dependency. |
+| Dashed edge | A `@Requires` ordering edge, amber when it points at the holder's initializer. |
 
 ## The Loader hook
 
@@ -132,3 +147,7 @@ public final class Metrics implements Loader {
     }
 }
 ```
+
+The [player-homes example](https://github.com/weftkit/weftkit/tree/main/examples/bukkit/player-homes)
+runs this cycle end to end: it loads homes from disk in `load`, aborts startup on a corrupt
+file, and saves in `unload`.

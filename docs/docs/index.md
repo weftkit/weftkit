@@ -82,6 +82,12 @@ an add-on.
 [Get started](getting-started.md){ .md-button .md-button--primary }
 [Browse the annotations](annotations.md){ .md-button }
 
+## Examples
+
+The [examples](https://github.com/weftkit/weftkit/tree/main/examples) are complete runnable
+plugins: the smallest wired listener, a homes plugin built on the load and unload lifecycle,
+and a broadcast module that discovers its content through enumeration.
+
 ## Used by
 
 weftkit was extracted from [SilkSpawners](https://github.com/CorneliusMa/SilkSpawners_v2), which

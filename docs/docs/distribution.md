@@ -19,6 +19,12 @@ weftkit's bStats integration rides along, relocated by an `org.bstats` rule if y
 already has one and working unrelocated otherwise. Opting out of the metrics entirely is
 covered on the [metrics](metrics.md) page.
 
+Shadow's `minimize()` is safe to use. weftkit [modules](modules.md) and their components are
+ordinary code in your generated wiring: the bundled ones (listener wiring, weftkit's metrics) are
+contributed by the adapter at compile time, and third-party ones are declared on your registry,
+`@Registry(modules = SomeModule.class)`, next to them. Nothing is discovered by runtime classpath
+scanning, so neither minimization nor relocation can strip or hide a module.
+
 ## The libraries alternative
 
 Plugins with a compatibility floor of 1.16.5 or newer can skip shading and declare weftkit in
@@ -26,7 +32,7 @@ Plugins with a compatibility floor of 1.16.5 or newer can skip shading and decla
 
 ```yaml
 libraries:
-  - org.weftkit:weftkit-bukkit:0.3.0
+  - org.weftkit:weftkit-bukkit:0.6.0
 ```
 
 - No weftkit classes in your jar, no relocation.
