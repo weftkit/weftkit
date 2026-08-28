@@ -45,6 +45,8 @@ public class GraphGenerator {
 
     private static final String SINGLETON_STYLE = ", fillcolor=\"#FFF7ED\", color=\"#F59E0B\", penwidth=1.8";
 
+    private static final String MODULE_STYLE = ", fillcolor=\"#ECFDF5\", color=\"#0D9488\", penwidth=1.8";
+
     private static final String HIDDEN_STYLE = ", style=\"rounded,filled,dashed\"";
 
     private static final String HOLDER_STYLE =
@@ -57,8 +59,10 @@ public class GraphGenerator {
                         .formatted(
                                 component,
                                 simpleName(component),
-                                component,
-                                definition.singleton() ? SINGLETON_STYLE : "",
+                                component + (model.isModule(component) ? " (module)" : ""),
+                                model.isModule(component)
+                                        ? MODULE_STYLE
+                                        : definition.singleton() ? SINGLETON_STYLE : "",
                                 model.isHidden(component) ? HIDDEN_STYLE : "")));
         holders()
                 .forEach(holder -> graph.append("    \"%s\" [label=\"%s\", tooltip=\"%s\"%s];\n"

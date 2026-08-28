@@ -188,10 +188,16 @@ public class RegistryGenerator {
                 type.addField(requirementsField());
             }
         }
+        if (!model.modules().isEmpty()) {
+            type.addField(FieldSpec.builder(CLASS_LIST, "MODULES", Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
+                    .initializer("$T.of(\n$L)", List.class, moduleEntries())
+                    .build());
+        }
         type.addMethod(
                 MethodSpec.constructorBuilder().addModifiers(Modifier.PRIVATE).build());
         type.addMethod(accessor("loadOrder", CLASS_LIST, "LOAD_ORDER"));
         type.addMethod(accessor("requirements", mapOf(CLASS_LIST), "REQUIREMENTS"));
+        if (!model.modules().isEmpty()) type.addMethod(accessor("modules", CLASS_LIST, "MODULES"));
         for (Section section : sections)
             type.addMethod(accessor(section.accessor(), section.type(), section.constant()));
         for (Element element : originating) type.addOriginatingElement(element);
@@ -311,6 +317,14 @@ public class RegistryGenerator {
 
     private CodeBlock loadOrderEntries() {
         return model.loadOrder().stream().map(this::componentRef).collect(CodeBlock.joining(",\n"));
+    }
+
+    // Module classes in load order, so activation follows the graph and deactivation its reverse
+    private CodeBlock moduleEntries() {
+        return model.loadOrder().stream()
+                .filter(model::isModule)
+                .map(RegistryGenerator::classLiteral)
+                .collect(CodeBlock.joining(",\n"));
     }
 
     // Class.getName returns binary names, so nested hidden types need their dots swapped for dollars

@@ -24,6 +24,14 @@ public interface ComponentRegistry {
         return Map.of();
     }
 
+    /**
+     * The {@code @WeftModule} component classes woven into this registry, in load order. Defaults
+     * to empty for hand-built registries.
+     */
+    default List<Class<?>> modules() {
+        return List.of();
+    }
+
     Map<Class<?>, List<Dependency>> parameters();
 
     Map<Class<?>, Function<Object[], Object>> factories();

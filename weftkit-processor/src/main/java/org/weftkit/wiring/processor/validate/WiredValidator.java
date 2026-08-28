@@ -9,6 +9,7 @@ import org.weftkit.wiring.processor.compiler.Mirrors;
 import org.weftkit.wiring.processor.model.ModelCollector;
 import org.weftkit.wiring.processor.model.WiringModel;
 import org.weftkit.wiring.processor.validate.element.InitializesRule;
+import org.weftkit.wiring.processor.validate.element.ModuleRule;
 import org.weftkit.wiring.processor.validate.element.ProvidesRule;
 import org.weftkit.wiring.processor.validate.element.RegistryRule;
 import org.weftkit.wiring.processor.validate.element.RequiresRule;
@@ -19,9 +20,13 @@ import org.weftkit.wiring.processor.validate.graph.GraphValidator;
 /** Routes every annotated element to its rule, then runs the whole-graph rules. */
 public class WiredValidator {
 
+    private final Mirrors mirrors;
+
     private final Diagnostics diagnostics;
 
     private final ModelCollector collector;
+
+    private final ModuleRule moduleRule;
 
     private final RegistryRule registryRule;
 
@@ -38,13 +43,15 @@ public class WiredValidator {
     private final GraphValidator graph;
 
     public WiredValidator(ProcessingEnvironment processingEnv, WiringModel model) {
-        Mirrors mirrors = new Mirrors(processingEnv);
+        this.mirrors = new Mirrors(processingEnv);
         this.diagnostics = new Diagnostics(processingEnv);
         this.collector = new ModelCollector(model, mirrors, diagnostics);
-        this.registryRule = new RegistryRule(mirrors, diagnostics, collector);
         this.wiredRule = new WiredRule(processingEnv, mirrors, diagnostics, collector);
-        this.singletonRule = new SingletonRule(mirrors, diagnostics, collector);
         this.providesRule = new ProvidesRule(mirrors, diagnostics, collector);
+        this.moduleRule = new ModuleRule(
+                processingEnv, mirrors, diagnostics, collector, providesRule, wiredRule.componentRules());
+        this.registryRule = new RegistryRule(mirrors, diagnostics, collector, moduleRule);
+        this.singletonRule = new SingletonRule(mirrors, diagnostics, collector);
         this.initializesRule = new InitializesRule(mirrors, diagnostics, collector);
         this.requiresRule = new RequiresRule(mirrors, diagnostics, collector);
         this.graph = new GraphValidator(model, mirrors, diagnostics);
@@ -90,5 +97,14 @@ public class WiredValidator {
         if (collector.registryClass() == null)
             diagnostics.error("No @Registry class to generate the component registry for");
         graph.validate();
+    }
+
+    /**
+     * Resolves declared and adapter-contributed modules into the model. Must run before
+     * {@link #validateGraph()} so module components take part in graph validation and generation.
+     */
+    public void resolveModules() {
+        if (collector.registryClass() == null) return;
+        moduleRule.resolve();
     }
 }

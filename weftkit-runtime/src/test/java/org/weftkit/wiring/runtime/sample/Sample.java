@@ -5,12 +5,14 @@ import java.util.List;
 import java.util.Optional;
 import org.weftkit.wiring.Initializes;
 import org.weftkit.wiring.Loader;
+import org.weftkit.wiring.ModuleLifecycle;
 import org.weftkit.wiring.Provides;
 import org.weftkit.wiring.Qualified;
 import org.weftkit.wiring.Registry;
 import org.weftkit.wiring.Requires;
 import org.weftkit.wiring.Singleton;
 import org.weftkit.wiring.StaticHolder;
+import org.weftkit.wiring.WeftModule;
 import org.weftkit.wiring.Wired;
 import org.weftkit.wiring.runtime.Weft;
 import org.weftkit.wiring.runtime.WeftLoader;
@@ -30,24 +32,15 @@ public final class Sample {
         public boolean lazyThrowOnLoad = false;
         public boolean lazyNullProduct = false;
         public int flagValue;
+        public final List<String> activations = new ArrayList<>();
+        public final List<String> deactivations = new ArrayList<>();
+        public boolean alphaModuleProceed = true;
+        public boolean alphaModuleThrow = false;
         // Handed over by the tests, standing in for a plugin main passing the loader on
         public WeftLoader loader;
     }
 
     public static final class Widget {}
-
-    @Wired
-    public static final class WeftUser {
-        private final Weft weft;
-
-        public WeftUser(Weft weft) {
-            this.weft = weft;
-        }
-
-        public Weft weft() {
-            return weft;
-        }
-    }
 
     @SuppressWarnings("deprecation")
     @StaticHolder
@@ -78,7 +71,7 @@ public final class Sample {
         }
     }
 
-    @Registry
+    @Registry(modules = {AlphaModule.class, ZuluModule.class})
     public static final class Wiring {
         private final Probe probe;
 
@@ -504,6 +497,61 @@ public final class Sample {
 
         public void unload() {
             probe.unloads.add("Chain");
+        }
+    }
+
+    // Zulu sorts after Alpha, so activation order Zulu before Alpha proves injection drives it
+    @WeftModule(id = "sample:zulu")
+    public static final class ZuluModule implements ModuleLifecycle {
+        private final Probe probe;
+
+        public ZuluModule(Probe probe) {
+            this.probe = probe;
+        }
+
+        @Override
+        public boolean activate() {
+            probe.activations.add("Zulu");
+            return true;
+        }
+
+        @Override
+        public void deactivate() {
+            probe.deactivations.add("Zulu");
+        }
+    }
+
+    @WeftModule(id = "sample:alpha")
+    public static final class AlphaModule implements ModuleLifecycle {
+        private final Probe probe;
+
+        public AlphaModule(ZuluModule zulu, Probe probe) {
+            this.probe = probe;
+        }
+
+        @Override
+        public boolean activate() {
+            probe.activations.add("Alpha");
+            if (probe.alphaModuleThrow) throw new IllegalStateException("module activation failed");
+            return probe.alphaModuleProceed;
+        }
+
+        @Override
+        public void deactivate() {
+            probe.deactivations.add("Alpha");
+        }
+    }
+
+    @Wired
+    public static final class WeftUser {
+        private final Weft weft;
+
+        public WeftUser(Weft weft) {
+            this.weft = weft;
+        }
+
+        public Weft weft() {
+            return weft;
         }
     }
 

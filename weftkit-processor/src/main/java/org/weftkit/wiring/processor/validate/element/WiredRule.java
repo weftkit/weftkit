@@ -71,6 +71,11 @@ public final class WiredRule extends ElementRule<TypeElement> {
         return declared;
     }
 
+    /** The SPI rules, shared with module component validation. */
+    public List<ComponentRule> componentRules() {
+        return rules;
+    }
+
     private static List<ComponentRule> loadRules() {
         List<ComponentRule> rules = new ArrayList<>();
         for (ComponentRule rule : ServiceLoader.load(ComponentRule.class, ComponentRule.class.getClassLoader()))

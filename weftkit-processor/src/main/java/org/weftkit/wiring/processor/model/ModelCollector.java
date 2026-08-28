@@ -64,8 +64,30 @@ public final class ModelCollector {
     public void collect(TypeElement component, ExecutableElement constructor) {
         if (!mirrors.isPublic(component))
             model.markHidden(component.getQualifiedName().toString(), mirrors.packageName(component));
+        Singleton singleton = component.getAnnotation(Singleton.class);
+        add(
+                component,
+                new Component(
+                        singleton != null,
+                        singleton != null && singleton.lazy(),
+                        mirrors.qualifier(component),
+                        parameters(constructor)));
+    }
+
+    /** Collects a {@code @WeftModule} class, always an eager singleton. */
+    public void collectModule(TypeElement module, ExecutableElement constructor) {
+        add(module, new Component(true, false, "", parameters(constructor)));
+        model.addModule(module.getQualifiedName().toString());
+    }
+
+    private void add(TypeElement component, Component definition) {
+        String name = component.getQualifiedName().toString();
+        model.addComponent(name, definition);
+    }
+
+    private List<Parameter> parameters(ExecutableElement constructor) {
+        String componentPackage = mirrors.packageName((TypeElement) constructor.getEnclosingElement());
         Set<String> seen = new HashSet<>();
-        String componentPackage = mirrors.packageName(component);
         List<Parameter> parameters = new ArrayList<>();
         List<? extends VariableElement> constructorParameters = constructor.getParameters();
         for (int index = 0; index < constructorParameters.size(); index++) {
@@ -77,14 +99,7 @@ public final class ModelCollector {
                 diagnostics.error(parameter, "Duplicate constructor parameter type: " + collected.erasedClass());
             parameters.add(collected);
         }
-        Singleton singleton = component.getAnnotation(Singleton.class);
-        model.addComponent(
-                component.getQualifiedName().toString(),
-                new Component(
-                        singleton != null,
-                        singleton != null && singleton.lazy(),
-                        mirrors.qualifier(component),
-                        parameters));
+        return parameters;
     }
 
     /** Records the product and returns the previous owner of the same product, or null. */
@@ -98,6 +113,11 @@ public final class ModelCollector {
                 new Product(
                         owner.getQualifiedName().toString(),
                         getter.getSimpleName().toString()));
+    }
+
+    /** Whether the component is already in the model, as a source component or through a module. */
+    public boolean isCollected(String component) {
+        return model.isComponent(component);
     }
 
     /** Records the initializer and returns the previous initializer of the same holder, or null. */

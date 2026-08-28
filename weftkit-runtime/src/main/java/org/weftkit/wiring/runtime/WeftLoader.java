@@ -123,6 +123,11 @@ public final class WeftLoader {
         return type.cast(singletons.get(bound(type, "")));
     }
 
+    /** Returns the registry this loader drives. */
+    public ComponentRegistry registry() {
+        return registry;
+    }
+
     /** Returns the eager singleton load order. */
     public List<Class<?>> loadOrder() {
         return registry.loadOrder();

@@ -74,8 +74,12 @@ public class WiredProcessor extends AbstractProcessor {
             validator.validateInitializes((TypeElement) element);
         for (Element element : roundEnvironment.getElementsAnnotatedWith(Requires.class))
             validator.validateRequires((TypeElement) element);
-        // Emit the registry only once and before the final round so it still gets processed itself
-        if (!generated && !model.isEmpty() && !roundEnvironment.processingOver()) {
+        // Emit the registry only once and before the final round so it still gets processed itself.
+        // Modules resolve first, so their components take part in validation and generation
+        if (!generated
+                && !roundEnvironment.processingOver()
+                && (!model.isEmpty() || validator.registryPackage() != null)) {
+            validator.resolveModules();
             validator.validateGraph();
             if (validator.registryPackage() != null) {
                 Element[] originating = originatingElements();

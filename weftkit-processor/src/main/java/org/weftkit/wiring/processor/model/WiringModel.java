@@ -23,6 +23,8 @@ public class WiringModel {
 
     private final Map<String, String> hiddenTypes = new TreeMap<>();
 
+    private final List<String> modules = new ArrayList<>();
+
     private final Map<String, List<String>> dependencyCache = new HashMap<>();
 
     public void addComponent(String component, Component definition) {
@@ -43,6 +45,19 @@ public class WiringModel {
 
     public void addBinding(String abstraction, String qualifier, String implementation) {
         bindings.computeIfAbsent(abstraction, key -> new TreeMap<>()).put(qualifier, implementation);
+    }
+
+    public void addModule(String module) {
+        modules.add(module);
+    }
+
+    /** The woven module classes, declared before contributed. */
+    public List<String> modules() {
+        return Collections.unmodifiableList(modules);
+    }
+
+    public boolean isModule(String type) {
+        return modules.contains(type);
     }
 
     public void markHidden(String type, String packageName) {

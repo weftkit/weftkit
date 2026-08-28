@@ -12,4 +12,18 @@ import java.lang.annotation.Target;
  */
 @Retention(RetentionPolicy.CLASS)
 @Target(ElementType.TYPE)
-public @interface Registry {}
+public @interface Registry {
+
+    /**
+     * {@link WeftModule} classes to weave into the generated registry as hard references. Bundled
+     * adapter modules (listener wiring, metrics) need no declaration.
+     */
+    Class<?>[] modules() default {};
+
+    /**
+     * {@link WeftModule#id() Ids} of modules to keep out of this plugin, through an id holder like
+     * {@code BukkitModules.METRICS}, which imports no module class. A disabled module and its
+     * components are absent from the generated wiring. An unknown id fails the build.
+     */
+    String[] disable() default {};
+}

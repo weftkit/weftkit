@@ -42,6 +42,171 @@ class WiredProcessorTest {
                 .doesNotContain("@SuppressWarnings");
     }
 
+    private static JavaFileObject moduleRegistry() {
+        return JavaFileObjects.forSourceLines(
+                "test.Reg",
+                "package test;",
+                "import org.weftkit.wiring.Registry;",
+                "@Registry(modules = Mod.class) public final class Reg { public Reg() {} }");
+    }
+
+    private static JavaFileObject component() {
+        return JavaFileObjects.forSourceLines(
+                "test.Svc",
+                "package test;",
+                "import org.weftkit.wiring.Wired;",
+                "import org.weftkit.wiring.Singleton;",
+                "@Wired @Singleton public final class Svc { public Svc(Reg reg) {} }");
+    }
+
+    private static JavaFileObject module() {
+        return JavaFileObjects.forSourceLines(
+                "test.Mod",
+                "package test;",
+                "import org.weftkit.wiring.ModuleLifecycle;",
+                "import org.weftkit.wiring.WeftModule;",
+                "@WeftModule(id = \"test:mod\")",
+                "public final class Mod implements ModuleLifecycle {",
+                "    public Mod(Svc svc) {}",
+                "}");
+    }
+
+    // test.Contributed is contributed by the test FixtureContributor service
+    private static JavaFileObject contributed() {
+        return JavaFileObjects.forSourceLines(
+                "test.Contributed",
+                "package test;",
+                "import org.weftkit.wiring.WeftModule;",
+                "@WeftModule(id = \"test:contributed\")",
+                "public final class Contributed {",
+                "    public Contributed() {}",
+                "}");
+    }
+
+    @Test
+    void weavesContributedModulesWhenTheirClassIsOnTheClasspath() {
+        Compilation compilation = compile(registry(), component(), contributed());
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("test.Contributed.class");
+    }
+
+    @Test
+    void warnsOnContributedModulesSharingAnId() {
+        Compilation compilation = compile(
+                registry(),
+                component(),
+                contributed(),
+                JavaFileObjects.forSourceLines(
+                        "test.ContributedClash",
+                        "package test;",
+                        "import org.weftkit.wiring.WeftModule;",
+                        "@WeftModule(id = \"test:contributed\")",
+                        "public final class ContributedClash {",
+                        "    public ContributedClash() {}",
+                        "}"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation).hadWarningContaining("share the id test:contributed");
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .doesNotContain("ContributedClash");
+    }
+
+    @Test
+    void skipsAContributedModuleAbsentFromTheCompileClasspath() {
+        Compilation compilation = compile(registry(), component());
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .doesNotContain("Contributed");
+    }
+
+    @Test
+    void weavesDeclaredModulesAsInjectedSingletons() {
+        Compilation compilation = compile(moduleRegistry(), component(), module());
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("new test.Mod(");
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("test.Mod.class,");
+    }
+
+    @Test
+    void ordersModuleActivationByInjection() {
+        Compilation compilation = compile(
+                JavaFileObjects.forSourceLines(
+                        "test.Reg",
+                        "package test;",
+                        "import org.weftkit.wiring.Registry;",
+                        "@Registry(modules = {Second.class, First.class})",
+                        "public final class Reg { public Reg() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.First",
+                        "package test;",
+                        "import org.weftkit.wiring.WeftModule;",
+                        "@WeftModule(id = \"test:first\")",
+                        "public final class First { public First() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Second",
+                        "package test;",
+                        "import org.weftkit.wiring.WeftModule;",
+                        "@WeftModule(id = \"test:second\")",
+                        "public final class Second { public Second(First first) {} }"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .containsMatch("MODULES = List.of\\(\\s*test.First.class,\\s*test.Second.class\\)");
+    }
+
+    @Test
+    void rejectsAModuleWithoutTheAnnotation() {
+        Compilation compilation = compile(
+                moduleRegistry(),
+                component(),
+                JavaFileObjects.forSourceLines(
+                        "test.Mod", "package test;", "public final class Mod { public Mod() {} }"));
+        assertThat(compilation).hadErrorContaining("is not annotated with @WeftModule");
+    }
+
+    @Test
+    void weavesModuleComponentsFromTheClasspathIntoTheGraph() {
+        Compilation compilation = compile(fixtureRegistry(""), component());
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("new org.weftkit.wiring.processor.fixture.FixtureComponent()");
+    }
+
+    @Test
+    void disablingAModuleDropsItAndItsComponents() {
+        Compilation compilation = compile(fixtureRegistry(", disable = \"fixture:mod\""), component());
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .doesNotContain("Fixture");
+    }
+
+    private static JavaFileObject fixtureRegistry(String disable) {
+        return JavaFileObjects.forSourceLines(
+                "test.Reg",
+                "package test;",
+                "import org.weftkit.wiring.Registry;",
+                "import org.weftkit.wiring.processor.fixture.FixtureModule;",
+                "@Registry(modules = FixtureModule.class" + disable + ")",
+                "public final class Reg { public Reg() {} }");
+    }
+
     @Test
     void rejectsWeftLoaderDependencies() {
         Compilation compilation = compile(
