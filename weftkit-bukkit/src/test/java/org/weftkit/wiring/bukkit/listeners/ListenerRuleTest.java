@@ -1,4 +1,4 @@
-package org.weftkit.wiring.bukkit;
+package org.weftkit.wiring.bukkit.listeners;
 
 import static com.google.testing.compile.CompilationSubject.assertThat;
 import static com.google.testing.compile.Compiler.javac;

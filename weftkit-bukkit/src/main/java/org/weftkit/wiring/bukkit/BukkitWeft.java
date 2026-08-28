@@ -1,12 +1,9 @@
 package org.weftkit.wiring.bukkit;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.logging.Level;
 import org.bukkit.event.Listener;
-import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.weftkit.wiring.bukkit.metrics.WeftkitMetrics;
+import org.weftkit.wiring.runtime.Modules;
 import org.weftkit.wiring.runtime.WeftLoader;
 import org.weftkit.wiring.runtime.registry.ComponentRegistry;
 
@@ -16,76 +13,67 @@ import org.weftkit.wiring.runtime.registry.ComponentRegistry;
  */
 public final class BukkitWeft {
 
-    private static final Map<String, WeftkitMetrics> METRICS = new HashMap<>();
-
     private BukkitWeft() {}
 
     /**
-     * Loads the registry with the plugin and the extra values as ambient roots, then registers
-     * every wired {@code Listener} and starts weftkit's own anonymous bStats reporting, see
-     * {@link WeftkitMetrics}. Returns null after disabling the plugin when a component aborts or
-     * fails the load. A load failure is logged instead of escaping {@code onEnable}, where Bukkit
-     * would only log it and leave the plugin half-enabled.
+     * Loads the registry with the plugin and the extra values as ambient roots, then activates its
+     * modules. On any abort or failure the graph is torn down, the plugin is disabled, and null is
+     * returned; failures are logged instead of escaping {@code onEnable}.
      */
     public static WeftLoader enable(JavaPlugin plugin, ComponentRegistry registry, Object... extraAmbient) {
         WeftLoader loader = new WeftLoader(registry, ambient(plugin, extraAmbient));
-        boolean loaded;
         try {
-            loaded = loader.load();
+            if (!loader.load()) return abort(plugin, null);
+            if (registry.modules().isEmpty() && hasListeners(registry))
+                plugin.getLogger()
+                        .warning("The registry contains no weftkit modules, so the wired listeners will not be"
+                                + " registered. Is weftkit-bukkit missing from the annotationProcessor path?");
+            if (!Modules.activate(loader)) return abort(plugin, loader);
         } catch (RuntimeException ex) {
             plugin.getLogger().log(Level.SEVERE, "Error during weftkit startup", ex);
-            loaded = false;
+            // A load failure already unloaded, an activation failure has not; unload is idempotent
+            return abort(plugin, loader);
         }
-        if (!loaded) {
-            plugin.getServer().getPluginManager().disablePlugin(plugin);
-            return null;
-        }
-        registerListeners(plugin, loader);
-        startMetrics(plugin);
         return loader;
     }
 
-    /** Registers every wired {@code Listener} component with the server. */
-    public static void registerListeners(JavaPlugin plugin, WeftLoader loader) {
-        PluginManager manager = plugin.getServer().getPluginManager();
-        loader.createAll(Listener.class).forEach(listener -> manager.registerEvents(listener, plugin));
-    }
-
     /**
-     * Unloads the loader, logging teardown failures through the plugin logger so shutdown never
-     * escapes {@code onDisable}. Accepts null for a plugin whose enable was aborted.
+     * Deactivates the modules and unloads the graph, logging teardown failures through the plugin
+     * logger so shutdown never escapes {@code onDisable}. Accepts null for an aborted enable.
      */
     public static void disable(JavaPlugin plugin, WeftLoader loader) {
-        stopMetrics(plugin);
         if (loader == null) return;
+        RuntimeException failure = null;
+        try {
+            Modules.deactivate(loader);
+        } catch (RuntimeException ex) {
+            failure = ex;
+        }
         try {
             loader.unload();
         } catch (RuntimeException ex) {
-            plugin.getLogger().log(Level.SEVERE, "Error during weftkit shutdown", ex);
+            if (failure == null) failure = ex;
+            else failure.addSuppressed(ex);
         }
+        if (failure != null) plugin.getLogger().log(Level.SEVERE, "Error during weftkit shutdown", failure);
     }
 
-    // Metrics must never take a plugin down. Missing bStats classes mean the consumer stripped
-    // them from its jar to opt out, so both failure kinds only log quietly
-    private static void startMetrics(JavaPlugin plugin) {
-        if (WeftkitMetrics.optedOut(plugin.getClass())) return;
-        try {
-            WeftkitMetrics metrics = new WeftkitMetrics(plugin);
-            metrics.load();
-            METRICS.put(plugin.getName(), metrics);
-        } catch (RuntimeException | LinkageError ex) {
-            plugin.getLogger().log(Level.FINE, "weftkit metrics unavailable", ex);
-        }
+    // Wired listeners with no modules: weftkit-bukkit missing from the processor path, or all
+    // modules disabled on purpose; the listeners stay unregistered either way
+    private static boolean hasListeners(ComponentRegistry registry) {
+        return registry.parameters().keySet().stream().anyMatch(Listener.class::isAssignableFrom);
     }
 
-    private static void stopMetrics(JavaPlugin plugin) {
-        WeftkitMetrics metrics = METRICS.remove(plugin.getName());
-        if (metrics == null) return;
-        try {
-            metrics.unload();
-        } catch (RuntimeException | LinkageError ex) {
-            plugin.getLogger().log(Level.FINE, "weftkit metrics teardown failed", ex);
+    private static WeftLoader abort(JavaPlugin plugin, WeftLoader loader) {
+        if (loader != null) {
+            try {
+                loader.unload();
+            } catch (RuntimeException ex) {
+                plugin.getLogger().log(Level.SEVERE, "Error during weftkit teardown", ex);
+            }
         }
+        plugin.getServer().getPluginManager().disablePlugin(plugin);
+        return null;
     }
 
     private static Object[] ambient(JavaPlugin plugin, Object[] extraAmbient) {

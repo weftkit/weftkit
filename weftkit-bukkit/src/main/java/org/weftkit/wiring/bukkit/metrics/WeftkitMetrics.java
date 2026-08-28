@@ -15,15 +15,13 @@ import org.weftkit.wiring.Loader;
 
 /**
  * Anonymous usage metrics for weftkit itself, reported to bStats under one shared service id.
- * Managed by {@link org.weftkit.wiring.bukkit.BukkitWeft} on enable and disable, so consumers
- * never create this themselves. The first weftkit plugin to enable claims a JVM-wide submitter
+ * Managed by the bundled {@link MetricsModule}, so consumers never create this themselves. The first weftkit plugin to enable claims a JVM-wide submitter
  * role and reports every enabled plugin that ships weftkit, recognized by the version resource in
  * its jar, so a server reports each plugin once no matter how many weftkit plugins it runs.
- * Plugin names are only reported for plugins whose main opts in with
- * {@link WeftMetrics#reportName()}, all others stay anonymous counts. Consumers opt out with
- * {@link WeftMetrics#enabled()} or by excluding org.bstats from their jar.
+ * Plugin names are only reported for plugins that opt in through {@link MetricsSettings}, all
+ * others stay anonymous counts.
  */
-public final class WeftkitMetrics implements Loader {
+final class WeftkitMetrics implements Loader {
 
     private static final int SERVICE_ID = 33308;
 
@@ -39,29 +37,15 @@ public final class WeftkitMetrics implements Loader {
 
     private final JavaPlugin plugin;
 
+    private final boolean reportName;
+
     private Metrics metrics;
 
     private boolean submitter;
 
-    public WeftkitMetrics(JavaPlugin plugin) {
+    WeftkitMetrics(JavaPlugin plugin, boolean reportName) {
         this.plugin = plugin;
-    }
-
-    /**
-     * Returns whether the plugin class disabled weftkit's metrics with {@link WeftMetrics} or the
-     * deprecated {@link NoMetrics}.
-     */
-    @SuppressWarnings("removal")
-    public static boolean optedOut(Class<?> plugin) {
-        if (plugin.isAnnotationPresent(NoMetrics.class)) return true;
-        WeftMetrics config = plugin.getAnnotation(WeftMetrics.class);
-        return config != null && !config.enabled();
-    }
-
-    /** Returns whether the plugin class opted into name reporting with {@link WeftMetrics}. */
-    public static boolean reportsName(Class<?> plugin) {
-        WeftMetrics config = plugin.getAnnotation(WeftMetrics.class);
-        return config != null && config.reportName();
+        this.reportName = reportName;
     }
 
     static boolean named(String pluginName) {
@@ -70,7 +54,7 @@ public final class WeftkitMetrics implements Loader {
 
     @Override
     public boolean load() {
-        if (reportsName(plugin.getClass())) System.setProperty(NAME_KEY_PREFIX + plugin.getName(), "true");
+        if (reportName) System.setProperty(NAME_KEY_PREFIX + plugin.getName(), "true");
         // The literal is interned JVM-wide, so every plugin's shaded copy locks the same instance
         synchronized (CLAIM_KEY) {
             if (System.getProperty(CLAIM_KEY) == null) {
