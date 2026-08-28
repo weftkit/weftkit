@@ -23,6 +23,7 @@ tasks.shadowJar {
     relocate("org.weftkit.wiring", "org.weftkit.examples.announcer.lib.weftkit")
     relocate("org.bstats", "org.weftkit.examples.announcer.lib.bstats")
     minimize {}
+    metaInf { from(rootProject.layout.projectDirectory.file("../../../LICENSE")) }
 }
 
 tasks.build {
