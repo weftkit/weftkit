@@ -35,6 +35,12 @@ subprojects {
         isReproducibleFileOrder = true
     }
 
+    tasks.withType<Jar>().configureEach {
+        metaInf {
+            from(rootProject.layout.projectDirectory.file("LICENSE"))
+        }
+    }
+
     // The POM carries the same dependency info. Skipping to keep releases under Maven Central's monthly file-count limit
     tasks.withType<GenerateModuleMetadata>().configureEach {
         enabled = false
