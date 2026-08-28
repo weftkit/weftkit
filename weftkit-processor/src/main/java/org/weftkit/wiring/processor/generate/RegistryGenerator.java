@@ -29,9 +29,9 @@ import org.weftkit.wiring.processor.model.Component;
 import org.weftkit.wiring.processor.model.Parameter;
 import org.weftkit.wiring.processor.model.Product;
 import org.weftkit.wiring.processor.model.WiringModel;
-import org.weftkit.wiring.runtime.ComponentRegistry;
-import org.weftkit.wiring.runtime.Dependency;
-import org.weftkit.wiring.runtime.Registries;
+import org.weftkit.wiring.runtime.registry.ComponentRegistry;
+import org.weftkit.wiring.runtime.registry.Dependency;
+import org.weftkit.wiring.runtime.registry.Registries;
 
 public class RegistryGenerator {
 

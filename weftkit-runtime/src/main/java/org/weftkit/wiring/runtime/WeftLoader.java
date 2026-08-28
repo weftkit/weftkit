@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.weftkit.wiring.Loader;
+import org.weftkit.wiring.runtime.registry.ComponentRegistry;
+import org.weftkit.wiring.runtime.registry.Dependency;
 
 /**
  * Instantiates and injects the components of a {@link ComponentRegistry}. Eager singletons are

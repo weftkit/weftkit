@@ -1,4 +1,4 @@
-package org.weftkit.wiring.runtime;
+package org.weftkit.wiring.runtime.registry;
 
 import java.util.List;
 import java.util.Map;

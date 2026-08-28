@@ -7,8 +7,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.weftkit.wiring.bukkit.metrics.WeftkitMetrics;
-import org.weftkit.wiring.runtime.ComponentRegistry;
 import org.weftkit.wiring.runtime.WeftLoader;
+import org.weftkit.wiring.runtime.registry.ComponentRegistry;
 
 /**
  * The Bukkit entry points for weftkit: {@link #enable} from {@code onEnable} and {@link #disable}

@@ -9,6 +9,8 @@ import java.util.Set;
 import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 import org.weftkit.wiring.Loader;
+import org.weftkit.wiring.runtime.registry.ComponentRegistry;
+import org.weftkit.wiring.runtime.registry.Dependency;
 
 class EagerProductCaptureTest {
 

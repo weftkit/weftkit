@@ -1,8 +1,8 @@
 package org.weftkit.wiring.bukkit;
 
 import org.bukkit.plugin.java.JavaPlugin;
-import org.weftkit.wiring.runtime.ComponentRegistry;
 import org.weftkit.wiring.runtime.WeftLoader;
+import org.weftkit.wiring.runtime.registry.ComponentRegistry;
 
 /**
  * Base class for plugins that hand their lifecycle to weftkit. {@link #onEnable()} loads the

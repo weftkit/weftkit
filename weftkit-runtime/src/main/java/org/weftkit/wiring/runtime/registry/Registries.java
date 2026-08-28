@@ -1,4 +1,4 @@
-package org.weftkit.wiring.runtime;
+package org.weftkit.wiring.runtime.registry;
 
 import java.util.HashMap;
 import java.util.HashSet;
