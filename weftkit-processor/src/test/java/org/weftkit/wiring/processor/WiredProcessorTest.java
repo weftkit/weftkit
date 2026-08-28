@@ -281,6 +281,84 @@ class WiredProcessorTest {
     }
 
     @Test
+    void rejectsDependenciesOnFeatureFlaggedComponents() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Gated",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.FeatureFlag;",
+                        "@Wired @Singleton @FeatureFlag(\"regions\")",
+                        "public final class Gated { public Gated() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Uses",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "@Wired public final class Uses { public Uses(Gated gated) {} }"));
+        assertThat(compilation).hadErrorContaining("may never be constructed");
+    }
+
+    @Test
+    void rejectsSeveralFeatureFlagsImplementations() {
+        Compilation compilation = compile(registry(), flagsImplementation("FlagsA"), flagsImplementation("FlagsB"));
+        assertThat(compilation).hadErrorContaining("Several FeatureFlags implementations");
+    }
+
+    @Test
+    void ordersTheFeatureFlagsImplementationBeforeFlaggedComponents() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Gated",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.FeatureFlag;",
+                        "@Wired @Singleton @FeatureFlag(\"regions\")",
+                        "public final class Gated { public Gated() {} }"),
+                flagsImplementation("ZFlags"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .containsMatch("LOAD_ORDER = List.of\\(\\s*test.ZFlags.class,\\s*test.Gated.class\\)");
+    }
+
+    private static JavaFileObject flagsImplementation(String name) {
+        return JavaFileObjects.forSourceLines(
+                "test." + name,
+                "package test;",
+                "import org.weftkit.wiring.Wired;",
+                "import org.weftkit.wiring.Singleton;",
+                "import org.weftkit.wiring.runtime.FeatureFlags;",
+                "@Wired @Singleton public final class " + name + " implements FeatureFlags {",
+                "    public " + name + "() {}",
+                "    public boolean isEnabled(String key) { return true; }",
+                "}");
+    }
+
+    @Test
+    void graphBadgesFeatureFlaggedComponents() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Gated",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.FeatureFlag;",
+                        "@Wired @Singleton @FeatureFlag(\"regions\")",
+                        "public final class Gated { public Gated(Reg reg) {} }"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedFile(StandardLocation.SOURCE_OUTPUT, "test", "weftkit-graph.dot")
+                .contentsAsUtf8String()
+                .contains("feature: regions");
+    }
+
+    @Test
     void suppressesUncheckedOnlyForParameterizedCasts() {
         Compilation compilation = compile(
                 registry(),

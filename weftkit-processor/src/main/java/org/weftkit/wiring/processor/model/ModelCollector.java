@@ -12,12 +12,16 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
+import org.weftkit.wiring.FeatureFlag;
 import org.weftkit.wiring.Singleton;
 import org.weftkit.wiring.processor.compiler.Diagnostics;
 import org.weftkit.wiring.processor.compiler.Mirrors;
+import org.weftkit.wiring.runtime.FeatureFlags;
 
 /** Builds the {@link WiringModel} from validated elements, reporting entries it cannot parse. */
 public final class ModelCollector {
+
+    private static final String FEATURE_FLAGS = FeatureFlags.class.getCanonicalName();
 
     private final WiringModel model;
 
@@ -65,23 +69,26 @@ public final class ModelCollector {
         if (!mirrors.isPublic(component))
             model.markHidden(component.getQualifiedName().toString(), mirrors.packageName(component));
         Singleton singleton = component.getAnnotation(Singleton.class);
+        FeatureFlag featureFlag = component.getAnnotation(FeatureFlag.class);
         add(
                 component,
                 new Component(
                         singleton != null,
                         singleton != null && singleton.lazy(),
                         mirrors.qualifier(component),
+                        featureFlag == null ? "" : featureFlag.value(),
                         parameters(constructor)));
     }
 
     /** Collects a {@code @WeftModule} class, always an eager singleton. */
     public void collectModule(TypeElement module, ExecutableElement constructor) {
-        add(module, new Component(true, false, "", parameters(constructor)));
+        add(module, new Component(true, false, "", "", parameters(constructor)));
         model.addModule(module.getQualifiedName().toString());
     }
 
     private void add(TypeElement component, Component definition) {
         String name = component.getQualifiedName().toString();
+        if (mirrors.isSubtype(component, FEATURE_FLAGS)) model.addFlagsProvider(name);
         model.addComponent(name, definition);
     }
 

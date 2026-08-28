@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -26,6 +27,8 @@ public class WiringModel {
     private final List<String> modules = new ArrayList<>();
 
     private final Map<String, String> settingsDefaults = new TreeMap<>();
+
+    private final Set<String> flagsProviders = new LinkedHashSet<>();
 
     private final Map<String, List<String>> dependencyCache = new HashMap<>();
 
@@ -69,6 +72,15 @@ public class WiringModel {
 
     public Map<String, String> settingsDefaults() {
         return Collections.unmodifiableMap(settingsDefaults);
+    }
+
+    public void addFlagsProvider(String component) {
+        flagsProviders.add(component);
+    }
+
+    /** Components implementing FeatureFlags, ordered before every flagged component. */
+    public Set<String> flagsProviders() {
+        return Collections.unmodifiableSet(flagsProviders);
     }
 
     public void markHidden(String type, String packageName) {
@@ -134,6 +146,12 @@ public class WiringModel {
         for (String holder : requirements.getOrDefault(component, List.of())) {
             String initializer = initializers.get(holder);
             if (initializer != null && isComponent(initializer)) dependencies.add(initializer);
+        }
+        // The gate resolves flags through the provider, so it must precede any flagged component
+        if (!components.get(component).featureFlag().isEmpty() && flagsProviders.size() == 1) {
+            String provider = flagsProviders.iterator().next();
+            if (!provider.equals(component) && isComponent(provider) && !dependencies.contains(provider))
+                dependencies.add(provider);
         }
         return dependencies;
     }

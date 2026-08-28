@@ -152,7 +152,12 @@ class WeftLoaderIntegrationTest {
         WeftLoader loader = newLoader();
         loader.load();
         assertEquals(WeftWiring.INSTANCE.loadOrder(), loader.loadOrder());
-        assertEquals(loader.loadOrder(), List.copyOf(loader.loadTimings().keySet()));
+        // Frozen is flagged off, so it is skipped without a timing entry
+        assertEquals(
+                loader.loadOrder().stream()
+                        .filter(type -> !type.equals(Sample.Frozen.class))
+                        .toList(),
+                List.copyOf(loader.loadTimings().keySet()));
         assertEquals(
                 loader.loadTimings().values().stream().reduce(Duration.ZERO, Duration::plus), loader.totalLoadTime());
         assertFalse(loader.totalLoadTime().isNegative());
@@ -164,6 +169,19 @@ class WeftLoaderIntegrationTest {
         assertTrue(loader.load());
         Machine machine = loader.get(Machine.class);
         assertEquals("engine+machine", machine.signature());
+    }
+
+    @Test
+    void exposesUniqueAmbientByType() {
+        WeftLoader loader = newLoader();
+        assertSame(wiring, loader.ambient(Sample.Wiring.class));
+        assertNull(loader.ambient(String.class));
+    }
+
+    @Test
+    void ambientRejectsAmbiguousType() {
+        WeftLoader loader = new WeftLoader(WeftWiring.INSTANCE, wiring, probe, new Sample.Probe());
+        assertThrows(ResolutionException.class, () -> loader.ambient(Sample.Probe.class));
     }
 
     @Test

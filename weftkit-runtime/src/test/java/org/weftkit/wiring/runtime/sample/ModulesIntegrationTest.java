@@ -9,7 +9,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.weftkit.wiring.runtime.FeatureFlags;
 import org.weftkit.wiring.runtime.Modules;
+import org.weftkit.wiring.runtime.ResolutionException;
+import org.weftkit.wiring.runtime.Weft;
 import org.weftkit.wiring.runtime.WeftLoader;
 
 class ModulesIntegrationTest {
@@ -65,5 +68,39 @@ class ModulesIntegrationTest {
         WeftLoader loader = loadedLoader();
         assertThrows(IllegalStateException.class, () -> Modules.activate(loader));
         assertEquals(List.of("Zulu"), probe.deactivations);
+    }
+
+    @Test
+    void flaggedComponentIsNeverConstructedWhileItsFlagIsOff() {
+        WeftLoader loader = loadedLoader();
+        assertFalse(probe.loads.contains("Frozen"));
+        assertTrue(loader.createAll(Sample.GatedService.class).isEmpty());
+        assertThrows(ResolutionException.class, () -> loader.create(Sample.Frozen.class));
+    }
+
+    @Test
+    void wiredFeatureFlagsImplementationDecides() {
+        probe.enabledFlags.add("frozen");
+        WeftLoader loader = loadedLoader();
+        assertTrue(probe.loads.contains("Frozen"));
+        assertEquals(1, loader.createAll(Sample.GatedService.class).size());
+    }
+
+    @Test
+    void ambientFeatureFlagsWinOverTheWiredImplementation() {
+        FeatureFlags allOn = key -> true;
+        WeftLoader loader = new WeftLoader(WeftWiring.INSTANCE, wiring, probe, allOn);
+        probe.loader = loader;
+        assertTrue(loader.load());
+        // The wired ProbeFlags would report the flag off, the ambient value enables it
+        assertTrue(probe.loads.contains("Frozen"));
+    }
+
+    @Test
+    void weftFacadeEnumeratesEnabledComponentsOnly() {
+        WeftLoader loader = loadedLoader();
+        Weft weft = loader.create(Sample.WeftUser.class).weft();
+        assertEquals(2, weft.all(Sample.Service.class).size());
+        assertThrows(ResolutionException.class, () -> weft.all(Object.class));
     }
 }

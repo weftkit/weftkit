@@ -52,14 +52,17 @@ public class GraphGenerator {
     private static final String HOLDER_STYLE =
             ", style=\"rounded,filled,dashed\", fillcolor=\"#F5F5F4\", color=\"#78716C\"";
 
+    private static final String FLAG_COLOR = "#B45309";
+
     private String render() {
         StringBuilder graph = new StringBuilder(HEADER);
         model.components()
-                .forEach((component, definition) -> graph.append("    \"%s\" [label=\"%s\", tooltip=\"%s\"%s%s];\n"
+                .forEach((component, definition) -> graph.append("    \"%s\" [%s, tooltip=\"%s\"%s%s];\n"
                         .formatted(
                                 component,
-                                simpleName(component),
-                                component + (model.isModule(component) ? " (module)" : ""),
+                                label(simpleName(component), definition.featureFlag()),
+                                tooltip(component, definition.featureFlag())
+                                        + (model.isModule(component) ? " (module)" : ""),
                                 model.isModule(component)
                                         ? MODULE_STYLE
                                         : definition.singleton() ? SINGLETON_STYLE : "",
@@ -89,5 +92,19 @@ public class GraphGenerator {
     private static String simpleName(String qualified) {
         int lastDot = qualified.lastIndexOf('.');
         return lastDot < 0 ? qualified : qualified.substring(lastDot + 1);
+    }
+
+    private static String label(String name, String featureFlag) {
+        if (featureFlag.isEmpty()) return "label=\"" + name + "\"";
+        return "label=<%s<br/><font point-size=\"9\" color=\"%s\">feature: %s</font>>"
+                .formatted(escapeHtml(name), FLAG_COLOR, escapeHtml(featureFlag));
+    }
+
+    private static String tooltip(String component, String featureFlag) {
+        return featureFlag.isEmpty() ? component : component + " (feature: " + featureFlag + ")";
+    }
+
+    private static String escapeHtml(String text) {
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
 }

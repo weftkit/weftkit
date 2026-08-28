@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.weftkit.wiring.FeatureFlag;
 import org.weftkit.wiring.Loader;
 import org.weftkit.wiring.runtime.registry.ComponentRegistry;
 import org.weftkit.wiring.runtime.registry.Dependency;
@@ -32,6 +33,11 @@ public final class WeftLoader {
     private final Set<Class<?>> eager;
 
     private final Weft weft = new Weft(this);
+
+    // Cached provider instance, not cached flag values, so isEnabled stays live per check
+    private FeatureFlags flags;
+
+    private boolean flagsResolved;
 
     private final Map<Class<?>, Object> singletons = new HashMap<>();
 
@@ -62,6 +68,8 @@ public final class WeftLoader {
      */
     public boolean load() {
         for (Class<?> type : registry.loadOrder()) {
+            // A singleton gated off by its feature flag is never constructed
+            if (!enabled(type)) continue;
             long start = System.nanoTime();
             boolean hookCompleted = false;
             try {
@@ -112,6 +120,8 @@ public final class WeftLoader {
         singletons.clear();
         creationOrder.clear();
         products.clear();
+        flags = null;
+        flagsResolved = false;
         if (failure != null) throw failure;
     }
 
@@ -121,6 +131,20 @@ public final class WeftLoader {
      */
     public <T> T get(Class<T> type) {
         return type.cast(singletons.get(bound(type, "")));
+    }
+
+    /**
+     * Returns the unique ambient root assignable to the type, or null when none matches. Throws when
+     * more than one ambient value fits, mirroring how ambient injection rejects ambiguity.
+     */
+    public <T> T ambient(Class<T> type) {
+        T match = null;
+        for (Object candidate : ambient) {
+            if (!type.isInstance(candidate)) continue;
+            if (match != null) throw new ResolutionException("Ambiguous ambient value for " + type.getName());
+            match = type.cast(candidate);
+        }
+        return match;
     }
 
     /** Returns the registry this loader drives. */
@@ -147,13 +171,15 @@ public final class WeftLoader {
     }
 
     /**
-     * Creates or fetches every component assignable to the supertype, sorted by class name.
+     * Creates or fetches every enabled component assignable to the supertype, sorted by class
+     * name. Components gated off by their feature flag are skipped without being constructed.
      * Arguments are matched to constructor parameters by type; they only reach plain components,
      * since a singleton's cached state must not depend on whichever call materialized it.
      */
     public <T> List<T> createAll(Class<T> supertype, Object... arguments) {
         return registry.parameters().keySet().stream()
                 .filter(supertype::isAssignableFrom)
+                .filter(this::enabled)
                 .sorted(Comparator.comparing(Class::getName))
                 .map(type -> supertype.cast(instance(type, arguments)))
                 .toList();
@@ -163,9 +189,13 @@ public final class WeftLoader {
      * Creates a component of the type, resolving interface bindings. Singletons resolve to their
      * cached instance, lazy ones materializing on demand. Plain components are built fresh, each
      * constructor parameter resolved from the given arguments, the ambient values, and the graph.
+     * Throws for a component gated off by its feature flag.
      */
     public <T> T create(Class<T> type, Object... arguments) {
-        return type.cast(instance(bound(type, ""), arguments));
+        Class<?> target = bound(type, "");
+        if (target != null && !enabled(target))
+            throw new ResolutionException("Component is disabled by its feature flag: " + target.getName());
+        return type.cast(instance(target, arguments));
     }
 
     private Object build(Class<?> target, Object... arguments) {
@@ -317,5 +347,32 @@ public final class WeftLoader {
         Object singleton = singletons.get(type);
         if (singleton == null) throw new ResolutionException("Singleton dependency is not loaded: " + type.getName());
         return singleton;
+    }
+
+    private boolean enabled(Class<?> type) {
+        return type.getAnnotation(FeatureFlag.class) == null || FeatureGate.enabled(type, flags());
+    }
+
+    // Ambient values win over a graph implementation. The processor orders a FeatureFlags
+    // component before every flagged component, so resolution here never hits an unloaded eager
+    // singleton
+    private FeatureFlags flags() {
+        if (flagsResolved) return flags;
+        FeatureFlags provided = ambient(FeatureFlags.class);
+        flags = provided != null ? provided : graphFlags();
+        // Only on success, so a failed resolution rethrows instead of defaulting
+        flagsResolved = true;
+        return flags;
+    }
+
+    private FeatureFlags graphFlags() {
+        List<Class<?>> implementations = registry.parameters().keySet().stream()
+                .filter(FeatureFlags.class::isAssignableFrom)
+                .toList();
+        if (implementations.isEmpty()) return null;
+        if (implementations.size() > 1)
+            throw new ResolutionException("Ambiguous FeatureFlags implementations: "
+                    + implementations.stream().map(Class::getName).toList());
+        return (FeatureFlags) instance(implementations.get(0));
     }
 }

@@ -1,8 +1,11 @@
 package org.weftkit.wiring.runtime.sample;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import org.weftkit.wiring.FeatureFlag;
 import org.weftkit.wiring.Initializes;
 import org.weftkit.wiring.Loader;
 import org.weftkit.wiring.ModuleLifecycle;
@@ -14,6 +17,7 @@ import org.weftkit.wiring.Singleton;
 import org.weftkit.wiring.StaticHolder;
 import org.weftkit.wiring.WeftModule;
 import org.weftkit.wiring.Wired;
+import org.weftkit.wiring.runtime.FeatureFlags;
 import org.weftkit.wiring.runtime.Weft;
 import org.weftkit.wiring.runtime.WeftLoader;
 
@@ -32,6 +36,7 @@ public final class Sample {
         public boolean lazyThrowOnLoad = false;
         public boolean lazyNullProduct = false;
         public int flagValue;
+        public final Set<String> enabledFlags = new HashSet<>();
         public final List<String> activations = new ArrayList<>();
         public final List<String> deactivations = new ArrayList<>();
         public boolean alphaModuleProceed = true;
@@ -539,6 +544,39 @@ public final class Sample {
         @Override
         public void deactivate() {
             probe.deactivations.add("Alpha");
+        }
+    }
+
+    public interface GatedService {}
+
+    @Wired
+    @Singleton
+    @FeatureFlag("frozen")
+    public static final class Frozen implements GatedService, Loader {
+        private final Probe probe;
+
+        public Frozen(Probe probe) {
+            this.probe = probe;
+        }
+
+        public boolean load() {
+            probe.loads.add("Frozen");
+            return true;
+        }
+    }
+
+    @Wired
+    @Singleton
+    public static final class ProbeFlags implements FeatureFlags {
+        private final Probe probe;
+
+        public ProbeFlags(Probe probe) {
+            this.probe = probe;
+        }
+
+        @Override
+        public boolean isEnabled(String key) {
+            return probe.enabledFlags.contains(key);
         }
     }
 

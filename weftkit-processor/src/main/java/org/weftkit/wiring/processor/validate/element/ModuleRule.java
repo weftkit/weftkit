@@ -13,6 +13,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.ElementFilter;
+import org.weftkit.wiring.FeatureFlag;
 import org.weftkit.wiring.Initializes;
 import org.weftkit.wiring.Loader;
 import org.weftkit.wiring.Provides;
@@ -171,6 +172,9 @@ public final class ModuleRule {
                 .require(
                         module.getAnnotation(Wired.class) == null && module.getAnnotation(Singleton.class) == null,
                         "Module " + name + " is wired implicitly, drop @Wired and @Singleton")
+                .require(
+                        module.getAnnotation(FeatureFlag.class) == null,
+                        "Module " + name + " cannot be feature flagged, opt out with @Registry(disable)")
                 .passed();
         if (!valid) return;
         collector.collectModule(module, constructors.get(0));

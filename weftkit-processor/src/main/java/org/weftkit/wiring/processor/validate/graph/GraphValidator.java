@@ -18,6 +18,7 @@ public final class GraphValidator {
         this.rules = List.of(
                 new DependencyRule(model, mirrors, diagnostics),
                 new SettingsRule(model, mirrors, diagnostics, registryPackage),
+                new FeatureFlagRule(model, mirrors, diagnostics),
                 new ProductRule(model, mirrors, diagnostics),
                 new InitializerRule(model, mirrors, diagnostics),
                 new RequirementRule(model, mirrors, diagnostics),
