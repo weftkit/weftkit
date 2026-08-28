@@ -31,7 +31,9 @@ class WeftLoaderIntegrationTest {
     }
 
     private WeftLoader newLoader() {
-        return new WeftLoader(WeftWiring.INSTANCE, wiring, probe);
+        WeftLoader loader = new WeftLoader(WeftWiring.INSTANCE, wiring, probe);
+        probe.loader = loader;
+        return loader;
     }
 
     @Test
@@ -127,6 +129,7 @@ class WeftLoaderIntegrationTest {
     @Test
     void rejectsAmbiguousAmbientValue() {
         WeftLoader loader = new WeftLoader(WeftWiring.INSTANCE, wiring, probe, new Sample.Probe());
+        probe.loader = loader;
         ResolutionException ex = assertThrows(ResolutionException.class, loader::load);
         assertTrue(ex.getMessage().contains("Ambiguous ambient value"));
     }
@@ -161,13 +164,6 @@ class WeftLoaderIntegrationTest {
         assertTrue(loader.load());
         Machine machine = loader.get(Machine.class);
         assertEquals("engine+machine", machine.signature());
-    }
-
-    @Test
-    void injectsTheLoaderItself() {
-        WeftLoader loader = newLoader();
-        loader.load();
-        assertSame(loader, loader.create(Sample.LoaderUser.class).loader());
     }
 
     @Test
@@ -218,6 +214,7 @@ class WeftLoaderIntegrationTest {
     void qualifiedDependencyIgnoresAmbientOfSameType() {
         Sample.Notifier ambientNotifier = new Sample.Notifier() {};
         WeftLoader loader = new WeftLoader(WeftWiring.INSTANCE, wiring, probe, ambientNotifier);
+        probe.loader = loader;
         loader.load();
         assertSame(
                 loader.get(Sample.ChatNotifier.class),

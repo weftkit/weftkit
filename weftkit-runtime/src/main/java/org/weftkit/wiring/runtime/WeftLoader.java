@@ -20,8 +20,8 @@ import org.weftkit.wiring.runtime.registry.Dependency;
  * hooks too: {@code load()} at materialization, where a false return or exception drops the
  * singleton and propagates to the injection site while the rest of the graph stays loaded, so
  * the next injection retries. Not thread safe: drive it from a single thread, on Bukkit the
- * server main thread. The loader injects itself, so a component may declare a {@code WeftLoader}
- * constructor parameter to reach the graph at runtime.
+ * server main thread. The loader is not injectable; components enumerate the graph through
+ * {@link Weft} and leave the loader to the plugin main.
  */
 public final class WeftLoader {
 
@@ -30,6 +30,8 @@ public final class WeftLoader {
     private final Object[] ambient;
 
     private final Set<Class<?>> eager;
+
+    private final Weft weft = new Weft(this);
 
     private final Map<Class<?>, Object> singletons = new HashMap<>();
 
@@ -183,14 +185,14 @@ public final class WeftLoader {
 
     private Object resolve(Dependency dependency, Object[] arguments, Class<?> component) {
         Class<?> type = dependency.type();
-        // Arguments, ambient roots, and the loader itself carry no qualifier, so only an unqualified
+        // Arguments, ambient roots, and Weft carry no qualifier, so only an unqualified
         // dependency may match them; a qualified one must resolve through its binding or product
         if (dependency.qualifier().isEmpty()) {
             Object argument = unique(arguments, type, component, "argument");
             if (argument != null) return argument;
             Object provided = unique(ambient, type, component, "ambient value");
             if (provided != null) return provided;
-            if (type.isInstance(this)) return this;
+            if (type == Weft.class) return weft;
         }
         Class<?> target = bound(type, dependency.qualifier());
         if (target != null && registry.parameters().containsKey(target)) return instance(target);

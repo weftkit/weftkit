@@ -12,6 +12,7 @@ import org.weftkit.wiring.Requires;
 import org.weftkit.wiring.Singleton;
 import org.weftkit.wiring.StaticHolder;
 import org.weftkit.wiring.Wired;
+import org.weftkit.wiring.runtime.Weft;
 import org.weftkit.wiring.runtime.WeftLoader;
 
 public final class Sample {
@@ -29,9 +30,24 @@ public final class Sample {
         public boolean lazyThrowOnLoad = false;
         public boolean lazyNullProduct = false;
         public int flagValue;
+        // Handed over by the tests, standing in for a plugin main passing the loader on
+        public WeftLoader loader;
     }
 
     public static final class Widget {}
+
+    @Wired
+    public static final class WeftUser {
+        private final Weft weft;
+
+        public WeftUser(Weft weft) {
+            this.weft = weft;
+        }
+
+        public Weft weft() {
+            return weft;
+        }
+    }
 
     @SuppressWarnings("deprecation")
     @StaticHolder
@@ -180,19 +196,6 @@ public final class Sample {
     public interface Cache {}
 
     @Wired
-    public static final class LoaderUser {
-        private final WeftLoader loader;
-
-        public LoaderUser(WeftLoader loader) {
-            this.loader = loader;
-        }
-
-        public WeftLoader loader() {
-            return loader;
-        }
-    }
-
-    @Wired
     public static final class Tuner {
         private final Optional<Widget> widget;
         private final Optional<Cache> cache;
@@ -334,17 +337,17 @@ public final class Sample {
     @Wired
     @Singleton
     public static final class SelfProvider implements Loader {
-        private final WeftLoader loader;
+        private final Probe probe;
         private final Gadget gadget = new Gadget();
         public Gadget observed;
 
-        public SelfProvider(WeftLoader loader) {
-            this.loader = loader;
+        public SelfProvider(Probe probe) {
+            this.probe = probe;
         }
 
         public boolean load() {
             // Resolve a fresh component that needs our own product during our own load hook
-            observed = loader.create(GadgetHolder.class).gadget();
+            observed = probe.loader.create(GadgetHolder.class).gadget();
             return true;
         }
 
@@ -486,18 +489,16 @@ public final class Sample {
     @Wired
     @Singleton(lazy = true)
     public static final class Chain implements Loader {
-        private final WeftLoader loader;
         private final Probe probe;
 
-        public Chain(WeftLoader loader, Probe probe) {
-            this.loader = loader;
+        public Chain(Probe probe) {
             this.probe = probe;
         }
 
         public boolean load() {
             probe.loads.add("Chain");
             // Materialize another lazy singleton from inside the load hook
-            loader.create(FrostUser.class);
+            probe.loader.create(FrostUser.class);
             return true;
         }
 

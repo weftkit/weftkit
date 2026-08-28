@@ -43,6 +43,19 @@ class WiredProcessorTest {
     }
 
     @Test
+    void rejectsWeftLoaderDependencies() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Grabby",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.runtime.WeftLoader;",
+                        "@Wired public final class Grabby { public Grabby(WeftLoader loader) {} }"));
+        assertThat(compilation).hadErrorContaining("WeftLoader is not injectable");
+    }
+
+    @Test
     void suppressesUncheckedOnlyForParameterizedCasts() {
         Compilation compilation = compile(
                 registry(),

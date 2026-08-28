@@ -14,11 +14,14 @@ import org.weftkit.wiring.processor.compiler.Mirrors;
 import org.weftkit.wiring.processor.model.Component;
 import org.weftkit.wiring.processor.model.Parameter;
 import org.weftkit.wiring.processor.model.WiringModel;
+import org.weftkit.wiring.runtime.WeftLoader;
 
 // Resolves every constructor parameter against the graph and records the interface bindings the
 // generators read. Only external types can arrive as explicit arguments, so anything declared in
 // this build must resolve here
 final class DependencyRule extends GraphRule {
+
+    private static final String WEFT_LOADER = WeftLoader.class.getCanonicalName();
 
     DependencyRule(WiringModel model, Mirrors mirrors, Diagnostics diagnostics) {
         super(model, mirrors, diagnostics);
@@ -37,6 +40,10 @@ final class DependencyRule extends GraphRule {
     }
 
     private void validateParameter(Parameter parameter, Element anchor) {
+        if (parameter.erasedClass().equals(WEFT_LOADER)) {
+            diagnostics.error(anchor, "WeftLoader is not injectable, inject Weft to enumerate components by supertype");
+            return;
+        }
         if (model.isComponent(parameter.erasedClass())) {
             if (!parameter.qualifier().isEmpty())
                 diagnostics.error(
