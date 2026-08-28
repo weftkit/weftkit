@@ -1,0 +1,10 @@
+name: PlayerHomes
+version: 1.0.0
+main: org.weftkit.examples.homes.HomesPlugin
+api-version: "1.20"
+description: Per-player homes with /sethome and /home, wired by weftkit.
+commands:
+  sethome:
+    description: Set your home to where you stand
+  home:
+    description: Teleport to your home

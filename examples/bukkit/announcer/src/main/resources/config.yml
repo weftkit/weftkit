@@ -1,0 +1,3 @@
+# Toggles for the feature flagged announcements, read by ConfigFlags.
+flags:
+  seasonal-broadcast: true

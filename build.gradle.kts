@@ -3,6 +3,12 @@ plugins {
     alias(libs.plugins.maven.publish) apply false
 }
 
+tasks.register("buildExamples") {
+    group = "build"
+    description = "Builds the example plugins in examples/."
+    dependsOn(gradle.includedBuilds.map { it.task(":build") })
+}
+
 subprojects {
     apply(plugin = "java-library")
     apply(plugin = "jacoco")

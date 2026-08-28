@@ -13,3 +13,7 @@ include(
     "weftkit-processor",
     "weftkit-bukkit",
 )
+
+includeBuild("examples/bukkit/join-leave-messages")
+includeBuild("examples/bukkit/player-homes")
+includeBuild("examples/bukkit/announcer")

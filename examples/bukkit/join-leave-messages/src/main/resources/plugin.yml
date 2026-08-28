@@ -1,0 +1,5 @@
+name: JoinLeaveMessages
+version: 1.0.0
+main: org.weftkit.examples.joinleave.JoinLeavePlugin
+api-version: "1.20"
+description: Replaces the join and leave broadcasts, wired by weftkit.

@@ -1,0 +1,5 @@
+name: Announcer
+version: 1.0.0
+main: org.weftkit.examples.announcer.AnnouncerPlugin
+api-version: "1.20"
+description: Rotating server broadcasts contributed by wired components, run by a weftkit module.
