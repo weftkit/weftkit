@@ -9,6 +9,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
+import org.weftkit.wiring.ModuleSettings;
 import org.weftkit.wiring.processor.compiler.Diagnostics;
 import org.weftkit.wiring.processor.compiler.Mirrors;
 import org.weftkit.wiring.processor.model.Component;
@@ -68,8 +69,14 @@ final class DependencyRule extends GraphRule {
                     anchor,
                     "Ambiguous dependency " + parameter.erasedClass() + ", implemented by "
                             + String.join(", ", implementations));
-        else if (!parameter.optional())
+        else if (!parameter.optional() && !moduleSettings(parameter))
             diagnostics.error(anchor, "Dependency must be @Wired or a @Provides product: " + parameter.erasedClass());
+    }
+
+    // An unimplemented @ModuleSettings dependency is backed by a generated default in SettingsRule
+    private boolean moduleSettings(Parameter parameter) {
+        TypeElement element = mirrors.typeElement(parameter.erasedClass());
+        return element != null && element.getAnnotation(ModuleSettings.class) != null;
     }
 
     // External abstractions may arrive as explicit arguments, so bind only when a single

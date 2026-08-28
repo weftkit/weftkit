@@ -76,6 +76,13 @@ public class RegistryGenerator {
 
     public void write(ProcessingEnvironment processingEnv, Element... originating) {
         writeFile(processingEnv, registryPackage, centralType(originating), "");
+        model.settingsDefaults()
+                .forEach((settings, defaults) -> writeFile(
+                        processingEnv,
+                        registryPackage,
+                        defaultsType(settings, defaults, originating),
+                        "All-defaults implementation backing $L where no implementation is wired",
+                        settings));
         fragments.byPackage().forEach((packageName, fragment) -> {
             String name = packageName + "." + REGISTRY_NAME;
             if (processingEnv.getElementUtils().getTypeElement(name) != null) {
@@ -219,6 +226,15 @@ public class RegistryGenerator {
         }
         type.addMethod(
                 MethodSpec.constructorBuilder().addModifiers(Modifier.PRIVATE).build());
+        for (Element element : originating) type.addOriginatingElement(element);
+        return type.build();
+    }
+
+    private TypeSpec defaultsType(String settings, String defaults, Element... originating) {
+        TypeSpec.Builder type = TypeSpec.classBuilder(defaults.substring(defaults.lastIndexOf('.') + 1))
+                .addModifiers(Modifier.FINAL)
+                .addSuperinterface(ClassName.bestGuess(settings))
+                .addAnnotation(generated());
         for (Element element : originating) type.addOriginatingElement(element);
         return type.build();
     }

@@ -25,6 +25,8 @@ public class WiringModel {
 
     private final List<String> modules = new ArrayList<>();
 
+    private final Map<String, String> settingsDefaults = new TreeMap<>();
+
     private final Map<String, List<String>> dependencyCache = new HashMap<>();
 
     public void addComponent(String component, Component definition) {
@@ -58,6 +60,15 @@ public class WiringModel {
 
     public boolean isModule(String type) {
         return modules.contains(type);
+    }
+
+    /** Records a generated settings implementation, keyed by its {@code @ModuleSettings} interface. */
+    public void addSettingsDefault(String settings, String implementation) {
+        settingsDefaults.put(settings, implementation);
+    }
+
+    public Map<String, String> settingsDefaults() {
+        return Collections.unmodifiableMap(settingsDefaults);
     }
 
     public void markHidden(String type, String packageName) {

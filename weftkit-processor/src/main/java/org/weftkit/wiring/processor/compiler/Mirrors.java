@@ -154,6 +154,11 @@ public final class Mirrors {
         return singleton != null && singleton.lazy();
     }
 
+    /** All methods of the type, inherited included. */
+    public List<ExecutableElement> allMethods(TypeElement type) {
+        return ElementFilter.methodsIn(processingEnv.getElementUtils().getAllMembers(type));
+    }
+
     public boolean isSubtype(TypeElement type, String supertype) {
         TypeMirror mirror = mirror(supertype);
         return mirror != null && assignable(type.asType(), mirror);

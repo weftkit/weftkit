@@ -208,6 +208,66 @@ class WiredProcessorTest {
     }
 
     @Test
+    void generatesDefaultsForUnwiredModuleSettings() {
+        Compilation compilation = compile(moduleRegistry(), component(), settings(), settingsModule());
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftSettingsDefaults")
+                .contentsAsUtf8String()
+                .contains("implements Settings");
+    }
+
+    @Test
+    void wiredSettingsImplementationOverridesTheDefaults() {
+        Compilation compilation = compile(
+                moduleRegistry(),
+                component(),
+                settings(),
+                settingsModule(),
+                JavaFileObjects.forSourceLines(
+                        "test.Impl",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "@Wired public final class Impl implements Settings { public Impl() {} }"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .doesNotContain("WeftSettingsDefaults");
+    }
+
+    @Test
+    void rejectsSettingsWithAbstractMethodsWhenNoImplementationIsWired() {
+        Compilation compilation = compile(
+                moduleRegistry(),
+                component(),
+                JavaFileObjects.forSourceLines(
+                        "test.Settings",
+                        "package test;",
+                        "import org.weftkit.wiring.ModuleSettings;",
+                        "@ModuleSettings public interface Settings { int limit(); }"),
+                settingsModule());
+        assertThat(compilation).hadErrorContaining("non-default methods");
+    }
+
+    private static JavaFileObject settings() {
+        return JavaFileObjects.forSourceLines(
+                "test.Settings",
+                "package test;",
+                "import org.weftkit.wiring.ModuleSettings;",
+                "@ModuleSettings public interface Settings { default int limit() { return 3; } }");
+    }
+
+    private static JavaFileObject settingsModule() {
+        return JavaFileObjects.forSourceLines(
+                "test.Mod",
+                "package test;",
+                "import org.weftkit.wiring.WeftModule;",
+                "@WeftModule(id = \"test:mod\")",
+                "public final class Mod { public Mod(Settings settings) {} }");
+    }
+
+    @Test
     void rejectsWeftLoaderDependencies() {
         Compilation compilation = compile(
                 registry(),
