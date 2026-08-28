@@ -25,6 +25,21 @@ contributed by the adapter at compile time, and third-party ones are declared on
 `@Registry(modules = SomeModule.class)`, next to them. Nothing is discovered by runtime classpath
 scanning, so neither minimization nor relocation can strip or hide a module.
 
+weftkit is [Apache-2.0](https://github.com/weftkit/weftkit/blob/main/LICENSE), so a fat jar that
+bundles it must ship weftkit's license, and any other bundled library's alongside it. weftkit's
+bStats integration, for one, adds bStats' MIT license. These are separate from your plugin's own
+license, so give each its own path rather than a shared `META-INF/LICENSE`, where one would
+overwrite another. Keep the third-party licenses under `META-INF/licenses/`:
+
+```kotlin
+tasks.shadowJar {
+    from("licenses") { into("META-INF/licenses") }
+}
+```
+
+Here `licenses/` holds a copy of each bundled dependency's license. Build the jar and confirm they
+survived, since `minimize()` and merge rules can drop loose files.
+
 ## The libraries alternative
 
 Plugins with a compatibility floor of 1.16.5 or newer can skip shading and declare weftkit in
