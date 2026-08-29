@@ -4,8 +4,17 @@
   </a>
 </p>
 
+# weftkit runs your Bukkit plugin's lifecycle
+
 <p align="center">
-  Lifecycle management for Bukkit plugins, wired at compile time.
+  Lifecycle and dependency injection framework for Bukkit Minecraft plugins, wired at compile time.
+</p>
+
+<p align="center">
+  <a href="https://github.com/weftkit/weftkit/actions/workflows/build.yml"><img src="https://github.com/weftkit/weftkit/actions/workflows/build.yml/badge.svg" alt="Build"></a>
+  <a href="https://central.sonatype.com/artifact/org.weftkit/weftkit-bukkit"><img src="https://img.shields.io/maven-central/v/org.weftkit/weftkit-bukkit?label=Maven%20Central" alt="Maven Central"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License: Apache 2.0"></a>
+  <img src="https://img.shields.io/badge/Java-17%2B-orange.svg" alt="Java 17+">
 </p>
 
 > [!NOTE]
@@ -30,9 +39,9 @@ during compilation:
 dependencies {
     compileOnly("org.spigotmc:spigot-api:1.20.4-R0.1-SNAPSHOT")
 
-    implementation("org.weftkit:weftkit-bukkit:0.3.0")
-    annotationProcessor("org.weftkit:weftkit-processor:0.3.0")
-    annotationProcessor("org.weftkit:weftkit-bukkit:0.3.0")
+    implementation("org.weftkit:weftkit-bukkit:0.6.0")
+    annotationProcessor("org.weftkit:weftkit-processor:0.6.0")
+    annotationProcessor("org.weftkit:weftkit-bukkit:0.6.0")
 }
 ```
 

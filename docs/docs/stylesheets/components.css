@@ -1,0 +1,256 @@
+/* Terminal */
+
+.wk-terminal {
+  --wk-term-bg: #16161f;
+  --wk-term-chrome: #23232f;
+  --wk-term-fg: #e2e2ea;
+  --md-code-bg-color: var(--wk-term-bg);
+  --md-code-fg-color: var(--wk-term-fg);
+  margin: 1.4rem 0;
+}
+
+.wk-terminal .highlight {
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 0.4rem 1.2rem rgba(0, 0, 0, 0.25);
+}
+
+.wk-terminal .highlight::before {
+  content: "";
+  display: block;
+  height: 1.3rem;
+  background-color: var(--wk-term-chrome);
+  background-image:
+    radial-gradient(circle at 0.75rem 0.65rem, #ff5f56 0.18rem, transparent 0.22rem),
+    radial-gradient(circle at 1.45rem 0.65rem, #ffbd2e 0.18rem, transparent 0.22rem),
+    radial-gradient(circle at 2.15rem 0.65rem, #27c93f 0.18rem, transparent 0.22rem);
+}
+
+.wk-terminal .highlight pre {
+  margin: 0;
+}
+
+.wk-terminal code {
+  border-radius: 0;
+}
+
+.wk-terminal .md-code__nav {
+  background-color: var(--wk-term-bg);
+}
+
+.wk-terminal :hover > .md-code__nav {
+  background-color: var(--wk-term-chrome);
+}
+
+.wk-terminal .md-code__button {
+  color: var(--wk-term-fg);
+}
+
+.wk-terminal .md-code__button:hover {
+  color: var(--md-accent-fg-color);
+}
+
+.wk-terminal .wk-term-error {
+  color: #ff5f56;
+}
+
+.wk-terminal .wk-term-caret {
+  color: #ffbd2e;
+}
+
+/* Rendered dependency graph */
+
+.md-typeset figure.wk-graph {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.8rem 2rem;
+  width: 100%;
+  margin: 1.8rem auto;
+}
+
+.md-typeset figure.wk-graph > p {
+  flex: 1 1 26rem;
+  min-width: 0;
+  margin: 0;
+}
+
+.md-typeset figure.wk-graph img {
+  max-width: 100%;
+  height: auto;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.md-typeset figure.wk-graph figcaption {
+  flex: 1 1 13rem;
+  margin-top: 0.6rem;
+  font-size: 0.76rem;
+  font-style: normal;
+  line-height: 1.6;
+  text-align: left;
+  color: var(--md-default-fg-color--light);
+}
+
+.md-typeset figure.wk-graph figcaption strong {
+  color: var(--md-default-fg-color);
+}
+
+@media screen and (min-width: 45em) {
+  .md-typeset figure.wk-graph figcaption {
+    order: -1;
+    margin-top: 0;
+  }
+}
+
+[data-md-color-scheme="slate"] .md-typeset figure.wk-graph img {
+  padding: 0.9rem 0.6rem;
+  border-radius: 0.4rem;
+  background: #f5f5f7;
+}
+
+/* FAQ */
+
+.md-typeset .admonition.question,
+.md-typeset details.question {
+  border-color: var(--md-primary-fg-color--light);
+}
+
+.md-typeset .admonition.question:focus-within,
+.md-typeset details.question:focus-within {
+  box-shadow: 0 0 0 0.2rem var(--wk-wash-indigo);
+}
+
+.md-typeset .question > .admonition-title,
+.md-typeset .question > summary {
+  background-color: var(--wk-wash-indigo);
+}
+
+.md-typeset .question > .admonition-title::before,
+.md-typeset .question > summary::before {
+  background-color: var(--md-primary-fg-color--light);
+}
+
+.md-typeset .question > .admonition-title::after,
+.md-typeset .question > summary::after {
+  color: var(--md-primary-fg-color--light);
+}
+
+/* Cards */
+
+.md-typeset .grid.cards {
+  display: block;
+}
+
+.md-typeset .grid.cards > ul {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin: 1.4rem 0;
+  padding: 0;
+}
+
+.md-typeset .grid.cards.wk-cards-3 > ul {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media screen and (max-width: 44.9375em) {
+  .md-typeset .grid.cards > ul,
+  .md-typeset .grid.cards.wk-cards-3 > ul {
+    grid-template-columns: 1fr;
+  }
+}
+
+.md-typeset .grid.cards > ul > li {
+  position: relative;
+  margin: 0;
+  padding: 1.1rem 1.3rem 1.3rem;
+  border: 0.05rem solid var(--md-default-fg-color--lightest);
+  border-radius: .2rem;
+  background-color: var(--md-default-bg-color);
+  box-shadow: 0 0.15rem 0.5rem rgba(30, 27, 75, 0.06);
+  transition: transform 0.2s ease;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .grid.cards > ul > li {
+  box-shadow: 0 0.15rem 0.5rem rgba(0, 0, 0, 0.22);
+}
+
+.md-typeset .grid.cards > ul > li::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  box-shadow: var(--wk-card-shadow);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.md-typeset .grid.cards > ul > li::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 0.1rem;
+  background: var(--md-primary-fg-color--light);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+
+.md-typeset .grid.cards > ul > li strong > a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.md-typeset .grid.cards > ul > li:hover,
+.md-typeset .grid.cards > ul > li:focus-within {
+  transform: translateY(-0.2rem);
+}
+
+.md-typeset .grid.cards > ul > li:hover::before,
+.md-typeset .grid.cards > ul > li:hover::after,
+.md-typeset .grid.cards > ul > li:focus-within::before,
+.md-typeset .grid.cards > ul > li:focus-within::after {
+  opacity: 1;
+}
+
+.md-typeset .grid.cards .twemoji.lg {
+  color: var(--md-primary-fg-color);
+}
+
+.md-typeset .grid.cards hr {
+  width: 100%;
+  height: 0.1rem;
+  margin: 0.5rem 0 0.7rem;
+  border: none;
+  background: var(--md-default-fg-color--lightest);
+  transform: scaleX(0.18);
+  transform-origin: left;
+  transition: transform 0.3s ease, background-color 0.3s ease;
+}
+
+.md-typeset .grid.cards > ul > li:hover hr,
+.md-typeset .grid.cards > ul > li:focus-within hr {
+  transform: scaleX(1);
+  background-color: var(--md-accent-fg-color);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .md-typeset .grid.cards > ul > li,
+  .md-typeset .grid.cards > ul > li::before,
+  .md-typeset .grid.cards > ul > li::after,
+  .md-typeset .grid.cards hr {
+    transition: none;
+  }
+  .md-typeset .grid.cards hr {
+    transform: scaleX(1);
+  }
+}

@@ -3,6 +3,8 @@
 {% block htmltitle %}
   {% if page and page.is_homepage %}
     <title>{{ config.site_name }} - Bukkit plugin lifecycle and dependency injection</title>
+  {% elif page and page.meta and page.meta.title %}
+    <title>{{ page.meta.title }} - {{ config.site_name }}</title>
   {% elif page and page.title %}
     <title>{{ page.title }} - {{ config.site_name }}</title>
   {% else %}
@@ -15,9 +17,11 @@
     <meta name="robots" content="{{ page.meta.robots }}">
   {% endif %}
   {% if page and page.is_homepage %}
+    {% set wk_title = config.site_name %}
     {% set og_title = config.site_name %}
   {% else %}
-    {% set og_title = page.title ~ " - " ~ config.site_name %}
+    {% set wk_title = page.meta.title if page.meta and page.meta.title else page.title %}
+    {% set og_title = wk_title ~ " - " ~ config.site_name %}
   {% endif %}
   {% if page and page.meta and page.meta.description %}
     {% set og_description = page.meta.description %}
@@ -25,8 +29,11 @@
     {% set og_description = config.site_description %}
   {% endif %}
   {% set og_image = config.site_url ~ "assets/logo/png/weftkit-card.png" %}
+  <link rel="preload" href="{{ 'assets/fonts/Inter/Inter.woff2' | url }}" as="font" type="font/woff2" crossorigin>
   <link rel="apple-touch-icon" sizes="180x180" href="{{ 'assets/favicon/apple-touch-icon.png' | url }}">
-  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#2e313e" media="(prefers-color-scheme: dark)">
+  <meta property="og:type" content="{% if page and page.is_homepage %}website{% else %}article{% endif %}">
   <meta property="og:site_name" content="{{ config.site_name }}">
   <meta property="og:title" content="{{ og_title }}">
   <meta property="og:description" content="{{ og_description }}">
@@ -36,6 +43,9 @@
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="{{ config.site_name }} wordmark">
+  {% if page and not page.is_homepage and page.meta and page.meta.iso_mdate %}
+    <meta property="article:modified_time" content="{{ page.meta.iso_mdate }}">
+  {% endif %}
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="{{ og_title }}">
   <meta name="twitter:description" content="{{ og_description }}">
@@ -51,7 +61,24 @@
         "url": "{{ config.site_url }}",
         "name": "{{ config.site_name }}",
         "description": "{{ config.site_description }}",
-        "inLanguage": "en"
+        "inLanguage": "en",
+        "publisher": { "@id": "{{ config.site_url }}#organization" },
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "{{ config.site_url }}?q={search_term_string}"
+          },
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@type": "Organization",
+        "@id": "{{ config.site_url }}#organization",
+        "name": "{{ config.site_name }}",
+        "url": "{{ config.site_url }}",
+        "logo": "{{ config.site_url }}assets/logo/png/weftkit-card.png",
+        "sameAs": ["{{ config.repo_url }}"]
       },
       {
         "@type": "SoftwareSourceCode",
@@ -59,12 +86,44 @@
         "description": "{{ config.site_description }}",
         "url": "{{ config.site_url }}",
         "codeRepository": "{{ config.repo_url }}",
+        "version": "{{ config.extra.weftkit_version }}",
         "programmingLanguage": "Java",
         "runtimePlatform": "Java",
         "license": "https://www.apache.org/licenses/LICENSE-2.0",
         "keywords": "Bukkit, Spigot, Paper, Minecraft plugin, dependency injection, lifecycle framework",
         "sameAs": "{{ config.repo_url }}"
-      }
+      }{% if page and not page.is_homepage %},
+      {
+        "@type": "TechArticle",
+        "headline": {{ wk_title | tojson }},
+        "description": {{ (page.meta.description if page.meta and page.meta.description else config.site_description) | tojson }},
+        "url": "{{ page.canonical_url }}",
+        "inLanguage": "en",
+        "author": { "@id": "{{ config.site_url }}#organization" },
+        "publisher": { "@id": "{{ config.site_url }}#organization" }{% if page.meta and page.meta.iso_mdate %},
+        "dateModified": "{{ page.meta.iso_mdate }}"{% endif %}
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "{{ config.site_url }}" },
+          { "@type": "ListItem", "position": 2, "name": {{ wk_title | tojson }} }
+        ]
+      }{% endif %}{% if page and page.is_homepage %},
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {% for item in config.extra.faq %}{% if not loop.first %},{% endif %}
+          {
+            "@type": "Question",
+            "name": {{ item.q | tojson }},
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": {{ item.schema | tojson }}
+            }
+          }{% endfor %}
+        ]
+      }{% endif %}
     ]
   }
   </script>
@@ -73,8 +132,26 @@
 {% block scripts %}
   {{ super() }}
   <script>
-    document.querySelector('.md-search[role="dialog"]')?.setAttribute("aria-label", "Search");
-    document.querySelector('.md-dialog[role="alertdialog"]')?.setAttribute("aria-label", "Notification");
-    document.querySelector('.md-progress[role="progressbar"]')?.setAttribute("aria-label", "Page loading");
+    if (!window.__wkAriaLabels) {
+      window.__wkAriaLabels = true;
+      document.querySelector('.md-search[role="dialog"]')?.setAttribute("aria-label", "Search");
+      document.querySelector('.md-dialog[role="alertdialog"]')?.setAttribute("aria-label", "Notification");
+      document.querySelector('.md-progress[role="progressbar"]')?.setAttribute("aria-label", "Page loading");
+    }
+
+    if (!window.__wkSearchShortcut) {
+      window.__wkSearchShortcut = true;
+      document.addEventListener("keydown", function (event) {
+        if (event.key !== "/" && event.key !== "s") return;
+        if (!document.querySelector(".wk-hero-gradient")) return;
+        var focused = document.activeElement;
+        if (focused && /^(input|textarea|select)$/i.test(focused.tagName)) return;
+        var toggle = document.getElementById("__search");
+        if (toggle && !toggle.checked) {
+          event.preventDefault();
+          document.querySelector('.md-header__button[for="__search"]')?.click();
+        }
+      }, true);
+    }
   </script>
 {% endblock %}

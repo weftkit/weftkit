@@ -1,4 +1,5 @@
 ---
+title: "Internal components: package-private injection"
 description: weftkit wires package-private classes, so a plugin's internals stay internal while still being injected, tested, and lifecycle-managed.
 ---
 
@@ -75,3 +76,9 @@ visible at a glance.
 
 If an incremental build ever leaves the central registry and a package holder out of sync, the
 plugin fails fast at class initialization with `Stale weftkit registry, run a clean build`.
+
+## Related
+
+- [Components](components.md): the wiring model these rules build on
+- [Testing](testing.md): same-package tests for package-private components
+- [Annotations reference](annotations.md): every annotation's exact contract

@@ -1,5 +1,6 @@
 ---
-description: Install weftkit from Maven Central, annotate your plugin main with @Registry, and boot a wired Bukkit plugin in a few lines.
+title: "Getting started: a first wired Bukkit plugin"
+description: Install weftkit from Maven Central, annotate your plugin main with @Registry, and boot a wired Bukkit plugin in a few lines, full Gradle build included.
 ---
 
 # Getting started
@@ -24,9 +25,9 @@ repositories {
 dependencies {
     compileOnly("org.spigotmc:spigot-api:1.20.4-R0.1-SNAPSHOT")
 
-    implementation("org.weftkit:weftkit-bukkit:0.6.0")
-    annotationProcessor("org.weftkit:weftkit-processor:0.6.0")
-    annotationProcessor("org.weftkit:weftkit-bukkit:0.6.0")
+    implementation("org.weftkit:weftkit-bukkit:{{ weftkit_version }}")
+    annotationProcessor("org.weftkit:weftkit-processor:{{ weftkit_version }}")
+    annotationProcessor("org.weftkit:weftkit-bukkit:{{ weftkit_version }}")
 }
 ```
 
@@ -117,8 +118,8 @@ malformed listener stops the build.
 
 ## Next steps
 
-- The [examples](https://github.com/weftkit/weftkit/tree/main/examples) are complete runnable
-  plugins, from the smallest wired listener to a module with feature flags.
+- The [examples](examples/index.md) are complete runnable plugins, from the smallest wired
+  listener to a module with feature flags, each documented class by class.
 - [Components](components.md) covers injection, singletons, products, and reaching your objects.
 - [Lifecycle](lifecycle.md) covers startup, shutdown, and load order.
 - [Listeners and commands](listeners-and-commands.md) covers Bukkit event and command wiring.

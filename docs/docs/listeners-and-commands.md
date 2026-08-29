@@ -1,8 +1,14 @@
 ---
-description: Bukkit listeners register themselves during enable, and commands are built through the loader and attached in onWeftEnable.
+title: "Registering Bukkit listeners and commands"
+description: How weftkit registers Bukkit listeners automatically during enable, and how commands are built through the loader and attached in onWeftEnable.
 ---
 
 # Listeners and commands
+
+Event listeners and commands are where a plugin meets the server, and they are where manual
+wiring usually breaks first: a listener that never gets registered fails silently, and a
+command handler built before its dependencies exist fails loudly. weftkit removes the first
+problem entirely and keeps the second one ordered, so this page covers both halves.
 
 ## Listeners
 
@@ -30,6 +36,10 @@ final class JoinListener implements Listener {
     }
 }
 ```
+
+There is no registration call to forget and none to clean up. When the plugin enables, the
+bundled listener module collects every wired `Listener` from the graph and registers it with
+the server; when the plugin disables, Bukkit drops the registrations along with the plugin.
 
 ## Commands
 
@@ -69,7 +79,10 @@ commands:
     description: Greet the sender
 ```
 
-The [join-leave-messages example](https://github.com/weftkit/weftkit/tree/main/examples/bukkit/join-leave-messages)
-is a runnable plugin around one wired listener, and
-[player-homes](https://github.com/weftkit/weftkit/tree/main/examples/bukkit/player-homes) wires
-two commands this way.
+## Related
+
+- [join-leave-messages](examples/join-leave-messages.md): a runnable plugin around one wired listener
+- [player-homes](examples/player-homes.md): wires two commands through the loader this way
+- [Components](components.md): constructor injection and the rules behind `@Wired`
+- [Modules and feature flags](modules.md): the machinery that registers listeners, and how to gate one behind a flag
+- [Lifecycle](lifecycle.md): what has already happened by the time `onWeftEnable` runs

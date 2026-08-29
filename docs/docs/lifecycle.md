@@ -1,4 +1,5 @@
 ---
+title: "Plugin lifecycle: load order, hooks, and shutdown"
 description: How weftkit starts a Bukkit plugin in dependency order, tears it down in reverse, renders the dependency graph, and why it has no reload.
 ---
 
@@ -104,12 +105,22 @@ loader.loadTimings().forEach((type, duration) ->
 ```
 
 The processor also writes the full dependency graph as `weftkit-graph.dot` next to the generated
-registry sources (under `build/generated/sources/annotationProcessor`). Render it with Graphviz
-to see your plugin's wiring, where every edge points at a dependency:
+registry sources (under `build/generated/sources/annotationProcessor`). Render it with
+[Graphviz](https://graphviz.org/) to see your plugin's wiring, where every edge points at a
+dependency:
 
 ```sh
 dot -Tsvg weftkit-graph.dot -o weftkit-graph.svg
 ```
+
+The [player-homes example](examples/player-homes.md) renders to this, its two commands sharing
+the `HomeStore` singleton, which loads homes through the package-private `HomesFile`, alongside
+the bundled listener and metrics modules:
+
+<figure class="wk-graph" markdown>
+![Dependency graph of the player-homes plugin. HomeCommand and SetHomeCommand, both amber singletons, point at the HomeStore singleton, which points at the dashed-bordered package-private HomesFile. The teal MetricsModule points at a plain WeftMetricsSettingsDefaults, and the teal ListenerModule stands alone.](assets/diagrams/weftkit-graph.svg)
+<figcaption>The generated <code>weftkit-graph.dot</code> for the player-homes example, rendered with Graphviz.</figcaption>
+</figure>
 
 The nodes and edges carry a small visual vocabulary:
 
@@ -148,6 +159,12 @@ public final class Metrics implements Loader {
 }
 ```
 
-The [player-homes example](https://github.com/weftkit/weftkit/tree/main/examples/bukkit/player-homes)
-runs this cycle end to end: it loads homes from disk in `load`, aborts startup on a corrupt
-file, and saves in `unload`.
+The [player-homes example](examples/player-homes.md) runs this cycle end to end: it loads
+homes from disk in `load`, aborts startup on a corrupt file, and saves in `unload`.
+
+## Related
+
+- [Components](components.md): what gets loaded, and how the order is decided
+- [Modules and feature flags](modules.md): module activation inside the lifecycle
+- [Troubleshooting](troubleshooting.md): the errors the processor raises for broken graphs
+- [player-homes](examples/player-homes.md): the lifecycle end to end in a runnable plugin

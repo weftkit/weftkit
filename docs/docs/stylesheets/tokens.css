@@ -1,0 +1,53 @@
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src:
+    url("../assets/fonts/Inter/Inter.woff2") format("woff2-variations"),
+    url("../assets/fonts/Inter/Inter.ttf") format("truetype-variations");
+}
+
+:root {
+  --md-text-font: "Inter";
+
+  --md-primary-fg-color: #4F46E5;
+  --md-primary-fg-color--light: #6366F1;
+  --md-primary-fg-color--dark: #4338CA;
+  --md-accent-fg-color: #F59E0B;
+  --md-footer-fg-color--light: hsla(0, 0%, 100%, 0.87);
+  --md-footer-fg-color--lighter: hsla(0, 0%, 100%, 0.7);
+
+  --wk-brand-weft: #3730A3;
+  --wk-brand-kit: #D97706;
+
+  --wk-wash-indigo: rgba(99, 102, 241, 0.10);
+  --wk-wash-amber: rgba(245, 158, 11, 0.08);
+  --wk-card-shadow: 0 0.5rem 1.4rem rgba(79, 70, 229, 0.18);
+  --wk-rule: rgba(30, 27, 75, 0.18);
+  --wk-ground: #e6e6f1;
+  --wk-sheet-shadow:
+    0 0 1.4rem rgba(30, 27, 75, 0.05),
+    0 0.6rem 1.6rem rgba(30, 27, 75, 0.07),
+    0 2rem 5rem rgba(30, 27, 75, 0.10);
+  --wk-weave: linear-gradient(
+    90deg,
+    transparent,
+    var(--md-primary-fg-color--light) 25%,
+    var(--md-accent-fg-color) 75%,
+    transparent
+  );
+}
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #6366F1;
+  --md-accent-fg-color: #FBBF24;
+  --wk-brand-weft: #818CF8;
+  --wk-brand-kit: #FBBF24;
+  --wk-rule: rgba(255, 255, 255, 0.20);
+  --wk-ground: #16171f;
+  --wk-sheet-shadow:
+    0 0 1.4rem rgba(0, 0, 0, 0.28),
+    0 0.6rem 1.6rem rgba(0, 0, 0, 0.30),
+    0 2rem 5rem rgba(0, 0, 0, 0.34);
+}

@@ -1,4 +1,5 @@
 ---
+title: "Shading and distributing a Bukkit plugin jar"
 description: How to package a weftkit plugin - shading and relocation, the libraries alternative, and why plugins with an API should publish it as a separate artifact.
 ---
 
@@ -47,7 +48,7 @@ Plugins with a compatibility floor of 1.16.5 or newer can skip shading and decla
 
 ```yaml
 libraries:
-  - org.weftkit:weftkit-bukkit:0.6.0
+  - org.weftkit:weftkit-bukkit:{{ weftkit_version }}
 ```
 
 - No weftkit classes in your jar, no relocation.
@@ -66,3 +67,10 @@ The clean shape is an interface in the API artifact, implemented by a wired comp
 plugin and registered with Bukkit's `ServicesManager` during load, so dependents reach the live
 instance through the interface alone. Your API service can stay package-private, see
 [internal components](internal-components.md).
+
+## Related
+
+- [Getting started](getting-started.md): the compile-time side of the build
+- [Modules](modules.md): publishing a module for other plugins to use
+- [Metrics](metrics.md): what ships in the jar and how to opt out
+- [Examples overview](examples/index.md): complete builds that shade and relocate weftkit

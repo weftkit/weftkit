@@ -1,0 +1,321 @@
+/* Hero */
+
+.wk-hero {
+  position: relative;
+  margin: 0 0 0.6rem;
+  padding: 2.4rem 0 1.1rem;
+  text-align: center;
+}
+
+.wk-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(55, 48, 163, 0.09) 0 1.5px, transparent 1.5px 22px),
+    repeating-linear-gradient(0deg, rgba(217, 119, 6, 0.07) 0 1.5px, transparent 1.5px 22px);
+  -webkit-mask-image: radial-gradient(ellipse 72% 80% at 50% 46%, #000 12%, transparent 72%);
+          mask-image: radial-gradient(ellipse 72% 80% at 50% 46%, #000 12%, transparent 72%);
+}
+
+.wk-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+[data-md-color-scheme="slate"] .wk-hero::before {
+  background-image:
+    repeating-linear-gradient(90deg, rgba(129, 140, 248, 0.07) 0 1.5px, transparent 1.5px 22px),
+    repeating-linear-gradient(0deg, rgba(251, 191, 36, 0.05) 0 1.5px, transparent 1.5px 22px);
+}
+
+.wk-hero h1 img {
+  width: 1.05em;
+  height: 1.05em;
+  margin-right: 0.1em;
+  vertical-align: middle;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.wk-hero h1 {
+  max-width: none;
+  margin: 1.2rem auto 0.8rem;
+  font-size: clamp(1.7rem, 0.9rem + 3vw, 2.2rem);
+  font-weight: 700;
+  line-height: 1.2;
+  text-wrap: balance;
+  color: var(--md-default-fg-color);
+}
+
+.wk-hero .wk-weft {
+  color: var(--wk-brand-weft);
+}
+
+.wk-hero .wk-kit {
+  color: var(--wk-brand-kit);
+}
+
+.wk-hero p {
+  max-width: 36rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.wk-hero .md-button {
+  margin: 0.2rem 0.3rem;
+  padding: 0.55em 1.9em;
+  border-radius: 0.3rem;
+  font-size: 0.8rem;
+}
+
+.wk-hero::after {
+  content: "";
+  display: block;
+  height: 2px;
+  max-width: 22rem;
+  margin: 0 auto;
+  border-radius: 1px;
+  background: var(--wk-weave);
+}
+
+.wk-code {
+  margin: 1.4rem 0;
+  text-align: left;
+}
+
+.wk-code .tabbed-block > p {
+  margin: 0.6rem 0 0;
+  font-size: 0.64rem;
+  color: var(--md-default-fg-color--light);
+}
+
+/* Home page */
+
+body:has(.wk-hero-gradient) {
+  & .md-container {
+    background-color: var(--wk-ground);
+  }
+
+  & .md-nav__title {
+    background: none;
+    box-shadow: none;
+  }
+
+  & .md-main__inner {
+    margin-top: 0;
+    background-color: var(--md-default-bg-color);
+    background-image:
+      radial-gradient(ellipse 60% 80% at 30% 0%, var(--wk-wash-indigo), transparent 70%),
+      radial-gradient(ellipse 60% 80% at 70% 0%, var(--wk-wash-amber), transparent 70%);
+    background-repeat: no-repeat;
+    box-shadow: var(--wk-sheet-shadow);
+  }
+
+  & .md-content {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* 50rem landing width on wide screens, but always keep a side gutter once the
+     full-bleed sheet gets close to the cap, so mid widths never run edge to edge.
+     Only above phone width — on mobile the sheet keeps Material's own thin gutter
+     so the content column isn't boxed in by dead space on both sides. */
+  @media screen and (min-width: 45em) {
+    & .md-content {
+      max-width: min(50rem, 100% - 6rem);
+    }
+  }
+
+  & .md-sidebar--secondary {
+    display: none;
+  }
+
+  & .md-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: none;
+    box-shadow: none;
+    color: var(--md-default-fg-color);
+    pointer-events: none;
+  }
+
+  & .md-header__title,
+  & .md-header .md-logo,
+  & .md-header .md-search {
+    display: none;
+  }
+
+  & .md-header__button[for="__search"] {
+    display: inline;
+  }
+
+  & .md-header__source {
+    display: flex;
+    align-items: center;
+    width: auto;
+    max-width: none;
+    height: 2.4rem;
+    margin: 0 0.2rem 0 0.2rem;
+  }
+
+  & .md-source__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: auto;
+    width: auto;
+    padding: 0.4rem;
+  }
+
+  & .md-source__icon svg {
+    margin: 0;
+    height: 1.2rem;
+    width: auto;
+  }
+
+  & .md-source__repository {
+    display: none;
+  }
+
+  & .md-header__button,
+  & .md-header .md-search,
+  & .md-header__source,
+  & .md-header [data-md-component="palette"] {
+    pointer-events: auto;
+  }
+
+  & .md-header [data-md-component="palette"] {
+    margin-left: auto;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+  }
+
+  & .md-header [data-md-component="palette"]:hover {
+    opacity: 1;
+  }
+
+  & .wk-hero {
+    padding-top: 3.4rem;
+  }
+
+  & .md-typeset h2 {
+    margin-top: 3.2rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--md-default-fg-color);
+  }
+
+  & .md-typeset h2::before {
+    content: "";
+    display: block;
+    width: 2.4rem;
+    height: 0.12rem;
+    margin-bottom: 1rem;
+    border-radius: 1px;
+    background: var(--wk-rule);
+  }
+
+  & .md-typeset .wk-cta-text > h2::before {
+    display: none;
+  }
+
+  & .md-typeset .admonition.note,
+  & .md-typeset details.note {
+    border-color: var(--md-primary-fg-color--light);
+  }
+
+  & .md-typeset .note > .admonition-title {
+    background-color: var(--wk-wash-indigo);
+  }
+
+  & .md-typeset .note > .admonition-title::before {
+    background-color: var(--md-primary-fg-color--light);
+  }
+
+  & .md-typeset .wk-panel {
+    margin: 0;
+  }
+
+  @media screen and (min-width: 76.25em) {
+    & .md-sidebar--primary {
+      display: none;
+    }
+  }
+
+  &:has([data-md-toggle="search"]:checked) .md-header .md-search {
+    display: block;
+  }
+
+  @media screen and (min-width: 60em) {
+    &:has([data-md-toggle="search"]:checked) .md-search__inner {
+      position: fixed;
+      top: 0.6rem;
+      left: 50%;
+      float: none;
+      transform: translateX(-50%);
+      z-index: 10;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    & .md-header [data-md-component="palette"] {
+      transition: none;
+    }
+  }
+}
+
+/* Closing CTA */
+
+.md-typeset .wk-cta {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.2rem 2.5rem;
+  margin: 2.8rem 0 0.5rem;
+  padding-top: 1.8rem;
+}
+
+.md-typeset .wk-cta::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--wk-weave);
+}
+
+.md-typeset .wk-cta-text {
+  flex: 1 1 20rem;
+}
+
+.md-typeset .wk-cta-text > h2:first-child {
+  margin-top: 0;
+}
+
+.md-typeset .wk-cta-text p {
+  margin-bottom: 0;
+  max-width: 32rem;
+}
+
+.md-typeset .wk-cta-actions {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.wk-cta-actions .md-button {
+  margin: 0;
+  padding: 0.55em 1.7em;
+  border-radius: 0.3rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}

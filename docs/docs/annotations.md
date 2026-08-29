@@ -1,5 +1,6 @@
 ---
-description: Reference for every weftkit annotation and the Loader lifecycle interface.
+title: "Annotations reference: @Wired, @Provides, and more"
+description: Reference for every weftkit annotation, from @Registry and @Wired to @Provides and @FeatureFlag, plus the Loader interface and its lifecycle contract.
 ---
 
 # Annotations
@@ -155,3 +156,10 @@ returning `false` aborts startup. On a lazy singleton `load` runs at first mater
 a false return or exception fails only that injection, with the rest of the graph staying
 loaded. `unload` runs on shutdown in reverse creation order. Only singletons may implement
 `Loader`, since a per-injection component would never have its `load` called.
+
+## Related
+
+- [Components](components.md): the annotations in use, with worked examples
+- [Modules and feature flags](modules.md): `@WeftModule` and `@FeatureFlag` in practice
+- [Plugin lifecycle](lifecycle.md): the `Loader` contract inside startup and shutdown
+- [Troubleshooting](troubleshooting.md): the build errors behind each contract

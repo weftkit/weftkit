@@ -1,8 +1,15 @@
 ---
-description: Testing weftkit components - plain unit tests with fakes, package-private components, and running the real graph without a server.
+title: "Testing wired components without a server"
+description: "How to test weftkit components: plain unit tests with fakes, package-private components in same-package tests, and the real graph running without a server."
 ---
 
 # Testing
+
+weftkit is built to stay out of the way under test. Wiring is resolved at compile time and
+injection happens through plain constructors, so components need no framework to be
+constructed, and the whole graph loads and unloads inside a unit test without a Bukkit server.
+This page covers the three levels: testing a component alone, testing package-private
+internals, and running the real graph.
 
 ## Components are plain classes
 
@@ -47,3 +54,10 @@ Two boundaries to know:
 
 An ambient `FeatureFlags` pins [feature flags](modules.md#feature-flags) for a test, since an
 ambient value wins over a wired implementation.
+
+## Related
+
+- [Components](components.md): constructor injection, ambient roots, and optional dependencies
+- [Internal components](internal-components.md): why hiding a component costs no testability
+- [Lifecycle](lifecycle.md): exactly what `load()` and `unload()` run
+- [Modules and feature flags](modules.md): what `Modules.activate` drives in a test

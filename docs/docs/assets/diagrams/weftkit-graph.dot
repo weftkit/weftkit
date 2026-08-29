@@ -1,0 +1,17 @@
+digraph weftkit {
+    rankdir=LR;
+    graph [ranksep=1.1, nodesep=0.28, splines=spline, concentrate=true, bgcolor=transparent];
+    node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11, margin="0.16,0.08", color="#4F46E5", fillcolor="#EEF0FB", fontcolor="#1E1B2E", penwidth=1.2];
+    edge [color="#9AA0B4", arrowsize=0.7, penwidth=1.0];
+    "org.weftkit.examples.homes.WeftMetricsSettingsDefaults" [label="WeftMetricsSettingsDefaults", tooltip="org.weftkit.examples.homes.WeftMetricsSettingsDefaults"];
+    "org.weftkit.examples.homes.commands.HomeCommand" [label="HomeCommand", tooltip="org.weftkit.examples.homes.commands.HomeCommand", fillcolor="#FFF7ED", color="#F59E0B", penwidth=1.8];
+    "org.weftkit.examples.homes.commands.SetHomeCommand" [label="SetHomeCommand", tooltip="org.weftkit.examples.homes.commands.SetHomeCommand", fillcolor="#FFF7ED", color="#F59E0B", penwidth=1.8];
+    "org.weftkit.examples.homes.storage.HomeStore" [label="HomeStore", tooltip="org.weftkit.examples.homes.storage.HomeStore", fillcolor="#FFF7ED", color="#F59E0B", penwidth=1.8];
+    "org.weftkit.examples.homes.storage.HomesFile" [label="HomesFile", tooltip="org.weftkit.examples.homes.storage.HomesFile", fillcolor="#FFF7ED", color="#F59E0B", penwidth=1.8, style="rounded,filled,dashed"];
+    "org.weftkit.wiring.bukkit.listeners.ListenerModule" [label="ListenerModule", tooltip="org.weftkit.wiring.bukkit.listeners.ListenerModule (module)", fillcolor="#ECFDF5", color="#0D9488", penwidth=1.8];
+    "org.weftkit.wiring.bukkit.metrics.MetricsModule" [label="MetricsModule", tooltip="org.weftkit.wiring.bukkit.metrics.MetricsModule (module)", fillcolor="#ECFDF5", color="#0D9488", penwidth=1.8];
+    "org.weftkit.examples.homes.commands.HomeCommand" -> "org.weftkit.examples.homes.storage.HomeStore";
+    "org.weftkit.examples.homes.commands.SetHomeCommand" -> "org.weftkit.examples.homes.storage.HomeStore";
+    "org.weftkit.examples.homes.storage.HomeStore" -> "org.weftkit.examples.homes.storage.HomesFile";
+    "org.weftkit.wiring.bukkit.metrics.MetricsModule" -> "org.weftkit.examples.homes.WeftMetricsSettingsDefaults";
+}

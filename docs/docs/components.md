@@ -1,4 +1,5 @@
 ---
+title: "Components: constructor injection with @Wired"
 description: Constructor injection in weftkit - singletons, interface bindings, @Provides products, qualifiers, optional dependencies, and lazy singletons.
 ---
 
@@ -215,3 +216,10 @@ protected Object[] ambientValues() {
     return new Object[] {myExternalService};
 }
 ```
+
+## Related
+
+- [Annotations reference](annotations.md): the exact contract of `@Wired`, `@Singleton`, and `@Provides`
+- [Internal components](internal-components.md): wiring package-private classes
+- [Testing](testing.md): constructing components with fakes, no framework involved
+- [Plugin lifecycle](lifecycle.md): when components load and shut down

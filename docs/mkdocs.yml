@@ -1,6 +1,6 @@
 site_name: weftkit
-site_description: Lifecycle and dependency injection framework for Bukkit plugins, wired at compile time.
-site_url: https://weftkit.org
+site_description: Lifecycle and dependency injection framework for Bukkit Minecraft plugins, wired at compile time.
+site_url: https://weftkit.org/
 repo_url: https://github.com/weftkit/weftkit
 repo_name: weftkit/weftkit
 copyright: Copyright &copy; 2026 the weftkit authors
@@ -51,9 +51,17 @@ plugins:
 
 hooks:
   - hooks/sitemap.py
+  - hooks/vars.py
+
+extra:
+  # Single source for the release version. hooks/vars.py substitutes the
+  # {{ weftkit_version }} token in markdown; the page template reads it directly.
+  weftkit_version: 0.6.0
 
 extra_css:
-  - stylesheets/extra.css
+  - stylesheets/tokens.css       # design tokens first — everything below references them
+  - stylesheets/home.css         # hero + home-page layout + closing CTA
+  - stylesheets/components.css   # terminal, dependency graph, FAQ, cards
 
 markdown_extensions:
   - admonition
@@ -62,9 +70,14 @@ markdown_extensions:
   - pymdownx.details
   - pymdownx.superfences
   - pymdownx.inlinehilite
-  - pymdownx.snippets
+  # base_path is the repository root, so pages can embed example sources verbatim
+  - pymdownx.snippets:
+      base_path: !relative $config_dir/..
+      check_paths: true
   - pymdownx.highlight:
       anchor_linenums: true
+  - pymdownx.tabbed:
+      alternate_style: true
   - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
@@ -74,16 +87,25 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting started: getting-started.md
-  - Components: components.md
-  - Internal components: internal-components.md
-  - Lifecycle: lifecycle.md
-  - Listeners and commands: listeners-and-commands.md
-  - Modules: modules.md
-  - Annotations: annotations.md
-  - Distribution: distribution.md
-  - Testing: testing.md
-  - Metrics: metrics.md
-  - Troubleshooting: troubleshooting.md
+  - Comparison: comparison.md
+  - Concepts:
+      - Components: components.md
+      - Internal components: internal-components.md
+      - Lifecycle: lifecycle.md
+      - Listeners and commands: listeners-and-commands.md
+      - Modules: modules.md
+  - Examples:
+      - Overview: examples/index.md
+      - join-leave-messages: examples/join-leave-messages.md
+      - player-homes: examples/player-homes.md
+      - announcer: examples/announcer.md
+  - Guides:
+      - Distribution: distribution.md
+      - Testing: testing.md
+      - Metrics: metrics.md
+  - Reference:
+      - Annotations: annotations.md
+      - Troubleshooting: troubleshooting.md
 
 not_in_nav: |
   /impressum.md

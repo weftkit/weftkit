@@ -1,43 +1,108 @@
 ---
 title: weftkit
-description: weftkit is a lifecycle and dependency injection framework for Bukkit plugins, running on any Bukkit-based Minecraft server from Spigot to Paper. Wiring mistakes fail the build instead of crashing on startup.
+description: A managed lifecycle for Bukkit, Spigot, and Paper Minecraft plugins, with dependency injection wired at compile time so mistakes fail the build, not the server.
+hide:
+  - toc
 ---
 
-<p align="center">
-  <img src="assets/logo/svg/weftkit-wordmark.svg" alt="weftkit" width="440">
-</p>
+<div class="wk-hero wk-hero-gradient" markdown>
 
-# Lifecycle management for Bukkit plugins, wired at compile time
+# <img src="assets/logo/svg/weftkit-mark-weave.svg" alt=""> <span class="wk-weft">weft</span><span class="wk-kit">kit</span> runs your Bukkit plugin's lifecycle
 
-weftkit is a lifecycle and dependency injection framework for Bukkit plugins, running on any
-Bukkit-based Minecraft server from Spigot to Paper. It brings your components up in dependency
-order, runs
-their startup and shutdown hooks, registers your Bukkit listeners, and tears everything down in
-reverse when the plugin disables. If a component's startup fails, weftkit aborts cleanly and
-disables the plugin instead of leaving it half loaded.
+weftkit manages your plugin's lifecycle at runtime and resolves the wiring that drives it at
+compile time, so the dependency graph that survives `javac` is the one that runs on the server.
 
-The wiring that makes this possible is resolved at compile time. A small annotation processor
-validates the whole dependency graph during `javac`, so a missing dependency, a cycle, or a
-misused annotation fails the build instead of crashing on startup, and the generated registry
-means the hot path does zero reflection.
+[Get started](getting-started.md){ .md-button .md-button--primary }
+[Browse the examples](examples/index.md){ .md-button }
 
-!!! note "Pre-release"
-    weftkit is pre-1.0, so the public API can still change between releases until 1.0.
+</div>
 
-## Why weftkit
+Three classes make a plugin that welcomes joining players. Components declare their
+dependencies as constructor parameters, and weftkit builds them, injects them, and registers
+the listener. No `registerEvents`, no factories, no reflection.
 
-A *weft* is the horizontal thread passed back and forth through the vertical warp threads in
-weaving, binding the loose strands into a single fabric. That is what weftkit does. It threads
-through your independent components and binds them into one plugin with a single, managed
-lifecycle.
+<div class="wk-code" markdown>
 
-If you know Dagger or Guice: weftkit sits closest to Dagger, since wiring is resolved at
-compile time with zero runtime reflection. What a general purpose dependency injection
-container leaves out is exactly what a plugin needs most, and weftkit makes it the core: load
-order, startup and teardown hooks, and Bukkit listener registration are part of the graph, not
-an add-on.
+=== "Plugin main"
 
-## Highlights
+    ```java
+    @Registry
+    public final class HelloPlugin extends WeftPlugin {
+
+        @Override
+        protected ComponentRegistry registry() {
+            return WeftWiring.INSTANCE;
+        }
+    }
+    ```
+
+    The only wiring you write: hand back the registry weftkit generates.
+
+=== "Component"
+
+    ```java
+    @Wired
+    @Singleton
+    final class Greeter {
+
+        public String greet(Player player) {
+            return "Welcome, " + player.getName();
+        }
+    }
+    ```
+
+    A plain singleton. weftkit builds it and injects it wherever it is asked for.
+
+=== "Listener"
+
+    ```java
+    @Wired
+    @Singleton
+    final class JoinListener implements Listener {
+
+        private final Greeter greeter;
+
+        JoinListener(Greeter greeter) {
+            this.greeter = greeter;
+        }
+
+        @EventHandler
+        public void onJoin(PlayerJoinEvent event) {
+            event.getPlayer().sendMessage(greeter.greet(event.getPlayer()));
+        }
+    }
+    ```
+
+    Registered for you. Its dependency arrives through the constructor.
+
+</div>
+
+## And when the wiring is wrong
+
+The processor validates the whole dependency graph as it compiles. Forget an annotation,
+introduce a cycle, or depend on something nothing provides, and the build stops with a message
+pointing at the offending class, long before a server ever loads the jar.
+
+<div class="wk-terminal">
+<div class="highlight"><pre><code>$ ./gradlew build
+
+JoinListener.java:9: <span class="wk-term-error">error:</span> Dependency must be @Wired or a @Provides product: com.example.hello.Greeter
+    JoinListener(Greeter greeter) {
+                 <span class="wk-term-caret">^</span>
+1 error</code></pre></div>
+</div>
+
+[Troubleshooting](troubleshooting.md) lists every error the processor can raise and how to fix
+it.
+
+<figure class="wk-graph" markdown>
+![Dependency graph of the player-homes example: the amber HomeCommand and SetHomeCommand singletons point at the HomeStore singleton, which points at the dashed package-private HomesFile, while the teal MetricsModule points at WeftMetricsSettingsDefaults and the teal ListenerModule stands alone.](assets/diagrams/weftkit-graph.svg)
+<figcaption markdown="span">**See your plugin's structure.** The processor also [renders the whole dependency graph](lifecycle.md#diagnostics) as Graphviz. Every component and every edge, package-private classes included. This is the [player-homes](examples/player-homes.md) example.</figcaption>
+</figure>
+
+<section class="wk-panel" markdown>
+
+## What you get
 
 <div class="grid cards" markdown>
 
@@ -45,50 +110,108 @@ an add-on.
 
     ---
 
-    Components load in dependency order, run startup and teardown hooks, and shut down in reverse.
+    Components load in dependency order, run startup and teardown hooks, and shut down cleanly in reverse.
 
 -   :material-puzzle:{ .lg .middle } __[Bukkit integration](listeners-and-commands.md)__
 
     ---
 
-    `onEnable`, `onDisable`, listener registration, and clean shutdown are handled for you.
+    `onEnable`, `onDisable`, listener registration, and shutdown are handled for you on any Bukkit server.
 
--   :material-shield-check:{ .lg .middle } __[Compile-time safety](troubleshooting.md)__
-
-    ---
-
-    The graph is validated during `javac`, so wiring mistakes are build errors, not startup crashes.
-
--   :material-lightning-bolt:{ .lg .middle } __[Zero runtime reflection](components.md)__
+-   :material-toggle-switch-outline:{ .lg .middle } __[Modules and feature flags](modules.md)__
 
     ---
 
-    Components are built by generated factories, so the hot path does no reflection.
-
--   :material-graph:{ .lg .middle } __[Readable wiring](lifecycle.md#diagnostics)__
-
-    ---
-
-    The processor renders your whole dependency graph to Graphviz, so you can see the plugin's structure at a glance.
+    Features ship as modules that discover their content by enumeration, and flags toggle whole components off.
 
 -   :material-eye-off:{ .lg .middle } __[Internals stay internal](internal-components.md)__
 
     ---
 
-    Package-private classes are wired like any other component, so injection never forces your internals to go public.
+    Package-private classes are wired like any other component, so injection never forces your internals public.
 
 </div>
 
+</section>
+
+## Why weftkit
+
+A general purpose container hands you an object graph and stops there. weftkit is built around
+the plugin lifecycle instead: load order, startup and teardown hooks, and clean shutdown in
+reverse are first-class, and listener and command registration on any Bukkit server, Spigot to
+Paper, comes with them. That is the part Dagger and Guice leave for you to wire by hand. If you
+are weighing options, see [how weftkit compares to Dagger, Guice, and wiring by hand](comparison.md).
+
+!!! note "Pre-release"
+    weftkit is pre-1.0, so the public API can still change between releases until 1.0.
+
+## Add it to your build
+
+weftkit is published to Maven Central. One dependency carries the runtime and annotations; the
+two annotation processors validate the graph and generate the registry as you compile.
+
+```kotlin
+dependencies {
+    implementation("org.weftkit:weftkit-bukkit:{{ weftkit_version }}")
+    annotationProcessor("org.weftkit:weftkit-processor:{{ weftkit_version }}")
+    annotationProcessor("org.weftkit:weftkit-bukkit:{{ weftkit_version }}")
+}
+```
+
+The full build, including the Bukkit API dependency and repositories, is in
+[getting started](getting-started.md#installation).
+
+<section class="wk-panel" markdown>
+
+## Learn from complete plugins
+
+The [examples](examples/index.md) are complete runnable plugins, each documented class by
+class with the source embedded.
+
+<div class="grid cards wk-cards-3" markdown>
+
+-   :material-hand-wave:{ .lg .middle } __[join-leave-messages](examples/join-leave-messages.md)__
+
+    ---
+
+    The smallest useful plugin: one wired listener, one injected component, three classes total.
+
+-   :material-home:{ .lg .middle } __[player-homes](examples/player-homes.md)__
+
+    ---
+
+    The lifecycle end to end: load homes from disk at startup, abort on corrupt data, save on shutdown.
+
+-   :material-bullhorn:{ .lg .middle } __[announcer](examples/announcer.md)__
+
+    ---
+
+    A module that discovers its content through enumeration, with settings and a feature flagged component.
+
+</div>
+
+</section>
+
+## FAQ
+
+<!-- faq -->
+
+
+<div class="wk-cta" markdown>
+
+<div class="wk-cta-text" markdown>
+
+## Ready to wire your plugin?
+
+Add one dependency, hand back the generated registry, and let the build catch the mistakes.
+
+</div>
+
+<div class="wk-cta-actions" markdown>
+
+[View on GitHub](https://github.com/weftkit/weftkit){ .md-button }
 [Get started](getting-started.md){ .md-button .md-button--primary }
-[Browse the annotations](annotations.md){ .md-button }
 
-## Examples
+</div>
 
-The [examples](https://github.com/weftkit/weftkit/tree/main/examples) are complete runnable
-plugins: the smallest wired listener, a homes plugin built on the load and unload lifecycle,
-and a broadcast module that discovers its content through enumeration.
-
-## Used by
-
-weftkit was extracted from [SilkSpawners](https://github.com/CorneliusMa/SilkSpawners_v2), which
-runs on it as its wiring and lifecycle framework.
+</div>

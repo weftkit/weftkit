@@ -1,4 +1,5 @@
 ---
+title: "Metrics: what bStats collects and how to opt out"
 description: weftkit reports anonymous usage numbers to bStats. This page lists exactly what is collected and how plugin authors and server owners opt out.
 ---
 
@@ -101,3 +102,9 @@ weftkit detects the missing classes and disables its metrics silently.
 
 bStats has a global switch that disables all bStats collection on the server, weftkit's
 included: set `enabled: false` in `plugins/bStats/config.yml`.
+
+## Related
+
+- [Modules](modules.md): the mechanism metrics is built on
+- [Distribution](distribution.md): what else ships in the plugin jar
+- [Getting started](getting-started.md): the dependencies that bring metrics in

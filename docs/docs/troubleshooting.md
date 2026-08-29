@@ -1,5 +1,6 @@
 ---
-description: Every weftkit build error and runtime exception, what causes it, and how to fix it.
+title: "Troubleshooting build errors and exceptions"
+description: Every build error and runtime exception weftkit can raise, what each one means, and how to fix it, from dependency cycles to stale generated registries.
 ---
 
 # Troubleshooting
@@ -126,3 +127,9 @@ rebuild.
 until the first build. Enable annotation processing in your IDE so it regenerates as you edit.
 See the note in [Getting started](getting-started.md).
 
+
+## Related
+
+- [Annotations reference](annotations.md): the contracts behind the build errors
+- [Plugin lifecycle](lifecycle.md): rendering the dependency graph for diagnosis
+- [Getting started](getting-started.md): a known-good build to compare against

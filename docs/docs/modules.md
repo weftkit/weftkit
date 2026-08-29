@@ -1,4 +1,5 @@
 ---
+title: "Modules and feature flags for Bukkit plugins"
 description: weftkit modules are constructor-injected singletons woven into the graph at compile time. How to use, disable, configure, and write them.
 ---
 
@@ -158,6 +159,12 @@ is skipped, so the contribution only applies where the adapter is in use. Declar
 `@Requires` and `@Initializes` are not supported on module components, since the static holder
 analysis only runs over sources.
 
-The [announcer example](https://github.com/weftkit/weftkit/tree/main/examples/bukkit/announcer)
-is a complete plugin built around such a module: enumeration through `Weft`, an id holder,
-settings, and a feature flagged component.
+The [announcer example](examples/announcer.md) is a complete plugin built around such a
+module: enumeration through `Weft`, an id holder, settings, and a feature flagged component.
+
+## Related
+
+- [Annotations reference](annotations.md): the `@WeftModule`, `@ModuleSettings`, and `@FeatureFlag` contracts
+- [Metrics](metrics.md): a bundled module you can disable like any other
+- [Distribution](distribution.md): shipping a module in a plugin or library jar
+- [announcer](examples/announcer.md): a runnable module with settings and a flagged component

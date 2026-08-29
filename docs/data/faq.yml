@@ -1,0 +1,40 @@
+# Single source for the homepage FAQ
+
+- q: What is weftkit?
+  a: >-
+    weftkit is a lifecycle and dependency injection framework for Bukkit, Spigot, and Paper
+    Minecraft plugins. It starts your components in dependency order, runs their startup and
+    teardown hooks, and registers your listeners, with the wiring resolved and validated at
+    compile time so mistakes fail the build instead of the server.
+
+- q: How does weftkit compare to Dagger and Guice?
+  a: >-
+    Like Dagger, weftkit resolves the dependency graph at compile time with zero runtime
+    reflection. Unlike Dagger or Guice, it also manages the plugin lifecycle: load order,
+    teardown, and Bukkit listener registration are built in rather than left to you. The
+    [comparison page](comparison.md) has an honest side by side, including wiring by hand.
+
+- q: Which servers and Java versions does it support?
+  a: >-
+    Any Bukkit-based server, from CraftBukkit and Spigot to Paper and its forks, on Java 17 or
+    newer. weftkit depends only on the Bukkit API, not on server internals or NMS.
+
+- q: Is weftkit production-ready?
+  a: >-
+    weftkit is pre-1.0, so the public API can still change between releases. The runtime itself
+    is exercised in production: [SilkSpawners](https://github.com/CorneliusMa/SilkSpawners_v2),
+    the plugin weftkit was extracted from, runs on it.
+
+- q: Is weftkit free to use?
+  a: >-
+    Yes. weftkit is open source under the Apache License 2.0, free for commercial and private
+    plugins alike. The source, issue tracker, and releases live on
+    [GitHub](https://github.com/weftkit/weftkit), and the license is bundled in every
+    published jar.
+
+- q: Why is it called weftkit?
+  a: >-
+    A *weft* is the horizontal thread passed back and forth through the vertical warp threads
+    in weaving, binding the loose strands into a single fabric. That is what weftkit does: it
+    threads through your independent components and binds them into one plugin with a single,
+    managed lifecycle.

@@ -1,0 +1,24 @@
+# weftkit
+
+> weftkit is a lifecycle and dependency injection framework for Bukkit, Spigot, and Paper Minecraft plugins. It manages the plugin lifecycle at runtime, bringing components up in dependency order, running startup and teardown hooks, and shutting down cleanly in reverse, while an annotation processor resolves and validates the whole dependency graph at compile time, so a missing dependency, a cycle, or a misused annotation fails the build instead of crashing the server. Published to Maven Central as org.weftkit, licensed under Apache 2.0.
+
+## Docs
+
+- [Getting started](https://weftkit.org/getting-started/): installation, first plugin, and the full Gradle build
+- [Components](https://weftkit.org/components/): declaring and injecting components with @Wired, @Singleton, and @Provides
+- [Lifecycle](https://weftkit.org/lifecycle/): load order, startup and teardown hooks, and diagnostics
+- [Listeners and commands](https://weftkit.org/listeners-and-commands/): automatic Bukkit listener and command registration
+- [Modules](https://weftkit.org/modules/): shipping features as modules with feature flags
+- [Annotations](https://weftkit.org/annotations/): reference for every weftkit annotation
+- [Troubleshooting](https://weftkit.org/troubleshooting/): every error the processor can raise and how to fix it
+
+## Examples
+
+- [Examples overview](https://weftkit.org/examples/): complete runnable plugins, documented class by class
+- [join-leave-messages](https://weftkit.org/examples/join-leave-messages/): the smallest useful plugin, three classes total
+
+## Optional
+
+- [GitHub repository](https://github.com/weftkit/weftkit): source, issues, and releases
+- [Distribution](https://weftkit.org/distribution/): shading and publishing plugins built on weftkit
+- [Testing](https://weftkit.org/testing/): testing wired components
