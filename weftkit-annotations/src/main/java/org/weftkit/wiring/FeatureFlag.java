@@ -9,8 +9,10 @@ import java.lang.annotation.Target;
  * Gates a wired component behind a named feature flag. An off flag gates construction: the
  * component is never created, its lifecycle hooks never run, and module enumeration skips it.
  * Resolved against a {@code FeatureFlags} implementation (ambient or wired); without one,
- * {@link #enabledByDefault} decides. Because nothing may depend on a flagged component, flags fit
- * leaf features like listeners and commands. Runtime retention, read while the server runs.
+ * {@link #enabledByDefault} decides. Nothing may <em>require</em> a flagged component, so flags fit
+ * leaf features like listeners and commands. A consumer that should tolerate its absence depends on
+ * it as {@code Optional<T>}, which resolves empty while the flag is off. Runtime retention, read
+ * while the server runs.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)

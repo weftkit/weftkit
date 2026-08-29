@@ -7,8 +7,9 @@ import org.weftkit.wiring.processor.compiler.Mirrors;
 import org.weftkit.wiring.processor.model.WiringModel;
 
 /**
- * Enforces the construction-gating flag contract: nothing may depend on a flagged component, at
- * most one FeatureFlags implementation exists, and the implementation itself is not flagged.
+ * Enforces the construction-gating flag contract: nothing may <em>require</em> a flagged component
+ * (an {@code Optional<T>} dependency is allowed and resolves empty when the flag is off), at most
+ * one FeatureFlags implementation exists, and the implementation itself is not flagged.
  */
 final class FeatureFlagRule extends GraphRule {
 
@@ -25,7 +26,7 @@ final class FeatureFlagRule extends GraphRule {
             if (!model.components().get(provider).featureFlag().isEmpty())
                 diagnostics.error(anchor(provider), "The FeatureFlags implementation itself cannot be feature flagged");
         model.components().forEach((component, definition) -> {
-            for (String dependency : model.injectionDependencies(component)) flagFree(component, dependency);
+            for (String dependency : model.requiredInjectionDependencies(component)) flagFree(component, dependency);
             for (String initializer : model.componentRequirements().getOrDefault(component, List.of()))
                 flagFree(component, initializer);
         });
@@ -35,8 +36,9 @@ final class FeatureFlagRule extends GraphRule {
         if (model.components().get(dependency).featureFlag().isEmpty()) return;
         diagnostics.error(
                 anchor(component),
-                component + " depends on " + dependency
-                        + ", which is gated by a feature flag and may never be constructed");
+                component + " requires " + dependency
+                        + ", which is gated by a feature flag and may never be constructed; depend on it as"
+                        + " Optional<" + dependency + "> to allow it to be absent when the flag is off");
     }
 
     private Element anchor(String component) {

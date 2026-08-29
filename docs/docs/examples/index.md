@@ -13,7 +13,7 @@ with the source embedded from the repository, so the code you read is the code t
 | --- | --- |
 | [join-leave-messages](join-leave-messages.md) | The smallest useful plugin: a wired listener that replaces the join and leave broadcasts, with the message formatting injected as a component. |
 | [player-homes](player-homes.md) | `/sethome` and `/home` backed by a `Loader` that reads homes from disk at startup, saves on shutdown, and `@Provides` the loaded data. Shows manual command wiring. |
-| [announcer](announcer.md) | Rotating broadcasts, each line its own component: a `@WeftModule` enumerates them with `Weft.all`, one is gated by a `@FeatureFlag`, and `@ModuleSettings` sets the pace. |
+| [announcer](announcer.md) | Rotating broadcasts, each line its own component: a `@WeftModule` enumerates them with `Weft.all`, one is gated by a `@FeatureFlag` and another depends on it as `Optional<T>`, and `@ModuleSettings` sets the pace. |
 
 ## Running an example
 

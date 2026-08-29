@@ -301,6 +301,28 @@ class WiredProcessorTest {
     }
 
     @Test
+    void acceptsOptionalDependencyOnFeatureFlaggedComponent() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Gated",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.FeatureFlag;",
+                        "@Wired @Singleton @FeatureFlag(\"regions\")",
+                        "public final class Gated { public Gated() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Uses",
+                        "package test;",
+                        "import java.util.Optional;",
+                        "import org.weftkit.wiring.Wired;",
+                        "@Wired public final class Uses { public Uses(Optional<Gated> gated) {} }"),
+                flagsImplementation("ZFlags"));
+        assertThat(compilation).succeeded();
+    }
+
+    @Test
     void rejectsSeveralFeatureFlagsImplementations() {
         Compilation compilation = compile(registry(), flagsImplementation("FlagsA"), flagsImplementation("FlagsB"));
         assertThat(compilation).hadErrorContaining("Several FeatureFlags implementations");

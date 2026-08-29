@@ -135,10 +135,28 @@ final class HolidayListener implements Listener { ... }
 ```
 
 An off flag gates construction: the component is never created, its `Loader` hooks never run, and
-`weft.all` skips it. Because of that, no component may depend on a flagged one, which the
-processor enforces. Flags resolve against a `FeatureFlags` implementation, either wired as a
-component or passed as an ambient value (the ambient wins); without one, each flag's
-`enabledByDefault` decides.
+`weft.all` skips it. Because of that, no component may **require** a flagged one, which the
+processor enforces. A consumer that should keep working when the flag is off depends on it as
+`Optional<T>` instead, which resolves to the component while the flag is on and to
+`Optional.empty()` while it is off:
+
+```java
+@Wired
+@Singleton
+final class Greeter {
+
+    private final Optional<HolidayListener> holiday;
+
+    Greeter(Optional<HolidayListener> holiday) {
+        this.holiday = holiday;
+    }
+}
+```
+
+This is how a config-gated subsystem reaches its consumers: gate the subsystem with a flag backed
+by config, and every consumer injects it optionally. Flags resolve against a `FeatureFlags`
+implementation, either wired as a component or passed as an ambient value (the ambient wins);
+without one, each flag's `enabledByDefault` decides.
 
 ## Publishing a module
 

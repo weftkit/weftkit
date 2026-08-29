@@ -1,8 +1,9 @@
 # announcer
 
 Rotating server broadcasts, each line its own wired component. Shows modules end to end: a
-`@WeftModule` discovers the lines with `Weft.all`, `@ModuleSettings` sets the pace, and one
-line is gated by a `@FeatureFlag` resolved from `config.yml`.
+`@WeftModule` discovers the lines with `Weft.all`, `@ModuleSettings` sets the pace, one line is
+gated by a `@FeatureFlag` resolved from `config.yml`, and another depends on that flagged line as
+`Optional<T>`.
 
 Documented class by class at
 [weftkit.org/examples/announcer](https://weftkit.org/examples/announcer/).

@@ -49,9 +49,10 @@ when the consumer wires none. See [module settings](modules.md#module-settings).
 ## @FeatureFlag
 
 Gates a component behind a named flag. An off flag gates construction: the component is never
-created and module enumeration skips it, so nothing may depend on a flagged component. Flags
-resolve against a `FeatureFlags` implementation, wired or ambient, falling back to
-`enabledByDefault`. See [feature flags](modules.md#feature-flags).
+created and module enumeration skips it, so nothing may require a flagged component. A consumer
+may depend on one as `Optional<T>`, which resolves empty while the flag is off. Flags resolve
+against a `FeatureFlags` implementation, wired or ambient, falling back to `enabledByDefault`. See
+[feature flags](modules.md#feature-flags).
 
 ## @Provides
 

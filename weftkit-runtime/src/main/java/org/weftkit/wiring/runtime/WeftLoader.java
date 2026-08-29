@@ -254,7 +254,16 @@ public final class WeftLoader {
             if (type == WeftView.class) return view;
         }
         Class<?> target = bound(type, dependency.qualifier());
-        if (target != null && registry.parameters().containsKey(target)) return instance(target);
+        if (target != null && registry.parameters().containsKey(target)) {
+            // A flag-gated-off component resolves as absent. The processor rejects a required
+            // dependency on a flagged component, so only an optional one reaches the empty case
+            if (!enabled(target)) {
+                if (dependency.optional()) return null;
+                throw new ResolutionException("Required dependency " + type.getName() + " of " + component.getName()
+                        + " is gated off by its feature flag");
+            }
+            return instance(target);
+        }
         Object product = product(type, dependency);
         if (product != null) return product;
         if (dependency.optional()) return null;
@@ -332,8 +341,10 @@ public final class WeftLoader {
         if (cached != null) return cached;
         // The owner may still be inside its own load hook, so fall back to the live getter
         Object provider = singletons.get(owner);
-        // Deliberate for optional product dependencies too, they materialize instead of staying empty
-        if (provider == null && registry.lazySingletons().contains(owner)) provider = lazySingleton(owner);
+        // Deliberate for optional product dependencies too, they materialize instead of staying
+        // empty, unless the owner is gated off by a feature flag
+        if (provider == null && registry.lazySingletons().contains(owner) && enabled(owner))
+            provider = lazySingleton(owner);
         Object product = provider == null
                 ? null
                 : registry.productGetters()

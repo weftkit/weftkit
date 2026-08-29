@@ -12,8 +12,9 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
 - `@ModuleSettings` interfaces for consumer configuration of a module, backed by a generated
   all-defaults implementation when no implementation is wired.
 - `@FeatureFlag` gates component construction behind a named flag, resolved through an ambient
-  or wired `FeatureFlags` implementation. Nothing may depend on a flagged component, enforced at
-  compile time.
+  or wired `FeatureFlags` implementation. Nothing may require a flagged component, enforced at
+  compile time. A consumer that tolerates its absence depends on it as `Optional<T>`, which
+  resolves empty while the flag is off. This lets a config-gated subsystem reach its consumers.
 - `Weft`, the injectable enumeration facade: `all(supertype)` returns every enabled component.
 - `ModuleContributor` SPI for adapters to contribute modules to every generated registry.
 - Runnable example plugins under `examples/`, built in CI.

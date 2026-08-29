@@ -203,6 +203,28 @@ class WeftLoaderIntegrationTest {
     }
 
     @Test
+    void resolvesOptionalDependencyOnDisabledFlaggedComponentToEmpty() {
+        WeftLoader loader = newLoader();
+        loader.load();
+        // Frozen is gated off by default, so neither consumer receives it and it never loads
+        assertEquals(Optional.empty(), loader.create(Sample.GatedUser.class).frozen());
+        assertEquals(Optional.empty(), loader.get(Sample.GatedWatcher.class).frozen());
+        assertFalse(probe.loads.contains("Frozen"));
+    }
+
+    @Test
+    void resolvesOptionalDependencyOnEnabledFlaggedComponentToPresent() {
+        probe.enabledFlags.add("frozen");
+        WeftLoader loader = newLoader();
+        loader.load();
+        Sample.Frozen frozen = loader.get(Sample.Frozen.class);
+        assertSame(frozen, loader.create(Sample.GatedUser.class).frozen().orElseThrow());
+        // The eager consumer received the same singleton, so the flagged dependency loaded first
+        assertSame(frozen, loader.get(Sample.GatedWatcher.class).frozen().orElseThrow());
+        assertTrue(probe.loads.contains("Frozen"));
+    }
+
+    @Test
     void materializesLazySingletonOnFirstInjection() {
         WeftLoader loader = newLoader();
         loader.load();

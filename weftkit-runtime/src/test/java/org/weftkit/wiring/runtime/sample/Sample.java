@@ -566,6 +566,35 @@ public final class Sample {
         }
     }
 
+    // Plain consumer that tolerates the flagged Frozen being gated off, through an optional dependency
+    @Wired
+    public static final class GatedUser {
+        private final Optional<Frozen> frozen;
+
+        public GatedUser(Optional<Frozen> frozen) {
+            this.frozen = frozen;
+        }
+
+        public Optional<Frozen> frozen() {
+            return frozen;
+        }
+    }
+
+    // Eager consumer of the same optional flagged dependency, exercising the load-order path
+    @Wired
+    @Singleton
+    public static final class GatedWatcher {
+        private final Optional<Frozen> frozen;
+
+        public GatedWatcher(Optional<Frozen> frozen) {
+            this.frozen = frozen;
+        }
+
+        public Optional<Frozen> frozen() {
+            return frozen;
+        }
+    }
+
     @Wired
     @Singleton
     public static final class ProbeFlags implements FeatureFlags {

@@ -157,8 +157,20 @@ public class WiringModel {
     }
 
     public List<String> injectionDependencies(String component) {
+        return injectionDependencies(component, true);
+    }
+
+    // Dependencies that must resolve for the component to be constructed, an Optional<T> parameter
+    // may be absent, so it is excluded. Consumed by the feature flag rule, which allows an optional
+    // dependency on a flagged component but rejects a required one
+    public List<String> requiredInjectionDependencies(String component) {
+        return injectionDependencies(component, false);
+    }
+
+    private List<String> injectionDependencies(String component, boolean includeOptional) {
         List<String> dependencies = new ArrayList<>();
         for (Parameter parameter : components.get(component).parameters()) {
+            if (!includeOptional && parameter.optional()) continue;
             String bound = binding(parameter);
             if (parameter.qualifier().isEmpty() && isComponent(parameter.erasedClass()))
                 dependencies.add(parameter.erasedClass());

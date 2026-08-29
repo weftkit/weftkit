@@ -7,8 +7,8 @@ description: A module example walked through class by class, component enumerati
 
 Rotating server broadcasts. Each broadcast line is its own wired component, and a
 [module](../modules.md) discovers them all, runs the timer, and tears it down again. This is
-the example for `@WeftModule`, `Weft.all`, `@ModuleSettings`, and `@FeatureFlag`. The full
-source lives in
+the example for `@WeftModule`, `Weft.all`, `@ModuleSettings`, and `@FeatureFlag`, including an
+optional dependency on a flagged component. The full source lives in
 [`examples/bukkit/announcer`](https://github.com/weftkit/weftkit/tree/main/examples/bukkit/announcer).
 
 The packages follow the module split: `broadcast` is the engine, written as a library would
@@ -71,6 +71,18 @@ component is never constructed and `weft.all` skips it.
 --8<-- "examples/bukkit/announcer/src/main/java/org/weftkit/examples/announcer/announcements/SeasonalAnnouncement.java"
 ```
 
+## Depending on a flagged component
+
+`HeadlineAnnouncement` reaches `SeasonalAnnouncement` directly, not through enumeration. Nothing
+may *require* a flagged component, since it may never be constructed, so the dependency is an
+`Optional<SeasonalAnnouncement>`: it holds the component while the flag is on and is empty while
+it is off. This is how a config-gated feature reaches a consumer that should keep working without
+it, with the wiring stating the optionality instead of the consumer reading the flag itself.
+
+```java
+--8<-- "examples/bukkit/announcer/src/main/java/org/weftkit/examples/announcer/announcements/HeadlineAnnouncement.java"
+```
+
 ## The flags
 
 `ConfigFlags` resolves flags from `config.yml`, which it writes out on first load. Without
@@ -87,4 +99,5 @@ Build the example as described in the [overview](index.md), drop the jar into a 
 announcements.
 
 Flip `flags.seasonal-broadcast` in `plugins/Announcer/config.yml` and restart to watch the
-flagged component appear and disappear from the rotation.
+flagged component appear and disappear from the rotation, and the headline switch between reusing
+the seasonal text and its fallback as its `Optional` dependency fills and empties.
