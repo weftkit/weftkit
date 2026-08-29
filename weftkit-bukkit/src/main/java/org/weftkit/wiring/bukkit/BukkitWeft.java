@@ -1,6 +1,7 @@
 package org.weftkit.wiring.bukkit;
 
 import java.util.logging.Level;
+import org.bukkit.command.CommandExecutor;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.weftkit.wiring.runtime.Modules;
@@ -24,10 +25,10 @@ public final class BukkitWeft {
         WeftLoader loader = new WeftLoader(registry, ambient(plugin, extraAmbient));
         try {
             if (!loader.load()) return abort(plugin, null);
-            if (registry.modules().isEmpty() && hasListeners(registry))
+            if (registry.modules().isEmpty() && hasListenersOrCommands(registry))
                 plugin.getLogger()
-                        .warning("The registry contains no weftkit modules, so the wired listeners will not be"
-                                + " registered. Is weftkit-bukkit missing from the annotationProcessor path?");
+                        .warning("The registry contains no weftkit modules, so the wired listeners and commands will"
+                                + " not be registered. Is weftkit-bukkit missing from the annotationProcessor path?");
             if (!Modules.activate(loader)) return abort(plugin, loader);
         } catch (RuntimeException ex) {
             plugin.getLogger().log(Level.SEVERE, "Error during weftkit startup", ex);
@@ -58,10 +59,12 @@ public final class BukkitWeft {
         if (failure != null) plugin.getLogger().log(Level.SEVERE, "Error during weftkit shutdown", failure);
     }
 
-    // Wired listeners with no modules: weftkit-bukkit missing from the processor path, or all
-    // modules disabled on purpose; the listeners stay unregistered either way
-    private static boolean hasListeners(ComponentRegistry registry) {
-        return registry.parameters().keySet().stream().anyMatch(Listener.class::isAssignableFrom);
+    // Wired listeners or commands with no modules: weftkit-bukkit missing from the processor path,
+    // or all modules disabled on purpose; either way they stay unregistered
+    private static boolean hasListenersOrCommands(ComponentRegistry registry) {
+        return registry.parameters().keySet().stream()
+                .anyMatch(
+                        type -> Listener.class.isAssignableFrom(type) || CommandExecutor.class.isAssignableFrom(type));
     }
 
     private static WeftLoader abort(JavaPlugin plugin, WeftLoader loader) {

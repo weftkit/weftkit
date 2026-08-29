@@ -9,9 +9,11 @@ import org.bukkit.entity.Player;
 import org.weftkit.examples.homes.storage.HomeStore;
 import org.weftkit.wiring.Singleton;
 import org.weftkit.wiring.Wired;
+import org.weftkit.wiring.bukkit.commands.CommandHandler;
 
 @Wired
 @Singleton
+@CommandHandler("home")
 public final class HomeCommand implements CommandExecutor {
 
     private final HomeStore homes;

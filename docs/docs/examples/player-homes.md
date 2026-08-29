@@ -14,8 +14,8 @@ lives in
 
 ## The plugin main
 
-`HomesPlugin` overrides `onWeftEnable` to attach the command executors with `loader.get(...)`,
-the manual step weftkit leaves to the plugin, see
+`HomesPlugin` is just the registry hook: the commands bind themselves through
+`@CommandHandler`, so there is nothing to attach in `onWeftEnable`, see
 [listeners and commands](../listeners-and-commands.md).
 
 ```java
@@ -49,7 +49,8 @@ ordering annotations needed.
 [`SetHomeCommand`](https://github.com/weftkit/weftkit/blob/main/examples/bukkit/player-homes/src/main/java/org/weftkit/examples/homes/commands/SetHomeCommand.java)
 and
 [`HomeCommand`](https://github.com/weftkit/weftkit/blob/main/examples/bukkit/player-homes/src/main/java/org/weftkit/examples/homes/commands/HomeCommand.java)
-are plain `CommandExecutor` components injecting the store, declared in `plugin.yml` as usual.
+are `CommandExecutor` components injecting the store, each `@CommandHandler`ed to its
+`plugin.yml` command so the bundled command module binds it during enable.
 
 ```java
 --8<-- "examples/bukkit/player-homes/src/main/java/org/weftkit/examples/homes/commands/SetHomeCommand.java"

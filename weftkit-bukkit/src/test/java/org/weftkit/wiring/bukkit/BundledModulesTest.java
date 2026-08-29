@@ -21,6 +21,10 @@ class BundledModulesTest {
         assertThat(compilation)
                 .generatedSourceFile("test.WeftWiring")
                 .contentsAsUtf8String()
+                .contains("org.weftkit.wiring.bukkit.commands.CommandModule.class");
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
                 .contains("new org.weftkit.wiring.bukkit.metrics.MetricsModule(");
     }
 

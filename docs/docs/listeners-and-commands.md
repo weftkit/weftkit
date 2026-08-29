@@ -1,14 +1,15 @@
 ---
 title: "Registering Bukkit listeners and commands"
-description: How weftkit registers Bukkit listeners automatically during enable, and how commands are built through the loader and attached in onWeftEnable.
+description: How weftkit registers wired Bukkit listeners and commands automatically during enable, so neither needs a registration call in onWeftEnable.
 ---
 
 # Listeners and commands
 
 Event listeners and commands are where a plugin meets the server, and they are where manual
 wiring usually breaks first: a listener that never gets registered fails silently, and a
-command handler built before its dependencies exist fails loudly. weftkit removes the first
-problem entirely and keeps the second one ordered, so this page covers both halves.
+command handler wired before its dependencies exist fails loudly. weftkit removes both problems.
+A wired listener is registered for you, and a wired command is bound to its `plugin.yml` entry
+for you, each once the graph is up and its dependencies exist.
 
 ## Listeners
 
@@ -43,12 +44,17 @@ the server; when the plugin disables, Bukkit drops the registrations along with 
 
 ## Commands
 
-weftkit does not register commands for you, because command setup is specific to your plugin.
-Build the command object through the loader and attach it to Bukkit yourself.
+Any [`@Wired` component](components.md) that implements `CommandExecutor` and carries a
+`@CommandHandler` naming a `plugin.yml` command is bound to that command automatically during
+[enable](lifecycle.md#startup), by the bundled command [module](modules.md). The annotation name
+mirrors `@EventHandler`. Make it a `@Singleton`, and a component gated by a
+[`@FeatureFlag`](modules.md#feature-flags) is only created and bound while its flag is on. If the
+component also implements `TabCompleter`, it is bound for completion too.
 
 ```java
 @Wired
 @Singleton
+@CommandHandler("hello")
 final class HelloCommand implements CommandExecutor {
 
     private final Greeter greeter;
@@ -65,13 +71,8 @@ final class HelloCommand implements CommandExecutor {
 }
 ```
 
-Wire it in `onWeftEnable`, where the loader arrives with the graph already up.
-
-```java
-getCommand("hello").setExecutor(loader.get(HelloCommand.class));
-```
-
-Then declare the command in `plugin.yml`.
+There is no `setExecutor` call to write in `onWeftEnable` and none to clean up. Declare the
+command in `plugin.yml` as usual, and `@CommandHandler` binds the executor to it.
 
 ```yaml
 commands:
@@ -79,10 +80,15 @@ commands:
     description: Greet the sender
 ```
 
+The command name in the annotation is the one declared in `plugin.yml`, without the leading
+slash. A name that no `plugin.yml` entry declares is logged and left unbound rather than failing
+the plugin. To wire a command by hand instead, leave off `@CommandHandler` and set the executor
+yourself in `onWeftEnable` from the loader.
+
 ## Related
 
 - [join-leave-messages](examples/join-leave-messages.md): a runnable plugin around one wired listener
-- [player-homes](examples/player-homes.md): wires two commands through the loader this way
+- [player-homes](examples/player-homes.md): binds two commands with `@CommandHandler`
 - [Components](components.md): constructor injection and the rules behind `@Wired`
 - [Modules and feature flags](modules.md): the machinery that registers listeners, and how to gate one behind a flag
 - [Lifecycle](lifecycle.md): what has already happened by the time `onWeftEnable` runs
