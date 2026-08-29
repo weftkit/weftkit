@@ -21,8 +21,8 @@ import org.weftkit.wiring.runtime.registry.Dependency;
  * hooks too: {@code load()} at materialization, where a false return or exception drops the
  * singleton and propagates to the injection site while the rest of the graph stays loaded, so
  * the next injection retries. Not thread safe: drive it from a single thread, on Bukkit the
- * server main thread. The loader is not injectable; components enumerate the graph through
- * {@link Weft} and leave the loader to the plugin main.
+ * server main thread. The loader is not injectable; components reach the graph through
+ * {@link Weft} and {@link WeftView} and leave the loader to the plugin main.
  */
 public final class WeftLoader {
 
@@ -33,6 +33,8 @@ public final class WeftLoader {
     private final Set<Class<?>> eager;
 
     private final Weft weft = new Weft(this);
+
+    private final WeftView view = new WeftView(this);
 
     // Cached provider instance, not cached flag values, so isEnabled stays live per check
     private FeatureFlags flags;
@@ -185,6 +187,27 @@ public final class WeftLoader {
                 .toList();
     }
 
+    // Read-only counterpart of createAll, surfaced through WeftView
+    <T> List<Class<? extends T>> types(Class<T> supertype) {
+        List<Class<? extends T>> matches = new ArrayList<>();
+        registry.parameters().keySet().stream()
+                .filter(supertype::isAssignableFrom)
+                .filter(this::enabled)
+                .sorted(Comparator.comparing(Class::getName))
+                .forEach(type -> matches.add(type.asSubclass(supertype)));
+        return matches;
+    }
+
+    boolean contains(Class<?> type) {
+        Class<?> target = bound(type, "");
+        return target != null && registry.parameters().containsKey(target);
+    }
+
+    boolean componentEnabled(Class<?> type) {
+        Class<?> target = bound(type, "");
+        return target != null && registry.parameters().containsKey(target) && enabled(target);
+    }
+
     /**
      * Creates a component of the type, resolving interface bindings. Singletons resolve to their
      * cached instance, lazy ones materializing on demand. Plain components are built fresh, each
@@ -228,6 +251,7 @@ public final class WeftLoader {
             Object provided = unique(ambient, type, component, "ambient value");
             if (provided != null) return provided;
             if (type == Weft.class) return weft;
+            if (type == WeftView.class) return view;
         }
         Class<?> target = bound(type, dependency.qualifier());
         if (target != null && registry.parameters().containsKey(target)) return instance(target);

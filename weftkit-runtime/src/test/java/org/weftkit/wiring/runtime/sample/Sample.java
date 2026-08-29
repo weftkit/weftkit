@@ -20,6 +20,7 @@ import org.weftkit.wiring.Wired;
 import org.weftkit.wiring.runtime.FeatureFlags;
 import org.weftkit.wiring.runtime.Weft;
 import org.weftkit.wiring.runtime.WeftLoader;
+import org.weftkit.wiring.runtime.WeftView;
 
 public final class Sample {
 
@@ -583,13 +584,19 @@ public final class Sample {
     @Wired
     public static final class WeftUser {
         private final Weft weft;
+        private final WeftView view;
 
-        public WeftUser(Weft weft) {
+        public WeftUser(Weft weft, WeftView view) {
             this.weft = weft;
+            this.view = view;
         }
 
         public Weft weft() {
             return weft;
+        }
+
+        public WeftView view() {
+            return view;
         }
     }
 

@@ -44,10 +44,13 @@ public final class HologramModule implements ModuleLifecycle {
 }
 ```
 
-`Weft` does exactly one thing: `all` enumerates the wired components by supertype, feature
-flagged ones excluded. It exists because that set is not statically known; everything else a
-module needs, the plugin included, arrives through its constructor. It is also the only graph
-handle a component can inject: the `WeftLoader` stays with the plugin main.
+`Weft` does one thing: `all` enumerates the wired components by supertype, feature flagged ones
+excluded. It exists because that set is not statically known; everything else a module needs, the
+plugin included, arrives through its constructor. Its read-only sibling `WeftView` inspects the
+same graph without building anything: `types` names the wired classes by supertype, and `contains`,
+`enabled`, `loadOrder`, `loadTimings`, and `modules` report membership and load state.
+Those two are the only graph handles a component can inject: the `WeftLoader` stays with the
+plugin main.
 
 ## Lifecycle
 

@@ -14,6 +14,7 @@ import org.weftkit.wiring.runtime.Modules;
 import org.weftkit.wiring.runtime.ResolutionException;
 import org.weftkit.wiring.runtime.Weft;
 import org.weftkit.wiring.runtime.WeftLoader;
+import org.weftkit.wiring.runtime.WeftView;
 
 class ModulesIntegrationTest {
 
@@ -102,5 +103,37 @@ class ModulesIntegrationTest {
         Weft weft = loader.create(Sample.WeftUser.class).weft();
         assertEquals(2, weft.all(Sample.Service.class).size());
         assertThrows(ResolutionException.class, () -> weft.all(Object.class));
+    }
+
+    @Test
+    void weftViewNamesEnabledTypesWithoutConstructingThem() {
+        WeftLoader loader = loadedLoader();
+        WeftView view = loader.create(Sample.WeftUser.class).view();
+        assertEquals(List.of(Sample.Consumer.class, Sample.Worker.class), view.types(Sample.Service.class));
+        // A flagged component is named by neither weft.all nor view.types while its flag is off
+        assertTrue(view.types(Sample.GatedService.class).isEmpty());
+        assertThrows(ResolutionException.class, () -> view.types(Object.class));
+    }
+
+    @Test
+    void weftViewAnswersMembershipAndFlagState() {
+        WeftLoader loader = loadedLoader();
+        WeftView view = loader.create(Sample.WeftUser.class).view();
+        assertTrue(view.contains(Sample.Frozen.class));
+        // Present but gated off, so not enabled and never constructed
+        assertFalse(view.enabled(Sample.Frozen.class));
+        assertFalse(probe.loads.contains("Frozen"));
+        // A supertype with no single binding is not itself a component
+        assertFalse(view.contains(Sample.Service.class));
+    }
+
+    @Test
+    void weftViewReportsLoadOrderTimingsAndModules() {
+        WeftLoader loader = loadedLoader();
+        WeftView view = loader.create(Sample.WeftUser.class).view();
+        assertEquals(loader.loadOrder(), view.loadOrder());
+        assertEquals(List.of(Sample.ZuluModule.class, Sample.AlphaModule.class), view.modules());
+        assertTrue(view.loadTimings().containsKey(Sample.ZuluModule.class));
+        assertEquals(loader.totalLoadTime(), view.totalLoadTime());
     }
 }
