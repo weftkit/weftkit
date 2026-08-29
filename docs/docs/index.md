@@ -17,9 +17,10 @@ compile time, so the dependency graph that survives `javac` is the one that runs
 
 </div>
 
-Three classes make a plugin that welcomes joining players. Components declare their
-dependencies as constructor parameters, and weftkit builds them, injects them, and registers
-the listener. No `registerEvents`, no factories, no reflection.
+Four classes make a plugin that welcomes joining players and greets anyone who runs `/hello`.
+Components declare their dependencies as constructor parameters, and weftkit builds them, injects
+them, and registers the listener and the command. No `registerEvents`, no `setExecutor`, no
+factories, no reflection.
 
 <div class="wk-code" markdown>
 
@@ -45,8 +46,8 @@ the listener. No `registerEvents`, no factories, no reflection.
     @Singleton
     final class Greeter {
 
-        public String greet(Player player) {
-            return "Welcome, " + player.getName();
+        public String greet(CommandSender who) {
+            return "Welcome, " + who.getName();
         }
     }
     ```
@@ -74,6 +75,30 @@ the listener. No `registerEvents`, no factories, no reflection.
     ```
 
     Registered for you. Its dependency arrives through the constructor.
+
+=== "Command"
+
+    ```java
+    @Wired
+    @Singleton
+    @CommandHandler("hello")
+    final class HelloCommand implements CommandExecutor {
+
+        private final Greeter greeter;
+
+        HelloCommand(Greeter greeter) {
+            this.greeter = greeter;
+        }
+
+        @Override
+        public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+            sender.sendMessage(greeter.greet(sender));
+            return true;
+        }
+    }
+    ```
+
+    `@CommandHandler` binds it to the `hello` entry in `plugin.yml`. The same `Greeter`, injected again.
 
 </div>
 
