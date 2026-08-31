@@ -323,6 +323,25 @@ class WiredProcessorTest {
     }
 
     @Test
+    void recordsFeatureFlagsInTheRegistry() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Gated",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.FeatureFlag;",
+                        "@Wired @Singleton @FeatureFlag(value = \"regions\", enabledByDefault = false)",
+                        "public final class Gated { public Gated() {} }"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .containsMatch("Map.entry\\(test.Gated.class, new Flag\\(\"regions\", false\\)\\)");
+    }
+
+    @Test
     void rejectsSeveralFeatureFlagsImplementations() {
         Compilation compilation = compile(registry(), flagsImplementation("FlagsA"), flagsImplementation("FlagsB"));
         assertThat(compilation).hadErrorContaining("Several FeatureFlags implementations");

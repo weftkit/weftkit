@@ -31,6 +31,7 @@ import org.weftkit.wiring.processor.model.Product;
 import org.weftkit.wiring.processor.model.WiringModel;
 import org.weftkit.wiring.runtime.registry.ComponentRegistry;
 import org.weftkit.wiring.runtime.registry.Dependency;
+import org.weftkit.wiring.runtime.registry.Flag;
 import org.weftkit.wiring.runtime.registry.Registries;
 
 public class RegistryGenerator {
@@ -44,6 +45,8 @@ public class RegistryGenerator {
     private static final ClassName DEPENDENCY = ClassName.get(Dependency.class);
 
     private static final ClassName REGISTRIES = ClassName.get(Registries.class);
+
+    private static final ClassName FLAG = ClassName.get(Flag.class);
 
     private static final TypeName OBJECT = ClassName.get(Object.class);
 
@@ -134,6 +137,12 @@ public class RegistryGenerator {
                         Container.SET,
                         () -> lazyEntries(fragments.centralLazySingletons()),
                         fragment -> lazyEntries(fragment.lazySingletons())),
+                new Section(
+                        "featureFlags",
+                        mapOf(FLAG),
+                        Container.MAP,
+                        () -> flagEntries(centralComponents()),
+                        fragment -> flagEntries(fragment.components())),
                 new Section(
                         "parameters",
                         mapOf(ParameterizedTypeName.get(ClassName.get(List.class), DEPENDENCY)),
@@ -351,6 +360,18 @@ public class RegistryGenerator {
 
     private CodeBlock lazyEntries(List<String> singletons) {
         return singletons.stream().map(RegistryGenerator::classLiteral).collect(CodeBlock.joining(",\n"));
+    }
+
+    private static CodeBlock flagEntries(Map<String, Component> components) {
+        return components.entrySet().stream()
+                .filter(component -> component.getValue().featureFlag() != null)
+                .map(component ->
+                        mapEntry(component.getKey(), flag(component.getValue().featureFlag())))
+                .collect(CodeBlock.joining(",\n"));
+    }
+
+    private static CodeBlock flag(Flag flag) {
+        return CodeBlock.of("new $T($S, $L)", FLAG, flag.key(), flag.enabledByDefault());
     }
 
     private CodeBlock parameterEntries(Map<String, Component> components) {

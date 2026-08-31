@@ -72,7 +72,7 @@ final class SettingsRule extends GraphRule {
         String base = registryPackage.get() + ".Weft" + element.getSimpleName() + "Defaults";
         String name = base;
         for (int suffix = 2; model.isComponent(name); suffix++) name = base + suffix;
-        model.addComponent(name, new Component(false, false, "", "", List.of()));
+        model.addComponent(name, new Component(false, false, "", null, List.of()));
         model.addSettingsDefault(settings, name);
         return name;
     }

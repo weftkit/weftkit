@@ -9,10 +9,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.weftkit.wiring.FeatureFlag;
 import org.weftkit.wiring.Loader;
 import org.weftkit.wiring.runtime.registry.ComponentRegistry;
 import org.weftkit.wiring.runtime.registry.Dependency;
+import org.weftkit.wiring.runtime.registry.Flag;
 
 /**
  * Instantiates and injects the components of a {@link ComponentRegistry}. Eager singletons are
@@ -384,8 +384,10 @@ public final class WeftLoader {
         return singleton;
     }
 
+    // Flags come from the registry, no annotation lookup at runtime
     private boolean enabled(Class<?> type) {
-        return type.getAnnotation(FeatureFlag.class) == null || FeatureGate.enabled(type, flags());
+        Flag flag = registry.featureFlags().get(type);
+        return flag == null || FeatureGate.enabled(flag, flags());
     }
 
     // Ambient values win over a graph implementation. The processor orders a FeatureFlags

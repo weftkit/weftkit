@@ -148,7 +148,7 @@ public class WiringModel {
             if (initializer != null && isComponent(initializer)) dependencies.add(initializer);
         }
         // The gate resolves flags through the provider, so it must precede any flagged component
-        if (!components.get(component).featureFlag().isEmpty() && flagsProviders.size() == 1) {
+        if (components.get(component).featureFlag() != null && flagsProviders.size() == 1) {
             String provider = flagsProviders.iterator().next();
             if (!provider.equals(component) && isComponent(provider) && !dependencies.contains(provider))
                 dependencies.add(provider);

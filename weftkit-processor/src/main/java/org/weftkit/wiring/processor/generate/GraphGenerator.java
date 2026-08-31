@@ -8,6 +8,7 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
 import javax.tools.Diagnostic;
 import javax.tools.StandardLocation;
+import org.weftkit.wiring.processor.model.Component;
 import org.weftkit.wiring.processor.model.WiringModel;
 
 public class GraphGenerator {
@@ -60,8 +61,8 @@ public class GraphGenerator {
                 .forEach((component, definition) -> graph.append("    \"%s\" [%s, tooltip=\"%s\"%s%s];\n"
                         .formatted(
                                 component,
-                                label(simpleName(component), definition.featureFlag()),
-                                tooltip(component, definition.featureFlag())
+                                label(simpleName(component), flagKey(definition)),
+                                tooltip(component, flagKey(definition))
                                         + (model.isModule(component) ? " (module)" : ""),
                                 model.isModule(component)
                                         ? MODULE_STYLE
@@ -92,6 +93,10 @@ public class GraphGenerator {
     private static String simpleName(String qualified) {
         int lastDot = qualified.lastIndexOf('.');
         return lastDot < 0 ? qualified : qualified.substring(lastDot + 1);
+    }
+
+    private static String flagKey(Component definition) {
+        return definition.featureFlag() == null ? "" : definition.featureFlag().key();
     }
 
     private static String label(String name, String featureFlag) {
