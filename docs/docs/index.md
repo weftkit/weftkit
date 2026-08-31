@@ -181,7 +181,7 @@ two annotation processors validate the graph and generate the registry as you co
 dependencies {
     implementation("org.weftkit:weftkit-bukkit:{{ weftkit_version }}")
     annotationProcessor("org.weftkit:weftkit-processor:{{ weftkit_version }}")
-    annotationProcessor("org.weftkit:weftkit-bukkit:{{ weftkit_version }}")
+    annotationProcessor("org.weftkit:weftkit-bukkit-processor:{{ weftkit_version }}")
 }
 ```
 

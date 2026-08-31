@@ -1,4 +1,4 @@
-package org.weftkit.wiring.bukkit.modules;
+package org.weftkit.wiring.bukkit;
 
 import org.weftkit.wiring.bukkit.commands.CommandModule;
 import org.weftkit.wiring.bukkit.listeners.ListenerModule;

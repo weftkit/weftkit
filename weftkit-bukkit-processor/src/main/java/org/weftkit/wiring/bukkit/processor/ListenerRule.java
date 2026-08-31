@@ -1,4 +1,4 @@
-package org.weftkit.wiring.bukkit.listeners;
+package org.weftkit.wiring.bukkit.processor;
 
 import com.google.auto.service.AutoService;
 import java.util.List;
@@ -15,7 +15,7 @@ import org.weftkit.wiring.processor.spi.ComponentRule;
  * method, each public, with exactly one Bukkit event parameter.
  */
 @AutoService(ComponentRule.class)
-public class ListenerRule implements ComponentRule {
+public final class ListenerRule implements ComponentRule {
 
     private static final String LISTENER = "org.bukkit.event.Listener";
 

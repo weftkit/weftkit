@@ -1,4 +1,4 @@
-package org.weftkit.wiring.bukkit.commands;
+package org.weftkit.wiring.bukkit.processor;
 
 import com.google.auto.service.AutoService;
 import java.util.Map;
@@ -14,7 +14,7 @@ import org.weftkit.wiring.processor.spi.ComponentRule;
  * {@code CommandExecutor} and names a non-blank command.
  */
 @AutoService(ComponentRule.class)
-public class CommandRule implements ComponentRule {
+public final class CommandRule implements ComponentRule {
 
     private static final String COMMAND_HANDLER = "org.weftkit.wiring.bukkit.commands.CommandHandler";
 
