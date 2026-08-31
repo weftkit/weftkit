@@ -1,6 +1,6 @@
 package org.weftkit.wiring.runtime;
 
-import org.weftkit.wiring.FeatureFlag;
+import org.weftkit.wiring.runtime.registry.Flag;
 
 /** The pure feature-flag decision, split out so it holds no graph state and tests without one. */
 final class FeatureGate {
@@ -8,13 +8,12 @@ final class FeatureGate {
     private FeatureGate() {}
 
     /**
-     * Whether components of the type are enabled. A type without {@link FeatureFlag} is always on.
-     * With the annotation, a present {@code flags} decides by key. A null {@code flags} (no
-     * implementation resolvable) falls back to {@link FeatureFlag#enabledByDefault}.
+     * Whether components carrying the flag are enabled. A null {@code flag} (unflagged component)
+     * is always on. A present {@code flags} decides by key. A null {@code flags} (no
+     * implementation resolvable) falls back to {@link Flag#enabledByDefault}.
      */
-    static boolean enabled(Class<?> type, FeatureFlags flags) {
-        FeatureFlag flag = type.getAnnotation(FeatureFlag.class);
+    static boolean enabled(Flag flag, FeatureFlags flags) {
         if (flag == null) return true;
-        return flags == null ? flag.enabledByDefault() : flags.isEnabled(flag.value());
+        return flags == null ? flag.enabledByDefault() : flags.isEnabled(flag.key());
     }
 }

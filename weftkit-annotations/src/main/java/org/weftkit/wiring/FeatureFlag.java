@@ -11,8 +11,9 @@ import java.lang.annotation.Target;
  * Resolved against a {@code FeatureFlags} implementation (ambient or wired); without one,
  * {@link #enabledByDefault} decides. Nothing may <em>require</em> a flagged component, so flags fit
  * leaf features like listeners and commands. A consumer that should tolerate its absence depends on
- * it as {@code Optional<T>}, which resolves empty while the flag is off. Runtime retention, read
- * while the server runs.
+ * it as {@code Optional<T>}, which resolves empty while the flag is off. The generated registry
+ * records key and default, so gating needs no runtime reflection. Runtime retention only keeps
+ * the flag introspectable for plugins.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)

@@ -23,7 +23,7 @@ final class FeatureFlagRule extends GraphRule {
             diagnostics.error("Several FeatureFlags implementations are wired, keep one: "
                     + String.join(", ", model.flagsProviders()));
         for (String provider : model.flagsProviders())
-            if (!model.components().get(provider).featureFlag().isEmpty())
+            if (model.components().get(provider).featureFlag() != null)
                 diagnostics.error(anchor(provider), "The FeatureFlags implementation itself cannot be feature flagged");
         model.components().forEach((component, definition) -> {
             for (String dependency : model.requiredInjectionDependencies(component)) flagFree(component, dependency);
@@ -33,7 +33,7 @@ final class FeatureFlagRule extends GraphRule {
     }
 
     private void flagFree(String component, String dependency) {
-        if (model.components().get(dependency).featureFlag().isEmpty()) return;
+        if (model.components().get(dependency).featureFlag() == null) return;
         diagnostics.error(
                 anchor(component),
                 component + " requires " + dependency

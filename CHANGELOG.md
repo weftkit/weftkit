@@ -24,6 +24,8 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
 - Runnable example plugins under `examples/`, built in CI.
 - The rendered dependency graph marks modules and feature-flagged components.
 - `WeftLoader.ambient(type)` and `WeftLoader.registry()` accessors.
+- `ComponentRegistry.featureFlags()` records each `@FeatureFlag` in the generated registry, so
+  the runtime gates components without any annotation lookup.
 
 ### Changed
 

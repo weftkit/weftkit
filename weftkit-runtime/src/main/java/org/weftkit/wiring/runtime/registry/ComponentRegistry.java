@@ -32,6 +32,14 @@ public interface ComponentRegistry {
         return List.of();
     }
 
+    /**
+     * Maps every {@code @FeatureFlag} component to its flag, letting the runtime gate without an
+     * annotation lookup. Defaults to empty for hand-built registries, leaving every component on.
+     */
+    default Map<Class<?>, Flag> featureFlags() {
+        return Map.of();
+    }
+
     Map<Class<?>, List<Dependency>> parameters();
 
     Map<Class<?>, Function<Object[], Object>> factories();

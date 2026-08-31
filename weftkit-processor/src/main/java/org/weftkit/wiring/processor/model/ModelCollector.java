@@ -17,6 +17,7 @@ import org.weftkit.wiring.Singleton;
 import org.weftkit.wiring.processor.compiler.Diagnostics;
 import org.weftkit.wiring.processor.compiler.Mirrors;
 import org.weftkit.wiring.runtime.FeatureFlags;
+import org.weftkit.wiring.runtime.registry.Flag;
 
 /** Builds the {@link WiringModel} from validated elements, reporting entries it cannot parse. */
 public final class ModelCollector {
@@ -76,13 +77,13 @@ public final class ModelCollector {
                         singleton != null,
                         singleton != null && singleton.lazy(),
                         mirrors.qualifier(component),
-                        featureFlag == null ? "" : featureFlag.value(),
+                        featureFlag == null ? null : new Flag(featureFlag.value(), featureFlag.enabledByDefault()),
                         parameters(constructor)));
     }
 
     /** Collects a {@code @WeftModule} class, always an eager singleton. */
     public void collectModule(TypeElement module, ExecutableElement constructor) {
-        add(module, new Component(true, false, "", "", parameters(constructor)));
+        add(module, new Component(true, false, "", null, parameters(constructor)));
         model.addModule(module.getQualifiedName().toString());
     }
 

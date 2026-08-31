@@ -4,33 +4,29 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
-import org.weftkit.wiring.FeatureFlag;
+import org.weftkit.wiring.runtime.registry.Flag;
 
 class FeatureGateTest {
 
-    @FeatureFlag(value = "off", enabledByDefault = false)
-    private static final class OffByDefault {}
+    private static final Flag OFF_BY_DEFAULT = new Flag("off", false);
 
-    @FeatureFlag("on")
-    private static final class OnByDefault {}
-
-    private static final class Unflagged {}
+    private static final Flag ON_BY_DEFAULT = new Flag("on", true);
 
     @Test
-    void unflaggedTypeIsAlwaysOn() {
-        assertTrue(FeatureGate.enabled(Unflagged.class, null));
-        assertTrue(FeatureGate.enabled(Unflagged.class, key -> false));
+    void unflaggedComponentIsAlwaysOn() {
+        assertTrue(FeatureGate.enabled(null, null));
+        assertTrue(FeatureGate.enabled(null, key -> false));
     }
 
     @Test
     void withoutFlagsTheDefaultDecides() {
-        assertTrue(FeatureGate.enabled(OnByDefault.class, null));
-        assertFalse(FeatureGate.enabled(OffByDefault.class, null));
+        assertTrue(FeatureGate.enabled(ON_BY_DEFAULT, null));
+        assertFalse(FeatureGate.enabled(OFF_BY_DEFAULT, null));
     }
 
     @Test
     void presentFlagsDecideByKey() {
-        assertFalse(FeatureGate.enabled(OnByDefault.class, key -> false));
-        assertTrue(FeatureGate.enabled(OffByDefault.class, "off"::equals));
+        assertFalse(FeatureGate.enabled(ON_BY_DEFAULT, key -> false));
+        assertTrue(FeatureGate.enabled(OFF_BY_DEFAULT, "off"::equals));
     }
 }
