@@ -175,7 +175,9 @@ disable it without importing it. An adapter that wants its modules woven into ev
 plugin automatically registers a `ModuleContributor` service with the annotation processor, the
 same way it contributes validation rules; a contributed class missing from the compile classpath
 is skipped, so the contribution only applies where the adapter is in use. Declarations on
-`@Registry` win over contributions with the same id.
+`@Registry` win over contributions with the same id. Ship such compile-time services in a
+separate artifact for the consumer's `annotationProcessor` path, like `weftkit-bukkit-processor`,
+so they and their service registrations stay out of consumer jars.
 
 `@Requires` and `@Initializes` are not supported on module components, since the static holder
 analysis only runs over sources.

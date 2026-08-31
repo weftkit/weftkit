@@ -1,4 +1,4 @@
-package org.weftkit.wiring.bukkit.modules;
+package org.weftkit.wiring.bukkit.processor;
 
 import com.google.auto.service.AutoService;
 import java.util.List;

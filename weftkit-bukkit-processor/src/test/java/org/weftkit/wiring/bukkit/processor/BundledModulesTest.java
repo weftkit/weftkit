@@ -1,4 +1,4 @@
-package org.weftkit.wiring.bukkit;
+package org.weftkit.wiring.bukkit.processor;
 
 import static com.google.testing.compile.CompilationSubject.assertThat;
 import static com.google.testing.compile.Compiler.javac;
@@ -97,7 +97,7 @@ class BundledModulesTest {
                                 "test.Reg",
                                 "package test;",
                                 "import org.weftkit.wiring.Registry;",
-                                "import org.weftkit.wiring.bukkit.modules.BukkitModules;",
+                                "import org.weftkit.wiring.bukkit.BukkitModules;",
                                 registry),
                         JavaFileObjects.forSourceLines(
                                 "test.Svc",

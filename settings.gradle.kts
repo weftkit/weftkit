@@ -12,6 +12,7 @@ include(
     "weftkit-runtime",
     "weftkit-processor",
     "weftkit-bukkit",
+    "weftkit-bukkit-processor",
 )
 
 includeBuild("examples/bukkit/join-leave-messages")

@@ -15,7 +15,7 @@ dependencies {
 
     implementation("org.weftkit:weftkit-bukkit:0.6.0")
     annotationProcessor("org.weftkit:weftkit-processor:0.6.0")
-    annotationProcessor("org.weftkit:weftkit-bukkit:0.6.0")
+    annotationProcessor("org.weftkit:weftkit-bukkit-processor:0.6.0")
 }
 
 tasks.shadowJar {

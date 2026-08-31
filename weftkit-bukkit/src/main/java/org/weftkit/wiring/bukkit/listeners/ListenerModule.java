@@ -8,7 +8,7 @@ import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.weftkit.wiring.ModuleLifecycle;
 import org.weftkit.wiring.WeftModule;
-import org.weftkit.wiring.bukkit.modules.BukkitModules;
+import org.weftkit.wiring.bukkit.BukkitModules;
 import org.weftkit.wiring.runtime.Weft;
 
 /**

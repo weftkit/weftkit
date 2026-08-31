@@ -27,12 +27,14 @@ dependencies {
 
     implementation("org.weftkit:weftkit-bukkit:{{ weftkit_version }}")
     annotationProcessor("org.weftkit:weftkit-processor:{{ weftkit_version }}")
-    annotationProcessor("org.weftkit:weftkit-bukkit:{{ weftkit_version }}")
+    annotationProcessor("org.weftkit:weftkit-bukkit-processor:{{ weftkit_version }}")
 }
 ```
 
-`weftkit-bukkit` brings the runtime and the annotations. The two annotation processors validate
-the graph and generate the registry during compilation.
+`weftkit-bukkit` brings the runtime and the annotations. The processor path stays out of your
+jar: `weftkit-processor` validates the graph and generates the registry during compilation, and
+`weftkit-bukkit-processor` weaves in the bundled Bukkit modules and checks listeners and
+commands.
 
 ## A minimal plugin
 

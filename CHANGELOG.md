@@ -17,6 +17,8 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
   resolves empty while the flag is off. This lets a config-gated subsystem reach its consumers.
 - `Weft`, the injectable enumeration facade: `all(supertype)` returns every enabled component.
 - `ModuleContributor` SPI for adapters to contribute modules to every generated registry.
+- Command binding: `@CommandHandler` executors bind to their `plugin.yml` commands through the
+  bundled `bukkit:commands` module, with the handler contract checked at compile time.
 - Plugin metrics: `MetricsSettings.serviceId()` plus `MetricsContributor` and `PluginMetrics`
   publish your plugin's own bStats charts through the bundled `bukkit:metrics` module.
 - Runnable example plugins under `examples/`, built in CI.
@@ -29,6 +31,9 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
   `bukkit:listeners` and `bukkit:metrics`, disable them via `BukkitModules`.
 - Metrics configuration moved from annotations on the plugin main to a wired `MetricsSettings`
   component, so it can be decided at runtime.
+- The Bukkit adapter's compile-time side ships as the new `weftkit-bukkit-processor` artifact:
+  declare it on `annotationProcessor` instead of `weftkit-bukkit`. The listener validation rule
+  moved there, and plugin jars stop shipping processor service files.
 - `ComponentRegistry`, `Dependency`, and `Registries` moved to
   `org.weftkit.wiring.runtime.registry`.
 

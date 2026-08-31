@@ -41,7 +41,7 @@ dependencies {
 
     implementation("org.weftkit:weftkit-bukkit:0.6.0")
     annotationProcessor("org.weftkit:weftkit-processor:0.6.0")
-    annotationProcessor("org.weftkit:weftkit-bukkit:0.6.0")
+    annotationProcessor("org.weftkit:weftkit-bukkit-processor:0.6.0")
 }
 ```
 
@@ -156,7 +156,8 @@ runs on it as its wiring and lifecycle framework.
 | `weftkit-annotations` | The wiring vocabulary - `@Registry`, `@Wired`, `@Singleton`, `@Provides`, `@Qualified`, `@Initializes`, `@Requires`, `@StaticHolder` - and the `Loader` lifecycle interface (`load`/`unload`). |
 | `weftkit-runtime` | The runtime. `WeftLoader` instantiates components in dependency order, injects by type, and drives the `Loader` lifecycle, working against the `ComponentRegistry` the processor generates. |
 | `weftkit-processor` | The platform-neutral annotation processor that validates the graph at compile time and generates the registry. Platform-specific checks are contributed through the `ComponentRule` service interface. |
-| `weftkit-bukkit` | The Bukkit adapter. `WeftPlugin` runs the whole lifecycle from `onEnable` to `onDisable` (with `BukkitWeft` as the manual entry point), and a `ComponentRule` validates `Listener` components and their `@EventHandler` methods. |
+| `weftkit-bukkit` | The Bukkit adapter runtime. `WeftPlugin` runs the whole lifecycle from `onEnable` to `onDisable` (with `BukkitWeft` as the manual entry point), plus the bundled listener, command, and metrics modules. |
+| `weftkit-bukkit-processor` | The Bukkit adapter's compile-time side: contributes the bundled modules to every generated registry and validates `Listener` and `@CommandHandler` components. Goes on the `annotationProcessor` path, never in the jar. |
 
 ## License
 
