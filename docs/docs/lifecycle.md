@@ -28,6 +28,15 @@ protected void onWeftEnable(WeftLoader loader) {
 }
 ```
 
+## Threading
+
+The loader is confined to the thread that created it, on Bukkit the server main thread. Any
+call touching mutable loader state fails immediately from another thread with a clear exception
+instead of silently racing the graph. That covers creating components inside an async task as
+well as reads like `get` and the load timings; only views of the immutable registry, such as
+`loadOrder` or `contains`, work from anywhere. Async work should gather its inputs up front or
+hop back to the main thread before touching components.
+
 ## Load order
 
 Load order follows the dependency graph. A component loads after every component it depends on,
@@ -97,7 +106,7 @@ A reload command is then one line: `loader.get(Config.class).reload()`. Componen
 The loader exposes what happened during startup. `loadOrder` returns the singleton load
 sequence, `totalLoadTime` returns the combined startup cost for a one-line enable log, and
 `loadTimings` returns how long each singleton took to construct and load, in load
-order.
+order, as a snapshot that is safe to hand to another thread.
 
 ```java
 loader.loadTimings().forEach((type, duration) ->

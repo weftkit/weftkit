@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -408,8 +409,11 @@ class WeftLoaderIntegrationTest {
     void recordsLazyMaterializationTimings() {
         WeftLoader loader = newLoader();
         loader.load();
-        assertFalse(loader.loadTimings().containsKey(Sample.Frost.class));
+        Map<Class<?>, Duration> beforeFrost = loader.loadTimings();
+        assertFalse(beforeFrost.containsKey(Sample.Frost.class));
         loader.create(Sample.FrostUser.class);
         assertTrue(loader.loadTimings().containsKey(Sample.Frost.class));
+        // Timings are a snapshot, the earlier map does not grow behind the caller
+        assertFalse(beforeFrost.containsKey(Sample.Frost.class));
     }
 }

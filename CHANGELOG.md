@@ -24,6 +24,10 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
 - Runnable example plugins under `examples/`, built in CI.
 - The rendered dependency graph marks modules and feature-flagged components.
 - `WeftLoader.ambient(type)` and `WeftLoader.registry()` accessors.
+- `WeftLoader` is confined to its creating thread: any access touching mutable loader state,
+  reads like `get` and the load timings included, fails fast from another thread with a clear
+  exception instead of silently racing the graph. Views of the immutable registry stay
+  accessible from any thread, and `loadTimings` returns a snapshot instead of a live view.
 - `ComponentRegistry.featureFlags()` records each `@FeatureFlag` in the generated registry, so
   the runtime gates components without any annotation lookup.
 

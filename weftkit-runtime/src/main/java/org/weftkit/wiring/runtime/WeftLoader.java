@@ -20,13 +20,16 @@ import org.weftkit.wiring.runtime.registry.Flag;
  * plain components fresh for every {@link #create}. A lazy singleton runs its {@link Loader}
  * hooks too: {@code load()} at materialization, where a false return or exception drops the
  * singleton and propagates to the injection site while the rest of the graph stays loaded, so
- * the next injection retries. Not thread safe: drive it from a single thread, on Bukkit the
- * server main thread. The loader is not injectable; components reach the graph through
- * {@link Weft} and {@link WeftView} and leave the loader to the plugin main.
+ * the next injection retries. Confined to its creating thread, on Bukkit the server main
+ * thread: calls touching mutable state fail fast from other threads, only immutable registry
+ * views are thread safe. Not injectable, components reach the graph through {@link Weft} and
+ * {@link WeftView}.
  */
 public final class WeftLoader {
 
     private final ComponentRegistry registry;
+
+    private final Thread owner = Thread.currentThread();
 
     private final Object[] ambient;
 
@@ -69,6 +72,7 @@ public final class WeftLoader {
      * before it propagates, with any teardown failure attached as suppressed.
      */
     public boolean load() {
+        requireOwnerThread();
         for (Class<?> type : registry.loadOrder()) {
             // A singleton gated off by its feature flag is never constructed
             if (!enabled(type)) continue;
@@ -108,6 +112,7 @@ public final class WeftLoader {
      * component materialized by an unload hook during teardown is dropped without its own hook.
      */
     public void unload() {
+        requireOwnerThread();
         List<Class<?>> order = List.copyOf(creationOrder);
         RuntimeException failure = null;
         for (int index = order.size() - 1; index >= 0; index--) {
@@ -132,6 +137,7 @@ public final class WeftLoader {
      * has been created.
      */
     public <T> T get(Class<T> type) {
+        requireOwnerThread();
         return type.cast(singletons.get(bound(type, "")));
     }
 
@@ -161,14 +167,17 @@ public final class WeftLoader {
 
     /**
      * Returns how long each singleton took to create and load, in creation order. An eager
-     * entry includes the time of any lazy materialization its own creation triggered.
+     * entry includes any lazy materialization its creation triggered. A snapshot at call time,
+     * safe to hand to another thread.
      */
     public Map<Class<?>, Duration> loadTimings() {
-        return Collections.unmodifiableMap(timings);
+        requireOwnerThread();
+        return Collections.unmodifiableMap(new LinkedHashMap<>(timings));
     }
 
     /** Returns the combined creation and load time of every singleton created so far. */
     public Duration totalLoadTime() {
+        requireOwnerThread();
         return timings.values().stream().reduce(Duration.ZERO, Duration::plus);
     }
 
@@ -179,6 +188,7 @@ public final class WeftLoader {
      * since a singleton's cached state must not depend on whichever call materialized it.
      */
     public <T> List<T> createAll(Class<T> supertype, Object... arguments) {
+        requireOwnerThread();
         return registry.parameters().keySet().stream()
                 .filter(supertype::isAssignableFrom)
                 .filter(this::enabled)
@@ -187,8 +197,10 @@ public final class WeftLoader {
                 .toList();
     }
 
-    // Read-only counterpart of createAll, surfaced through WeftView
+    // Read-only counterpart of createAll, surfaced through WeftView. Still owner-thread only,
+    // flag resolution may materialize the FeatureFlags singleton
     <T> List<Class<? extends T>> types(Class<T> supertype) {
+        requireOwnerThread();
         List<Class<? extends T>> matches = new ArrayList<>();
         registry.parameters().keySet().stream()
                 .filter(supertype::isAssignableFrom)
@@ -204,6 +216,7 @@ public final class WeftLoader {
     }
 
     boolean componentEnabled(Class<?> type) {
+        requireOwnerThread();
         Class<?> target = bound(type, "");
         return target != null && registry.parameters().containsKey(target) && enabled(target);
     }
@@ -215,10 +228,18 @@ public final class WeftLoader {
      * Throws for a component gated off by its feature flag.
      */
     public <T> T create(Class<T> type, Object... arguments) {
+        requireOwnerThread();
         Class<?> target = bound(type, "");
         if (target != null && !enabled(target))
             throw new ResolutionException("Component is disabled by its feature flag: " + target.getName());
         return type.cast(instance(target, arguments));
+    }
+
+    private void requireOwnerThread() {
+        if (Thread.currentThread() == owner) return;
+        throw new IllegalStateException("WeftLoader is confined to its creating thread '" + owner.getName()
+                + "' but was accessed from '" + Thread.currentThread().getName()
+                + "'. Schedule graph access back on the owner thread");
     }
 
     private Object build(Class<?> target, Object... arguments) {
