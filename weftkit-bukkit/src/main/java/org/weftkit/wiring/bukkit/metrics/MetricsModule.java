@@ -1,8 +1,11 @@
 package org.weftkit.wiring.bukkit.metrics;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.weftkit.wiring.Loader;
 import org.weftkit.wiring.ModuleLifecycle;
 import org.weftkit.wiring.WeftModule;
 import org.weftkit.wiring.bukkit.BukkitModules;
@@ -24,18 +27,21 @@ public final class MetricsModule implements ModuleLifecycle {
 
     private final Weft weft;
 
-    private WeftkitMetrics metrics;
-
-    private PluginBStats pluginMetrics;
+    private final List<Loader> loaded;
 
     public MetricsModule(JavaPlugin plugin, MetricsSettings settings, Weft weft) {
         this.plugin = plugin;
         this.settings = settings;
         this.weft = weft;
+        this.loaded = new ArrayList<>();
     }
 
     @Override
     public boolean activate() {
+        if (!bStatsShipped()) {
+            plugin.getLogger().fine("jar ships no bStats, metrics stay off");
+            return true;
+        }
         if (settings.enabled()) guarded(Level.FINE, this::startWeftkit, "weftkit metrics unavailable");
         if (settings.serviceId() > 0) guarded(Level.WARNING, this::startPlugin, "Plugin metrics unavailable");
         return true;
@@ -43,26 +49,31 @@ public final class MetricsModule implements ModuleLifecycle {
 
     @Override
     public void deactivate() {
-        if (metrics != null) {
-            guarded(Level.FINE, metrics::unload, "weftkit metrics teardown failed");
-            metrics = null;
+        for (Loader started : loaded) {
+            guarded(Level.FINE, started::unload, started.getClass().getSimpleName() + " teardown failed");
         }
-        if (pluginMetrics != null) {
-            guarded(Level.FINE, pluginMetrics::unload, "plugin metrics teardown failed");
-            pluginMetrics = null;
+        loaded.clear();
+    }
+
+    static boolean bStatsShipped() {
+        try {
+            Class.forName("org.bstats.bukkit.Metrics", false, MetricsModule.class.getClassLoader());
+            return true;
+        } catch (ClassNotFoundException | LinkageError ex) {
+            return false;
         }
     }
 
     private void startWeftkit() {
         WeftkitMetrics started = new WeftkitMetrics(plugin, settings.reportName());
         started.load();
-        metrics = started;
+        loaded.add(started);
     }
 
     private void startPlugin() {
         PluginBStats started = new PluginBStats(plugin, settings.serviceId());
         started.load();
-        pluginMetrics = started;
+        loaded.add(started);
         contributeAll(started, weft.all(MetricsContributor.class), plugin.getLogger());
     }
 
@@ -80,8 +91,7 @@ public final class MetricsModule implements ModuleLifecycle {
         }
     }
 
-    // Metrics must never take a plugin down, and a jar without bStats classes is the normal
-    // no-metrics state, so failures only log
+    // Metrics must never take a plugin down
     private void guarded(Level level, Runnable step, String failure) {
         try {
             step.run();

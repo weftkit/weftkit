@@ -82,7 +82,8 @@ once per bStats interval:
   core count, operating system, location by country)
 
 Only one plugin per server submits, no matter how many weftkit plugins are installed, so servers
-are never counted twice. No player data, plugin configuration, or file contents are collected.
+are never counted twice. If the submitting plugin is disabled mid-session, another weftkit plugin
+takes over. No player data, plugin configuration, or file contents are collected.
 The collected data is publicly visible on the weftkit bStats page.
 
 Plugins that ship weftkit without bStats never transmit anything themselves, but a submitter on
