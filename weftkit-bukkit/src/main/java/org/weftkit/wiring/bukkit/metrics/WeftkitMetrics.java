@@ -5,75 +5,73 @@ import java.io.InputStream;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.logging.Level;
 import org.bstats.bukkit.Metrics;
 import org.bstats.charts.AdvancedPie;
 import org.bstats.charts.SimplePie;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.HandlerList;
+import org.bukkit.event.Listener;
+import org.bukkit.event.server.ServiceUnregisterEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.weftkit.wiring.Loader;
 
 /**
- * Anonymous usage metrics for weftkit itself, reported to bStats under one shared service id.
- * Managed by the bundled {@link MetricsModule}, so consumers never create this themselves. The first weftkit plugin to enable claims a JVM-wide submitter
- * role and reports every enabled plugin that ships weftkit, recognized by the version resource in
- * its jar, so a server reports each plugin once no matter how many weftkit plugins it runs.
- * Plugin names are only reported for plugins that opt in through {@link MetricsSettings}, all
- * others stay anonymous counts.
+ * Anonymous usage metrics for weftkit itself, reported to bStats under one shared service id by
+ * one plugin per server, see {@link MetricsDescriptor}. Managed by the bundled
+ * {@link MetricsModule}. Plugin names are only reported on opt-in through {@link MetricsSettings}.
  */
-final class WeftkitMetrics implements Loader {
+final class WeftkitMetrics implements Loader, Listener {
 
     private static final int SERVICE_ID = 33308;
 
+    private static final long SNAPSHOT_TTL_MILLIS = 10_000;
+
     static final String VERSION_RESOURCE = "weftkit-version.properties";
-
-    // Outside the org.weftkit namespace so shading relocation cannot rewrite the literal, which
-    // must stay identical across every plugin's copy to act as the JVM-wide claim and its lock
-    static final String CLAIM_KEY = "weftkit.bstats.submitter";
-
-    // Same relocation-proof trick as CLAIM_KEY - every plugin's shaded copy registers its name
-    // opt-in under this prefix, where the submitter's copy can see it
-    static final String NAME_KEY_PREFIX = "weftkit.bstats.named.";
 
     private final JavaPlugin plugin;
 
-    private final boolean reportName;
+    private final MetricsDescriptor descriptor;
 
     private Metrics metrics;
 
-    private boolean submitter;
+    private Map<String, String> snapshot;
+
+    private long snapshotAt;
 
     WeftkitMetrics(JavaPlugin plugin, boolean reportName) {
         this.plugin = plugin;
-        this.reportName = reportName;
-    }
-
-    static boolean named(String pluginName) {
-        return System.getProperty(NAME_KEY_PREFIX + pluginName) != null;
+        this.descriptor = new MetricsDescriptor(plugin, reportName);
     }
 
     @Override
     public boolean load() {
-        if (reportName) System.setProperty(NAME_KEY_PREFIX + plugin.getName(), "true");
-        // The literal is interned JVM-wide, so every plugin's shaded copy locks the same instance
-        synchronized (CLAIM_KEY) {
-            if (System.getProperty(CLAIM_KEY) == null) {
-                System.setProperty(CLAIM_KEY, plugin.getName());
-                submitter = true;
-            }
-        }
-        if (submitter) startMetrics();
+        descriptor.register();
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
+        claimAndStart();
         return true;
     }
 
     @Override
     public void unload() {
-        System.clearProperty(NAME_KEY_PREFIX + plugin.getName());
-        if (submitter) releaseClaim();
-        if (metrics != null) {
-            metrics.shutdown();
-            metrics = null;
-        }
+        HandlerList.unregisterAll(this);
+        stop();
+        descriptor.unregister();
+    }
+
+    @EventHandler
+    public void onServiceUnregister(ServiceUnregisterEvent event) {
+        if (!plugin.isEnabled()) return;
+        if (!descriptor.handover(event.getProvider().getProvider())) return;
+        // Next tick, not inline: a stopping server no longer ticks, so the role does not churn
+        // through copies that are about to disable with it
+        plugin.getServer().getScheduler().runTask(plugin, this::claimAndStart);
+    }
+
+    private void claimAndStart() {
+        if (metrics == null && descriptor.claimSubmit()) startMetrics();
     }
 
     private void startMetrics() {
@@ -83,29 +81,30 @@ final class WeftkitMetrics implements Loader {
                     "plugins_per_server", () -> bucket(weftkitPlugins().size())));
             metrics.addCustomChart(new AdvancedPie("named_plugins", this::countByPlugin));
             metrics.addCustomChart(new AdvancedPie("weftkit_versions", this::countByVersion));
-        } catch (LinkageError ex) {
-            // A jar without bStats classes ships no metrics at all, so stay quiet
-            releaseClaim();
-            plugin.getLogger().log(Level.FINE, "weftkit metrics unavailable", ex);
-        } catch (RuntimeException ex) {
-            releaseClaim();
-            plugin.getLogger().warning("Failed to start weftkit bStats integration: " + ex.getMessage());
+        } catch (RuntimeException | LinkageError ex) {
+            // Withdraw so another copy can claim the submit role
+            withdraw();
+            plugin.getLogger().log(Level.WARNING, "Failed to start weftkit bStats integration", ex);
         }
     }
 
-    // Releasing on failure lets a weftkit plugin that enables later become the submitter instead
-    private void releaseClaim() {
-        synchronized (CLAIM_KEY) {
-            System.clearProperty(CLAIM_KEY);
-            submitter = false;
-        }
+    private void withdraw() {
+        stop();
+        descriptor.withdrawSubmit();
+    }
+
+    private void stop() {
+        if (metrics == null) return;
+        metrics.shutdown();
+        metrics = null;
     }
 
     private Map<String, Integer> countByPlugin() {
         Map<String, Integer> counts = new LinkedHashMap<>();
-        weftkitPlugins().keySet().forEach(name -> {
-            if (named(name)) counts.put(name, 1);
-        });
+        Set<String> weftkit = weftkitPlugins().keySet();
+        for (String name : descriptor.namedPlugins()) {
+            if (weftkit.contains(name)) counts.put(name, 1);
+        }
         return counts;
     }
 
@@ -115,10 +114,16 @@ final class WeftkitMetrics implements Loader {
         return counts;
     }
 
-    // Shading relocates packages but not resource paths, so every plugin that ships weftkit still
-    // carries the version resource at its jar root. Scanning the live plugin list for it replaces
-    // any shared registry of weftkit plugins
     private Map<String, String> weftkitPlugins() {
+        long now = System.currentTimeMillis();
+        if (snapshot == null || now - snapshotAt > SNAPSHOT_TTL_MILLIS) {
+            snapshot = scanPlugins();
+            snapshotAt = now;
+        }
+        return snapshot;
+    }
+
+    private Map<String, String> scanPlugins() {
         Map<String, String> plugins = new LinkedHashMap<>();
         for (Plugin candidate : plugin.getServer().getPluginManager().getPlugins()) {
             if (!candidate.isEnabled()) continue;

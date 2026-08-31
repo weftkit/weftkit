@@ -2,6 +2,7 @@ package org.weftkit.wiring.bukkit.metrics;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +31,13 @@ class MetricsModuleTest {
         MetricsContributor second = metrics -> metrics.add(new SimplePie("second", () -> "value"));
         MetricsModule.contributeAll(charts::add, List.of(first, second), quietLogger());
         assertEquals(2, charts.size());
+    }
+
+    // Pins the probed class name to the actual dependency. If bStats moves the class, this fails
+    // instead of metrics silently staying off
+    @Test
+    void probeSeesBStatsOnTheClasspath() {
+        assertTrue(MetricsModule.bStatsShipped());
     }
 
     @Test
