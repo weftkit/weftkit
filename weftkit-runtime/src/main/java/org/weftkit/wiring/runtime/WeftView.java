@@ -5,7 +5,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A read-only view of a loaded graph, injectable alongside {@link Weft}.
+ * A read-only view of a loaded graph, injectable alongside {@link Weft}. Shares the loader's
+ * thread confinement: {@link #contains}, {@link #loadOrder}, and {@link #modules} read immutable
+ * registry data and work from any thread, the rest is owner thread only.
  */
 public final class WeftView {
 
@@ -40,7 +42,7 @@ public final class WeftView {
         return loader.loadOrder();
     }
 
-    /** How long each singleton took to create and load, in creation order. */
+    /** How long each singleton took to create and load, in creation order. A snapshot at call time. */
     public Map<Class<?>, Duration> loadTimings() {
         return loader.loadTimings();
     }
