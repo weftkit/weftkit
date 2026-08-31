@@ -20,7 +20,7 @@ weftkit is not the right answer.
 | Managed lifecycle: load order, startup and teardown hooks, reverse shutdown | You write and maintain it | Built in, the core of the framework | Not included | Not included |
 | Bukkit listener registration | `registerEvents` per listener | Automatic for `@Wired` listeners | By hand | By hand |
 | Runtime reflection | None | None | None | Throughout |
-| Weight added to the plugin jar | None | Small runtime, bStats is the only third party dependency | Small runtime | Guice plus its dependencies, on the order of megabytes shaded |
+| Weight added to the plugin jar | None | Small runtime, zero third party dependencies | Small runtime | Guice plus its dependencies, on the order of megabytes shaded |
 | Use outside Bukkit | Not applicable | No, weftkit is Bukkit only | Yes, general purpose | Yes, general purpose; Sponge and Velocity are built on it |
 | Maturity and ecosystem | Not applicable | Pre-1.0, runs one production plugin | Very mature, large ecosystem | Very mature, large ecosystem |
 

@@ -84,7 +84,7 @@ final class WeftkitMetrics implements Loader {
             metrics.addCustomChart(new AdvancedPie("named_plugins", this::countByPlugin));
             metrics.addCustomChart(new AdvancedPie("weftkit_versions", this::countByVersion));
         } catch (LinkageError ex) {
-            // Missing bStats classes mean the consumer stripped them to opt out, so stay quiet
+            // A jar without bStats classes ships no metrics at all, so stay quiet
             releaseClaim();
             plugin.getLogger().log(Level.FINE, "weftkit metrics unavailable", ex);
         } catch (RuntimeException ex) {

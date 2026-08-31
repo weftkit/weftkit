@@ -2,7 +2,8 @@ description = "The weftkit Bukkit adapter: plugin lifecycle entry points and lis
 
 dependencies {
     api(project(":weftkit-runtime"))
-    implementation(libs.bstats)
+    // Consumers add bStats themselves
+    compileOnly(libs.bstats)
     compileOnly(project(":weftkit-processor"))
     compileOnly(libs.bukkit)
 
@@ -11,6 +12,7 @@ dependencies {
 
     testImplementation(project(":weftkit-processor"))
     testImplementation(libs.bukkit)
+    testImplementation(libs.bstats)
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation(libs.compile.testing)

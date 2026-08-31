@@ -17,6 +17,8 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
   resolves empty while the flag is off. This lets a config-gated subsystem reach its consumers.
 - `Weft`, the injectable enumeration facade: `all(supertype)` returns every enabled component.
 - `ModuleContributor` SPI for adapters to contribute modules to every generated registry.
+- Plugin metrics: `MetricsSettings.serviceId()` plus `MetricsContributor` and `PluginMetrics`
+  publish your plugin's own bStats charts through the bundled `bukkit:metrics` module.
 - Runnable example plugins under `examples/`, built in CI.
 - The rendered dependency graph marks modules and feature-flagged components.
 - `WeftLoader.ambient(type)` and `WeftLoader.registry()` accessors.
@@ -34,6 +36,9 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
 
 - `@WeftMetrics` and `@NoMetrics`, replaced by `MetricsSettings` and
   `@Registry(disable = BukkitModules.METRICS)`.
+- The bundled bStats dependency. All metrics, weftkit's own reporting included, only run when
+  the consuming plugin adds bStats itself, so no plugin carries telemetry without its build
+  saying so.
 - `WeftLoader` self-injection. A `WeftLoader` constructor parameter now fails the build; inject
   `Weft` to enumerate components, and reach everything else from the plugin main.
 - `BukkitWeft.registerListeners`, superseded by the bundled listener module.

@@ -115,10 +115,10 @@ dot -Tsvg weftkit-graph.dot -o weftkit-graph.svg
 
 The [player-homes example](examples/player-homes.md) renders to this, its two commands sharing
 the `HomeStore` singleton, which loads homes through the package-private `HomesFile`, alongside
-the bundled listener and metrics modules:
+the bundled listener, command, and metrics modules:
 
 <figure class="wk-graph" markdown>
-![Dependency graph of the player-homes plugin. HomeCommand and SetHomeCommand, both amber singletons, point at the HomeStore singleton, which points at the dashed-bordered package-private HomesFile. The teal MetricsModule points at a plain WeftMetricsSettingsDefaults, and the teal ListenerModule stands alone.](assets/diagrams/weftkit-graph.svg)
+![Dependency graph of the player-homes plugin. HomeCommand and SetHomeCommand, both amber singletons, point at the HomeStore singleton, which points at the dashed-bordered package-private HomesFile. The teal MetricsModule points at a plain WeftMetricsSettingsDefaults, and the teal ListenerModule and CommandModule stand alone.](assets/diagrams/weftkit-graph.svg)
 <figcaption>The generated <code>weftkit-graph.dot</code> for the player-homes example, rendered with Graphviz.</figcaption>
 </figure>
 

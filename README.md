@@ -129,12 +129,13 @@ internals stay internal while still being injected, tested, and lifecycle-manage
 
 ## Metrics
 
-weftkit reports anonymous usage numbers (plugin counts, weftkit versions, standard server stats)
-through [bStats](https://bstats.org), submitted once per server no matter how many weftkit
-plugins run on it. Plugin names are only reported for plugins that opt in with
-`@WeftMetrics(reportName = true)`. Plugin authors opt out entirely by annotating their plugin main
-with `@WeftMetrics(enabled = false)`, server owners through the global bStats config. [What is
-collected and how to opt out](https://weftkit.org/metrics/).
+weftkit ships no telemetry by default: it does not bundle [bStats](https://bstats.org), and a
+jar built without it transmits nothing. Adding bStats to your build enables your plugin's own
+charts through the wired metrics API, and weftkit's anonymous usage reporting (plugin counts,
+weftkit versions, standard server stats) rides along, submitted once per server no matter how
+many weftkit plugins run on it. Plugin names are only reported on explicit opt-in, server owners
+opt out through the global bStats config. [Plugin charts, what is collected, and how to opt
+out](https://weftkit.org/metrics/).
 
 ## Why "weftkit"
 
