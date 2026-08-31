@@ -21,7 +21,6 @@ dependencies {
 tasks.shadowJar {
     archiveClassifier.set("")
     relocate("org.weftkit.wiring", "org.weftkit.examples.joinleave.lib.weftkit")
-    relocate("org.bstats", "org.weftkit.examples.joinleave.lib.bstats")
     minimize {}
     metaInf { from(rootProject.layout.projectDirectory.file("../../../LICENSE")) }
 }

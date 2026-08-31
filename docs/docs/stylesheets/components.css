@@ -84,12 +84,12 @@
 
 .md-typeset figure.wk-graph figcaption {
   flex: 1 1 13rem;
-  margin-top: 0.6rem;
+  margin-top: 0;
   font-size: 0.76rem;
   font-style: normal;
   line-height: 1.6;
   text-align: left;
-  color: var(--md-default-fg-color--light);
+  order: -1;
 }
 
 .md-typeset figure.wk-graph figcaption strong {
@@ -97,9 +97,8 @@
 }
 
 @media screen and (min-width: 45em) {
-  .md-typeset figure.wk-graph figcaption {
-    order: -1;
-    margin-top: 0;
+  .md-typeset figure.wk-graph img {
+    max-width: 85%;
   }
 }
 

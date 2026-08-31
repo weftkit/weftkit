@@ -16,9 +16,8 @@ tasks.shadowJar {
 }
 ```
 
-weftkit's bStats integration rides along, relocated by an `org.bstats` rule if your plugin
-already has one and working unrelocated otherwise. Opting out of the metrics entirely is
-covered on the [metrics](metrics.md) page.
+weftkit bundles no third-party libraries, bStats included: the jar carries metrics code only if
+your build adds bStats, covered on the [metrics](metrics.md) page.
 
 Shadow's `minimize()` is safe to use. weftkit [modules](modules.md) and their components are
 ordinary code in your generated wiring: the bundled ones (listener wiring, weftkit's metrics) are
@@ -27,10 +26,10 @@ contributed by the adapter at compile time, and third-party ones are declared on
 scanning, so neither minimization nor relocation can strip or hide a module.
 
 weftkit is [Apache-2.0](https://github.com/weftkit/weftkit/blob/main/LICENSE), so a fat jar that
-bundles it must ship weftkit's license, and any other bundled library's alongside it. weftkit's
-bStats integration, for one, adds bStats' MIT license. These are separate from your plugin's own
-license, so give each its own path rather than a shared `META-INF/LICENSE`, where one would
-overwrite another. Keep the third-party licenses under `META-INF/licenses/`:
+bundles it must ship weftkit's license, and any other bundled library's alongside it. bStats,
+if you add it for [metrics](metrics.md), brings its MIT license. These are separate from your
+plugin's own license, so give each its own path rather than a shared `META-INF/LICENSE`, where
+one would overwrite another. Keep the third-party licenses under `META-INF/licenses/`:
 
 ```kotlin
 tasks.shadowJar {
@@ -72,5 +71,5 @@ instance through the interface alone. Your API service can stay package-private,
 
 - [Getting started](getting-started.md): the compile-time side of the build
 - [Modules](modules.md): publishing a module for other plugins to use
-- [Metrics](metrics.md): what ships in the jar and how to opt out
+- [Metrics](metrics.md): the bStats dependency that turns metrics on
 - [Examples overview](examples/index.md): complete builds that shade and relocate weftkit
