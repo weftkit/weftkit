@@ -28,6 +28,8 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
   reads like `get` and the load timings included, fails fast from another thread with a clear
   exception instead of silently racing the graph. Views of the immutable registry stay
   accessible from any thread, and `loadTimings` returns a snapshot instead of a live view.
+- A lazy singleton whose materialization failed stays failed: further injections rethrow the
+  first failure cheaply until `WeftLoader.resetFailure(type)` or an unload clears the marker.
 - `ComponentRegistry.featureFlags()` records each `@FeatureFlag` in the generated registry, so
   the runtime gates components without any annotation lookup.
 

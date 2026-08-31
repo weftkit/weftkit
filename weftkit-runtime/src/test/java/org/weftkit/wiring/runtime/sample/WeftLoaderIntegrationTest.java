@@ -299,7 +299,7 @@ class WeftLoaderIntegrationTest {
     }
 
     @Test
-    void lazyHookAbortThrowsAndLeavesGraphUpForRetry() {
+    void lazyHookAbortThrowsAndStaysFailedUntilReset() {
         WeftLoader loader = newLoader();
         loader.load();
         probe.lazyProceed = false;
@@ -310,8 +310,16 @@ class WeftLoaderIntegrationTest {
         assertSame(loader.get(Sample.Alpha.class), loader.get(Sample.Alpha.class));
         assertTrue(probe.unloads.isEmpty());
         probe.lazyProceed = true;
+        // The failure sticks: no rebuild, the cheap rethrow chains the first failure
+        ComponentLoadException again =
+                assertThrows(ComponentLoadException.class, () -> loader.create(Sample.FrostUser.class));
+        assertTrue(again.getMessage().contains("stays failed until reset"));
+        assertSame(ex, again.getCause());
+        assertEquals(1, probe.loads.stream().filter("Frost"::equals).count());
+        assertTrue(loader.resetFailure(Sample.Frost.class));
         assertSame(loader.create(Sample.FrostUser.class).frost(), loader.get(Sample.Frost.class));
         assertEquals(2, probe.loads.stream().filter("Frost"::equals).count());
+        assertFalse(loader.resetFailure(Sample.Frost.class));
     }
 
     @Test
@@ -323,6 +331,19 @@ class WeftLoaderIntegrationTest {
         assertFalse(probe.unloads.contains("Frost"));
         assertNull(loader.get(Sample.Frost.class));
         probe.lazyThrowOnLoad = false;
+        loader.resetFailure(Sample.Frost.class);
+        assertSame(loader.create(Sample.FrostUser.class).frost(), loader.get(Sample.Frost.class));
+    }
+
+    @Test
+    void unloadClearsLazyFailureMarkers() {
+        WeftLoader loader = newLoader();
+        loader.load();
+        probe.lazyThrowOnLoad = true;
+        assertThrows(IllegalStateException.class, () -> loader.create(Sample.FrostUser.class));
+        loader.unload();
+        probe.lazyThrowOnLoad = false;
+        loader.load();
         assertSame(loader.create(Sample.FrostUser.class).frost(), loader.get(Sample.Frost.class));
     }
 
@@ -370,6 +391,7 @@ class WeftLoaderIntegrationTest {
         assertTrue(probe.unloads.contains("GearProvider"));
         assertNull(loader.get(Sample.GearProvider.class));
         probe.lazyNullProduct = false;
+        assertTrue(loader.resetFailure(Sample.GearProvider.class));
         Sample.Gear spare = loader.create(Sample.SpareGearUser.class).gear();
         assertSame(loader.get(Sample.GearProvider.class).spareGear(), spare);
     }

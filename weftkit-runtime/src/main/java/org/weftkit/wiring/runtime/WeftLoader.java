@@ -18,12 +18,12 @@ import org.weftkit.wiring.runtime.registry.Flag;
  * Instantiates and injects the components of a {@link ComponentRegistry}. Eager singletons are
  * created by {@link #load()} in dependency order, lazy singletons on their first injection, and
  * plain components fresh for every {@link #create}. A lazy singleton runs its {@link Loader}
- * hooks too: {@code load()} at materialization, where a false return or exception drops the
- * singleton and propagates to the injection site while the rest of the graph stays loaded, so
- * the next injection retries. Confined to its creating thread, on Bukkit the server main
- * thread: calls touching mutable state fail fast from other threads, only immutable registry
- * views are thread safe. Not injectable, components reach the graph through {@link Weft} and
- * {@link WeftView}.
+ * hooks too: a false return or exception at materialization drops the singleton and propagates
+ * to the injection site while the rest of the graph stays loaded. The failure sticks, further
+ * injections rethrow cheaply until {@link #resetFailure} or {@link #unload}. Confined to its
+ * creating thread, on Bukkit the server main thread: calls touching mutable state fail fast
+ * from other threads, only immutable registry views are thread safe. Not injectable, components
+ * reach the graph through {@link Weft} and {@link WeftView}.
  */
 public final class WeftLoader {
 
@@ -45,6 +45,9 @@ public final class WeftLoader {
     private boolean flagsResolved;
 
     private final Map<Class<?>, Object> singletons = new HashMap<>();
+
+    // First failure per lazy singleton, blocks further attempts until resetFailure or unload
+    private final Map<Class<?>, RuntimeException> failures = new HashMap<>();
 
     // Completion order of singleton creation, eager and lazy interleaved, driving reverse-order
     // unload. Insertion order of the singletons map would not do: a hook-materialized lazy
@@ -127,9 +130,19 @@ public final class WeftLoader {
         singletons.clear();
         creationOrder.clear();
         products.clear();
+        failures.clear();
         flags = null;
         flagsResolved = false;
         if (failure != null) throw failure;
+    }
+
+    /**
+     * Clears the failure marker of a lazy singleton, resolving interface bindings, so the next
+     * injection retries. Returns whether a marker was set.
+     */
+    public boolean resetFailure(Class<?> type) {
+        requireOwnerThread();
+        return failures.remove(bound(type, "")) != null;
     }
 
     /**
@@ -313,8 +326,17 @@ public final class WeftLoader {
     private Object lazySingleton(Class<?> type) {
         Object singleton = singletons.get(type);
         if (singleton != null) return singleton;
+        RuntimeException earlier = failures.get(type);
+        if (earlier != null)
+            throw new ComponentLoadException(type.getName() + " (failed earlier, stays failed until reset)", earlier);
         long start = System.nanoTime();
-        Object created = build(type);
+        Object created;
+        try {
+            created = build(type);
+        } catch (RuntimeException ex) {
+            failures.put(type, ex);
+            throw ex;
+        }
         // Publish before the load hook runs so the hook can resolve this singleton and its products
         singletons.put(type, created);
         boolean hookCompleted = false;
@@ -324,7 +346,7 @@ public final class WeftLoader {
             creationOrder.add(type);
             captureProducts(type, created);
         } catch (RuntimeException ex) {
-            // Only this singleton is dropped, the graph stays up and the next injection retries
+            // Only this singleton is dropped, the graph stays up. The marker blocks rebuild loops
             if (hookCompleted) {
                 if (created instanceof Loader loader) {
                     try {
@@ -337,6 +359,7 @@ public final class WeftLoader {
                 dropProducts(type);
             }
             singletons.remove(type);
+            failures.put(type, ex);
             throw ex;
         }
         timings.put(type, Duration.ofNanos(System.nanoTime() - start));
