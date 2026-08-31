@@ -92,6 +92,7 @@ class ThreadConfinementTest {
                 loader::load,
                 () -> loader.create(Worker.class),
                 () -> loader.createAll(Worker.class),
+                () -> loader.resetFailure(Core.class),
                 () -> loader.get(Core.class),
                 loader::loadTimings,
                 loader::totalLoadTime,

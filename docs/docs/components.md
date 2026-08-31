@@ -198,8 +198,10 @@ public final class BackupExporter { ... }
 
 A lazy singleton takes part in the full lifecycle. A `Loader` implementation runs its `load`
 hook at materialization: a false return or exception drops the half-built singleton and
-propagates to the injection site, the rest of the graph stays loaded, and the next injection
-retries. `unload` runs on shutdown in reverse creation order, interleaved with the eager
+propagates to the injection site, the rest of the graph stays loaded. The component then counts
+as failed: further injections rethrow the first failure cheaply instead of rebuilding a broken
+component over and over, until `loader.resetFailure(...)` or a full unload clears the marker.
+`unload` runs on shutdown in reverse creation order, interleaved with the eager
 singletons. A `@Provides` product materializes its lazy owner on demand, even when injected as
 an `Optional`. `@Requires` works as usual, and a lazy `@Initializes` initializer is
 materialized before any component that requires its holder.
