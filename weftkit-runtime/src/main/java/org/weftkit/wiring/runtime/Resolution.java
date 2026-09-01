@@ -1,20 +1,20 @@
 package org.weftkit.wiring.runtime;
 
 import java.util.List;
-import java.util.Map;
-import org.weftkit.wiring.runtime.registry.ComponentRegistry;
+import org.weftkit.wiring.runtime.exception.ResolutionException;
 import org.weftkit.wiring.runtime.registry.Dependency;
+import org.weftkit.wiring.runtime.registry.LazyRegistry;
 
 /**
  * Resolves one constructor dependency through ordered layers: explicit arguments, ambient
  * values, the facades, the wired component core, and products. Each layer gates itself, and an
  * unresolved optional dependency settles as absent.
  */
-final class Resolution {
+final class Resolution implements DependencyResolver {
 
     private static final Object UNRESOLVED = new Object();
 
-    private final ComponentRegistry registry;
+    private final LazyRegistry registry;
 
     private final Object[] ambient;
 
@@ -22,30 +22,35 @@ final class Resolution {
 
     private final WeftView view;
 
-    private final Components components;
+    private final Instantiator components;
 
     private final FlagGate gate;
+
+    private final Products products;
 
     // The extension layers know neither the component core nor each other
     private final List<Layer> layers =
             List.of(this::fromArgument, this::fromAmbient, this::fromFacade, this::fromComponent, this::fromProduct);
 
     Resolution(
-            ComponentRegistry registry,
+            LazyRegistry registry,
             Object[] ambient,
             Weft weft,
             WeftView view,
-            Components components,
-            FlagGate gate) {
+            Instantiator components,
+            FlagGate gate,
+            Products products) {
         this.registry = registry;
         this.ambient = ambient;
         this.weft = weft;
         this.view = view;
         this.components = components;
         this.gate = gate;
+        this.products = products;
     }
 
-    Object resolve(Dependency dependency, Object[] arguments, Class<?> component) {
+    @Override
+    public Object resolve(Dependency dependency, Object[] arguments, Class<?> component) {
         for (Layer layer : layers) {
             Object outcome = layer.resolve(dependency, arguments, component);
             if (outcome != UNRESOLVED) return outcome;
@@ -91,23 +96,18 @@ final class Resolution {
     }
 
     private Object fromProduct(Dependency dependency, Object[] arguments, Class<?> component) {
-        Map<String, Class<?>> owners = registry.productOwners().get(dependency.type());
-        Class<?> owner = owners == null ? null : owners.get(dependency.qualifier());
+        Class<?> owner = products.owner(dependency.type(), dependency.qualifier());
         if (owner == null) return UNRESOLVED;
-        Object cached = components.capturedProduct(dependency.type(), dependency.qualifier());
+        Object cached = products.captured(dependency.type(), dependency.qualifier());
         if (cached != null) return cached;
         // The owner may still be inside its own load hook, so fall back to the live getter
         Object provider = components.created(owner);
         // Deliberate for optional product dependencies too, they materialize instead of staying
         // empty, unless the owner is gated off by a feature flag
         if (provider == null && registry.lazySingletons().contains(owner) && gate.enabled(owner))
-            provider = components.materialize(owner);
-        Object product = provider == null
-                ? null
-                : registry.productGetters()
-                        .get(dependency.type())
-                        .get(dependency.qualifier())
-                        .apply(provider);
+            provider = components.instance(owner);
+        Object product =
+                provider == null ? null : products.extract(dependency.type(), dependency.qualifier(), provider);
         if (product == null && !dependency.optional())
             throw new ResolutionException(
                     "Dependency is not available yet: " + dependency.type().getName());

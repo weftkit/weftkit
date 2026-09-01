@@ -6,6 +6,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import org.weftkit.wiring.Loader;
+import org.weftkit.wiring.runtime.exception.ResolutionException;
 import org.weftkit.wiring.runtime.registry.ComponentRegistry;
 
 /**
@@ -33,6 +34,8 @@ public final class WeftLoader {
 
     private final Components components;
 
+    private final LazyScope lazy;
+
     private final FlagGate gate;
 
     /**
@@ -43,8 +46,13 @@ public final class WeftLoader {
         this.registry = registry;
         this.ambient = ambient.clone();
         this.components = new Components(registry);
-        this.gate = new FlagGate(registry, () -> ambient(FeatureFlags.class), components::instance);
-        components.connect(new Resolution(registry, this.ambient, weft, view, components, gate), gate);
+        this.lazy = new LazyScope(components);
+        for (Class<?> type : registry.lazySingletons()) components.scope(type, lazy);
+        Products products = new Products(registry);
+        components.observe(products, lazy, new Requirements(registry, components));
+        this.gate =
+                new FlagGate(registry, components::wiredTypes, () -> ambient(FeatureFlags.class), components::instance);
+        components.connect(new Resolution(registry, this.ambient, weft, view, components, gate, products), gate);
     }
 
     /**
@@ -75,7 +83,7 @@ public final class WeftLoader {
      */
     public boolean resetFailure(Class<?> type) {
         requireOwnerThread();
-        return components.resetFailure(type);
+        return lazy.resetFailure(components.bound(type, ""));
     }
 
     /**

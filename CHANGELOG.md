@@ -44,6 +44,8 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
   moved there, and plugin jars stop shipping processor service files.
 - `ComponentRegistry`, `Dependency`, and `Registries` moved to
   `org.weftkit.wiring.runtime.registry`.
+- `ComponentLoadException` and `ResolutionException` moved to
+  `org.weftkit.wiring.runtime.exception`.
 
 ### Removed
 

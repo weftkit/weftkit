@@ -1,4 +1,4 @@
-package org.weftkit.wiring.runtime;
+package org.weftkit.wiring.runtime.exception;
 
 /**
  * Thrown when the loader cannot resolve what a component needs. The generated registry rules out
