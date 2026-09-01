@@ -128,11 +128,25 @@ class WeftLoaderIntegrationTest {
     }
 
     @Test
-    void rejectsAmbiguousAmbientValue() {
-        WeftLoader loader = new WeftLoader(WeftWiring.INSTANCE, wiring, probe, new Sample.Probe());
-        probe.loader = loader;
-        ResolutionException ex = assertThrows(ResolutionException.class, loader::load);
+    void rejectsSecondAmbientValueForADeclaredTypeAtConstruction() {
+        ResolutionException ex = assertThrows(
+                ResolutionException.class,
+                () -> new WeftLoader(WeftWiring.INSTANCE, wiring, probe, new Sample.Probe()));
         assertTrue(ex.getMessage().contains("Ambiguous ambient value"));
+    }
+
+    @Test
+    void rejectsAmbientValueMatchingNoDeclaredType() {
+        ResolutionException ex = assertThrows(
+                ResolutionException.class, () -> new WeftLoader(WeftWiring.INSTANCE, wiring, probe, "stray"));
+        assertTrue(ex.getMessage().contains("matches no declared ambient type"));
+    }
+
+    // A null is an absent value, not a stray one, so it is skipped rather than rejected
+    @Test
+    void skipsNullAmbientValue() {
+        WeftLoader loader = assertDoesNotThrow(() -> new WeftLoader(WeftWiring.INSTANCE, wiring, probe, null));
+        assertNull(loader.ambient(Sample.Cache.class));
     }
 
     @Test
@@ -180,9 +194,30 @@ class WeftLoaderIntegrationTest {
     }
 
     @Test
-    void ambientRejectsAmbiguousType() {
-        WeftLoader loader = new WeftLoader(WeftWiring.INSTANCE, wiring, probe, new Sample.Probe());
-        assertThrows(ResolutionException.class, () -> loader.ambient(Sample.Probe.class));
+    void declaredAmbientTypeWithoutValueFailsWithAHint() {
+        WeftLoader loader = newLoader();
+        loader.load();
+        ResolutionException ex = assertThrows(ResolutionException.class, () -> loader.create(Sample.CacheUser.class));
+        assertTrue(ex.getMessage().contains("value is absent"));
+    }
+
+    @Test
+    void ambientMatchesThroughTheDeclaredTypeOnly() {
+        // The value is a ChatNotifier at runtime, but only the declared Notifier slot holds it
+        Sample.ChatNotifier ambientNotifier = new Sample.ChatNotifier();
+        WeftLoader loader = new WeftLoader(WeftWiring.INSTANCE, wiring, probe, ambientNotifier);
+        assertNull(loader.ambient(Sample.ChatNotifier.class));
+        assertSame(ambientNotifier, loader.ambient(Sample.Notifier.class));
+    }
+
+    @Test
+    void ambientValueShadowsTheWiredImplementation() {
+        // Storage is declared ambient with SqlStorage wired, so the binding backs an absent value
+        Sample.Storage fake = new Sample.Storage() {};
+        WeftLoader loader = new WeftLoader(WeftWiring.INSTANCE, wiring, probe, fake);
+        probe.loader = loader;
+        loader.load();
+        assertSame(fake, loader.create(Sample.Backup.class).storage());
     }
 
     @Test
@@ -279,12 +314,22 @@ class WeftLoaderIntegrationTest {
     }
 
     @Test
-    void rejectsAmbiguousArgument() {
+    void firstAssignableArgumentWins() {
         WeftLoader loader = newLoader();
         loader.load();
-        assertThrows(
-                IllegalStateException.class,
-                () -> loader.create(Sample.Consumer.class, new Sample.Widget(), new Sample.Widget()));
+        Sample.Widget first = new Sample.Widget();
+        assertSame(
+                first,
+                loader.create(Sample.Consumer.class, first, new Sample.Widget()).widget());
+    }
+
+    @Test
+    void createRejectsArgumentsForASingleton() {
+        WeftLoader loader = newLoader();
+        loader.load();
+        ResolutionException ex =
+                assertThrows(ResolutionException.class, () -> loader.create(Sample.Alpha.class, new Sample.Widget()));
+        assertTrue(ex.getMessage().contains("never reach a singleton"));
     }
 
     @Test

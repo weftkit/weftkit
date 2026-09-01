@@ -2,6 +2,7 @@ package org.weftkit.wiring.runtime;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -54,7 +55,15 @@ class FlagResolutionTest {
 
     public static final class TokenUser {
 
-        TokenUser(Token token) {}
+        private final Token token;
+
+        TokenUser(Token token) {
+            this.token = token;
+        }
+
+        Token token() {
+            return token;
+        }
     }
 
     public static final class Switchboard implements FeatureFlags {
@@ -109,6 +118,27 @@ class FlagResolutionTest {
         public Map<Class<?>, Map<String, Class<?>>> bindings() {
             return Map.of();
         }
+    }
+
+    // A hand-built registry declares no ambient types, so it keeps the permissive matching: a
+    // value is injected by its runtime type, and neither an unmatched value nor a null is rejected
+    @Test
+    void handBuiltRegistryInjectsAmbientValuesByRuntimeType() {
+        ComponentRegistry registry = new TestRegistry() {
+
+            @Override
+            public Map<Class<?>, List<Dependency>> parameters() {
+                return Map.of(TokenUser.class, List.of(new Dependency(Token.class, "", false)));
+            }
+
+            @Override
+            public Map<Class<?>, Function<Object[], Object>> factories() {
+                return Map.of(TokenUser.class, arguments -> new TokenUser((Token) arguments[0]));
+            }
+        };
+        Token token = new Token();
+        WeftLoader loader = new WeftLoader(registry, token, null);
+        assertSame(token, loader.create(TokenUser.class).token());
     }
 
     @Test

@@ -6,4 +6,5 @@ package org.weftkit.wiring.runtime.registry;
  * just their slice, one implementation provides the whole. All returned collections must be
  * immutable.
  */
-public interface ComponentRegistry extends CoreRegistry, LazyRegistry, ProductRegistry, FlagRegistry, ModuleRegistry {}
+public interface ComponentRegistry
+        extends CoreRegistry, LazyRegistry, ProductRegistry, FlagRegistry, ModuleRegistry, AmbientRegistry {}

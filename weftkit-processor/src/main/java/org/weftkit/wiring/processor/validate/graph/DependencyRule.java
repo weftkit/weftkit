@@ -1,28 +1,40 @@
 package org.weftkit.wiring.processor.validate.graph;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
-import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.TypeMirror;
 import org.weftkit.wiring.ModuleSettings;
 import org.weftkit.wiring.processor.compiler.Diagnostics;
 import org.weftkit.wiring.processor.compiler.Mirrors;
 import org.weftkit.wiring.processor.model.Component;
 import org.weftkit.wiring.processor.model.Parameter;
 import org.weftkit.wiring.processor.model.WiringModel;
+import org.weftkit.wiring.runtime.FeatureFlags;
+import org.weftkit.wiring.runtime.Weft;
 import org.weftkit.wiring.runtime.WeftLoader;
+import org.weftkit.wiring.runtime.WeftView;
 
 // Resolves every constructor parameter against the graph and records the interface bindings the
-// generators read. Only external types can arrive as explicit arguments, so anything declared in
-// this build must resolve here
+// generators read. Ambient resolution is declaration based, so a singleton parameter no layer
+// covers fails the build here instead of the server. Only plain components may lean on explicit
+// create arguments
 final class DependencyRule extends GraphRule {
 
     private static final String WEFT_LOADER = WeftLoader.class.getCanonicalName();
+
+    private static final String WEFT = Weft.class.getCanonicalName();
+
+    private static final String WEFT_VIEW = WeftView.class.getCanonicalName();
+
+    private static final String FEATURE_FLAGS = FeatureFlags.class.getCanonicalName();
 
     DependencyRule(WiringModel model, Mirrors mirrors, Diagnostics diagnostics) {
         super(model, mirrors, diagnostics);
@@ -37,12 +49,25 @@ final class DependencyRule extends GraphRule {
         TypeElement element = mirrors.typeElement(component);
         List<? extends VariableElement> constructorParameters = constructorParameters(element);
         for (Parameter parameter : definition.parameters())
-            validateParameter(parameter, anchor(element, constructorParameters, parameter.index()));
+            validateParameter(
+                    component, definition, parameter, anchor(element, constructorParameters, parameter.index()));
     }
 
-    private void validateParameter(Parameter parameter, Element anchor) {
+    private void validateParameter(String component, Component definition, Parameter parameter, Element anchor) {
         if (parameter.erasedClass().equals(WEFT_LOADER)) {
             diagnostics.error(anchor, "WeftLoader is not injectable, inject Weft to enumerate components by supertype");
+            return;
+        }
+        // The facades resolve through their own layer
+        if (parameter.erasedClass().equals(WEFT) || parameter.erasedClass().equals(WEFT_VIEW)) return;
+        // The ambient layer outranks components and products, so ambiguous declarations are
+        // rejected for every parameter, whichever layer resolves it
+        List<String> covering = ambientCoverage(parameter);
+        if (covering.size() > 1 && !chain(covering)) {
+            diagnostics.error(
+                    anchor,
+                    "Ambient declarations are ambiguous for " + parameter.erasedClass() + ": "
+                            + String.join(", ", covering) + " are all assignable and unrelated");
             return;
         }
         if (model.isComponent(parameter.erasedClass())) {
@@ -56,21 +81,27 @@ final class DependencyRule extends GraphRule {
             return;
         }
         if (model.isProduct(parameter.erasedClass(), parameter.qualifier())) return;
-        if (parameter.internal()) bind(parameter, anchor);
-        else bindExternal(parameter, anchor);
+        if (parameter.internal()) bind(definition, parameter, anchor);
+        else bindExternal(component, definition, parameter, covering, anchor);
     }
 
-    private void bind(Parameter parameter, Element anchor) {
+    private void bind(Component definition, Parameter parameter, Element anchor) {
         List<String> implementations = implementations(parameter.erasedClass(), parameter.qualifier());
-        if (implementations.size() == 1)
+        if (implementations.size() == 1) {
             model.addBinding(parameter.erasedClass(), parameter.qualifier(), implementations.get(0));
-        else if (implementations.size() > 1)
+            return;
+        }
+        if (implementations.size() > 1) {
             diagnostics.error(
                     anchor,
                     "Ambiguous dependency " + parameter.erasedClass() + ", implemented by "
                             + String.join(", ", implementations));
-        else if (!parameter.optional() && !moduleSettings(parameter))
+            return;
+        }
+        if (moduleSettings(parameter)) return;
+        if (!parameter.optional())
             diagnostics.error(anchor, "Dependency must be @Wired or a @Provides product: " + parameter.erasedClass());
+        else warnNeverPresent(definition, parameter, anchor);
     }
 
     // An unimplemented @ModuleSettings dependency is backed by a generated default in SettingsRule
@@ -79,19 +110,87 @@ final class DependencyRule extends GraphRule {
         return element != null && element.getAnnotation(ModuleSettings.class) != null;
     }
 
-    // External abstractions may arrive as explicit arguments, so bind only when a single
-    // implementation makes the choice unambiguous. Zero implementations is the normal ambient case
-    // and stays silent. Several is a latent runtime failure worth flagging without forcing a choice
-    private void bindExternal(Parameter parameter, Element anchor) {
+    // External types resolve through the declared ambient types or a wired implementation. With
+    // neither, a singleton parameter is a guaranteed server failure and rejected here, while a
+    // plain component may receive the value as an explicit create argument
+    private void bindExternal(
+            String component, Component definition, Parameter parameter, List<String> covering, Element anchor) {
         List<String> implementations = implementations(parameter.erasedClass(), parameter.qualifier());
-        if (implementations.size() == 1)
+        // A single implementation binds even under ambient coverage: the ambient layer wins when
+        // a value is present, the binding backs an absent one
+        if (implementations.size() == 1) {
             model.addBinding(parameter.erasedClass(), parameter.qualifier(), implementations.get(0));
-        else if (implementations.size() > 1)
-            diagnostics.warning(
+            return;
+        }
+        // The ambient layer resolves it. Related declared types share one value at runtime
+        if (!covering.isEmpty()) {
+            model.addAmbientEdge(component, parameter.erasedClass());
+            return;
+        }
+        if (moduleSettings(parameter)) return;
+        if (implementations.size() > 1) {
+            if (definition.singleton())
+                diagnostics.error(
+                        anchor,
+                        "Ambiguous dependency " + parameter.erasedClass() + ", implemented by "
+                                + String.join(", ", implementations) + ". Add @Qualified or declare an ambient type");
+            else
+                diagnostics.warning(
+                        anchor,
+                        "External dependency " + parameter.erasedClass() + " has multiple @Wired implementations ("
+                                + String.join(", ", implementations)
+                                + ") and is left unbound. Supply one as a create argument");
+            return;
+        }
+        if (parameter.optional()) {
+            warnNeverPresent(definition, parameter, anchor);
+            return;
+        }
+        if (definition.singleton())
+            diagnostics.error(
                     anchor,
-                    "External dependency " + parameter.erasedClass() + " has multiple @Wired implementations ("
-                            + String.join(", ", implementations)
-                            + ") and is left unbound; supply one as a @Registry argument or ambient value at runtime");
+                    "Dependency of a singleton must be wired, a product, or a declared ambient type: "
+                            + parameter.erasedClass() + ". Declare it with @Registry(ambient) or a registry"
+                            + " constructor parameter");
+        else model.markArgumentDependent(component);
+    }
+
+    // Arguments never reach singletons, so nothing can ever fill the optional
+    private void warnNeverPresent(Component definition, Parameter parameter, Element anchor) {
+        if (!definition.singleton()) return;
+        diagnostics.warning(
+                anchor,
+                "Optional dependency " + parameter.erasedClass()
+                        + " of a singleton can never be present. Declare an ambient type or drop the parameter");
+    }
+
+    // Declared ambient types assignable to the parameter. Ambient values carry no qualifier, so a
+    // qualified parameter is never covered
+    private List<String> ambientCoverage(Parameter parameter) {
+        if (!parameter.qualifier().isEmpty()) return List.of();
+        TypeMirror target = mirrors.mirror(parameter.erasedClass());
+        if (target == null) return List.of();
+        // The loader declares FeatureFlags implicitly
+        Set<String> declared = new LinkedHashSet<>(model.ambientTypes());
+        declared.add(FEATURE_FLAGS);
+        List<String> covering = new ArrayList<>();
+        for (String name : declared) {
+            TypeMirror mirror = mirrors.mirror(name);
+            if (mirror != null && mirrors.assignable(mirror, target)) covering.add(name);
+        }
+        return covering;
+    }
+
+    // Subtype-related declarations collapse onto one value or fail loader construction, only
+    // unrelated ones are truly ambiguous
+    private boolean chain(List<String> covering) {
+        for (int first = 0; first < covering.size(); first++)
+            for (int second = first + 1; second < covering.size(); second++) {
+                TypeMirror one = mirrors.mirror(covering.get(first));
+                TypeMirror other = mirrors.mirror(covering.get(second));
+                if (!mirrors.assignable(one, other) && !mirrors.assignable(other, one)) return false;
+            }
+        return true;
     }
 
     private List<String> implementations(String abstraction, String qualifier) {
@@ -107,14 +206,5 @@ final class DependencyRule extends GraphRule {
                 implementations.add(component.getKey());
         }
         return implementations;
-    }
-
-    private List<? extends VariableElement> constructorParameters(TypeElement component) {
-        List<ExecutableElement> constructors = mirrors.accessibleConstructors(component);
-        return constructors.size() == 1 ? constructors.get(0).getParameters() : List.of();
-    }
-
-    private Element anchor(TypeElement component, List<? extends VariableElement> parameters, int index) {
-        return index >= 0 && index < parameters.size() ? parameters.get(index) : component;
     }
 }

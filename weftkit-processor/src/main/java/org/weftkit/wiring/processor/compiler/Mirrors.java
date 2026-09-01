@@ -61,11 +61,15 @@ public final class Mirrors {
 
     // Class values in annotations are only accessible as mirrors during processing
     public List<String> holders(Supplier<Class<?>[]> value) {
+        return classValues(value).stream().map(this::erased).toList();
+    }
+
+    public List<TypeMirror> classValues(Supplier<Class<?>[]> value) {
         try {
             value.get();
             return List.of();
         } catch (MirroredTypesException ex) {
-            return ex.getTypeMirrors().stream().map(this::erased).toList();
+            return List.copyOf(ex.getTypeMirrors());
         }
     }
 

@@ -13,8 +13,10 @@ validates how you use them during compilation.
 Marks the single class that anchors the wiring, usually your plugin main extending
 `WeftPlugin`. The component registry
 is generated into its package, and the class itself is injectable as an ambient dependency along
-with any of its constructor parameters. `modules` declares third-party [modules](modules.md) to
-weave in, and `disable` opts out of modules by id.
+with any of its constructor parameters. `ambient` declares further
+[ambient types](components.md#ambient-roots) for values handed to the loader at runtime,
+`modules` declares third-party [modules](modules.md) to weave in, and `disable` opts out of
+modules by id.
 
 ## @Wired
 

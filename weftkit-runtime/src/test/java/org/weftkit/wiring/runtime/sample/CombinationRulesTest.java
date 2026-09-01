@@ -93,6 +93,14 @@ class CombinationRulesTest {
     }
 
     @Test
+    void ambientValueSatisfiesARequiredDependency() {
+        Sample.Cache cache = new Sample.Cache() {};
+        WeftLoader loader = newLoader(cache);
+        loader.load();
+        assertSame(cache, loader.create(Sample.CacheUser.class).cache());
+    }
+
+    @Test
     void optionalProductDependencyResolvesEmptyBeforeItsOwnerLoads() {
         WeftLoader loader = newLoader();
         // No load() ran, so the eager Provider has not captured its Widget yet

@@ -22,7 +22,8 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
 - Plugin metrics: `MetricsSettings.serviceId()` plus `MetricsContributor` and `PluginMetrics`
   publish your plugin's own bStats charts through the bundled `bukkit:metrics` module.
 - Runnable example plugins under `examples/`, built in CI.
-- The rendered dependency graph marks modules and feature-flagged components.
+- The rendered dependency graph marks modules and feature-flagged components, and draws ambient
+  roots as input nodes with the edges into them.
 - `WeftLoader.ambient(type)` and `WeftLoader.registry()` accessors.
 - `WeftLoader` is confined to its creating thread: any access touching mutable loader state,
   reads like `get` and the load timings included, fails fast from another thread with a clear
@@ -32,6 +33,22 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
   first failure cheaply until `WeftLoader.resetFailure(type)` or an unload clears the marker.
 - `ComponentRegistry.featureFlags()` records each `@FeatureFlag` in the generated registry, so
   the runtime gates components without any annotation lookup.
+- Declared ambient types: the registry class, its constructor parameters, and the new
+  `@Registry(ambient = ...)` attribute name every type an ambient value may carry, recorded in
+  the generated registry as `ComponentRegistry.ambientTypes()`. The processor rejects a
+  singleton dependency no layer covers and ambient declarations that are ambiguous for a
+  parameter, so both error classes fail the build instead of the server. A singleton's
+  optional dependency nothing can ever fill is flagged as a warning.
+- The loader validates ambient values on construction: a value matching no declared type and a
+  second value for one declared type are rejected before any component resolves. Injection
+  matches through the declared types, never through the value's runtime type.
+- A declared ambient type with a single wired implementation keeps the binding as a fallback,
+  so an ambient value overrides the implementation and its absence changes nothing. This is the
+  seam for shadowing a wired dependency with a test fake.
+- `ModuleContributor.ambientTypes()` lets adapters declare ambient types their runtime supplies.
+  The Bukkit adapter declares `JavaPlugin`.
+- A plain component whose parameter only explicit `create` arguments can fill is rejected as a
+  dependency of other components at compile time.
 
 ### Changed
 
@@ -46,6 +63,9 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
   `org.weftkit.wiring.runtime.registry`.
 - `ComponentLoadException` and `ResolutionException` moved to
   `org.weftkit.wiring.runtime.exception`.
+- `create` and `createAll` arguments resolve deterministically: among several assignable
+  arguments the first given wins, replacing the runtime ambiguity exception. `create` with
+  arguments on a singleton throws immediately instead of silently ignoring them.
 
 ### Removed
 

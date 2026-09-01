@@ -17,9 +17,10 @@ public final class BukkitWeft {
     private BukkitWeft() {}
 
     /**
-     * Loads the registry with the plugin and the extra values as ambient roots, then activates its
-     * modules. On any abort or failure the graph is torn down, the plugin is disabled, and null is
-     * returned; failures are logged instead of escaping {@code onEnable}.
+     * Loads the registry with the plugin and the extra values as ambient roots, each extra value
+     * matching a declared ambient type, then activates its modules. On any abort or failure the
+     * graph is torn down, the plugin is disabled, and null is returned. Failures are logged
+     * instead of escaping {@code onEnable}.
      */
     public static WeftLoader enable(JavaPlugin plugin, ComponentRegistry registry, Object... extraAmbient) {
         WeftLoader loader = new WeftLoader(registry, ambient(plugin, extraAmbient));

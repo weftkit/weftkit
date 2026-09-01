@@ -46,9 +46,10 @@ A constructor can depend on an interface or an abstract class. When exactly one 
 component implements it, the processor binds the two at compile time and that implementation is
 injected. For abstractions declared in your own sources, zero or several implementations fail
 the build, so the binding is never ambiguous at runtime. An abstraction from another module or
-jar binds best effort instead: exactly one implementation binds, and zero or several stay
-unbound without an error, since such a value may legitimately arrive as an explicit argument or
-an ambient root.
+jar resolves through a declared [ambient type](#ambient-roots) or a single wired implementation
+instead. When a singleton depends on one that has neither, or several implementations compete
+without a qualifier, the build fails too. Only a plain component may leave such a parameter
+open, to be filled by an explicit `create` argument.
 
 ```java
 public interface SpawnerStorage {
@@ -120,7 +121,10 @@ Config config = loader.get(Config.class);
 ```
 
 For plain components, `create` builds a fresh instance, and `createAll` collects every component
-assignable to a type. Extra arguments are matched to constructor parameters by type.
+assignable to a type. Extra arguments are matched to constructor parameters by type, and among
+several assignable arguments the first given wins. Arguments never reach a
+singleton: `create` on a singleton rejects them outright, and `createAll` skips the singletons
+it fetches, since a cached instance must not depend on whichever call materialized it.
 
 ```java
 Report report = loader.create(Report.class);
@@ -206,18 +210,33 @@ singletons. A `@Provides` product materializes its lazy owner on demand, even wh
 an `Optional`. `@Requires` works as usual, and a lazy `@Initializes` initializer is
 materialized before any component that requires its holder.
 
-## Extra ambient roots
+## Ambient roots
 
-Values returned from `ambientValues` become ambient roots as well, available to every
-component by type. (With manual control, they are the arguments to `BukkitWeft.enable` after
-the registry.)
+Ambient roots are values handed to the loader from outside the graph, available to every
+component by type. Their types are declared at compile time: the `@Registry` class itself, its
+constructor parameters, and the `ambient` attribute. The processor checks every dependency
+against the declarations, so an undeclared or ambiguously declared ambient dependency fails the
+build, and a value that matches no declared type is rejected when the plugin enables.
+
+```java
+@Registry(ambient = Economy.class)
+public final class HelloPlugin extends WeftPlugin { ... }
+```
+
+Values returned from `ambientValues` fill the declared types. (With manual control, they are
+the arguments to `BukkitWeft.enable` after the registry.) The plugin instance itself is always
+passed first, so `JavaPlugin` and your plugin main need no declaration.
 
 ```java
 @Override
 protected Object[] ambientValues() {
-    return new Object[] {myExternalService};
+    return new Object[] {economy};
 }
 ```
+
+A declared type without a value is simply absent: components depending on it as
+[`Optional<X>`](#optional-dependencies) resolve empty. A `FeatureFlags` value may always be
+supplied without a declaration, see [feature flags](modules.md#feature-flags).
 
 ## Related
 

@@ -15,4 +15,11 @@ public final class BukkitModuleContributor implements ModuleContributor {
     public List<String> modules() {
         return List.of(ListenerModule.class.getName(), CommandModule.class.getName(), MetricsModule.class.getName());
     }
+
+    // Named as a string. The Bukkit API is not on the consumer's processor path, so a class
+    // literal would fail to load
+    @Override
+    public List<String> ambientTypes() {
+        return List.of("org.bukkit.plugin.java.JavaPlugin");
+    }
 }

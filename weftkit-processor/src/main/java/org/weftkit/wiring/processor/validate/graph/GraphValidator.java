@@ -11,13 +11,18 @@ public final class GraphValidator {
     private final List<GraphRule> rules;
 
     // DependencyRule records the bindings the later rules and the generators read, so it runs
-    // first, SettingsRule backs the still unbound settings right after, and CycleRule walks the
-    // resolved graph, so it runs last
+    // first, SettingsRule backs the still unbound settings right after, AmbientRule needs the
+    // complete bindings, and CycleRule walks the resolved graph, so it runs last
     public GraphValidator(
-            WiringModel model, Mirrors mirrors, Diagnostics diagnostics, Supplier<String> registryPackage) {
+            WiringModel model,
+            Mirrors mirrors,
+            Diagnostics diagnostics,
+            Supplier<String> registryPackage,
+            Supplier<String> registryClass) {
         this.rules = List.of(
                 new DependencyRule(model, mirrors, diagnostics),
                 new SettingsRule(model, mirrors, diagnostics, registryPackage),
+                new AmbientRule(model, mirrors, diagnostics, registryClass),
                 new FeatureFlagRule(model, mirrors, diagnostics),
                 new ProductRule(model, mirrors, diagnostics),
                 new InitializerRule(model, mirrors, diagnostics),

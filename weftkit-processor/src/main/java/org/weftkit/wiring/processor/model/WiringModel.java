@@ -30,6 +30,12 @@ public class WiringModel {
 
     private final Set<String> flagsProviders = new LinkedHashSet<>();
 
+    private final Set<String> ambientTypes = new LinkedHashSet<>();
+
+    private final Set<String> argumentDependent = new LinkedHashSet<>();
+
+    private final Map<String, Set<String>> ambientEdges = new TreeMap<>();
+
     private final Map<String, List<String>> dependencyCache = new HashMap<>();
 
     public void addComponent(String component, Component definition) {
@@ -81,6 +87,34 @@ public class WiringModel {
     /** Components implementing FeatureFlags, ordered before every flagged component. */
     public Set<String> flagsProviders() {
         return Collections.unmodifiableSet(flagsProviders);
+    }
+
+    public void addAmbientType(String type) {
+        ambientTypes.add(type);
+    }
+
+    /** The declared ambient types: registry class, its constructor parameters, attribute, contributions. */
+    public Set<String> ambientTypes() {
+        return Collections.unmodifiableSet(ambientTypes);
+    }
+
+    /** Marks a plain component with a required dependency only explicit create arguments can fill. */
+    public void markArgumentDependent(String component) {
+        argumentDependent.add(component);
+    }
+
+    public boolean isArgumentDependent(String component) {
+        return argumentDependent.contains(component);
+    }
+
+    /** Records that a component resolves a parameter through the ambient layer, keyed by injected type. */
+    public void addAmbientEdge(String component, String ambientType) {
+        ambientEdges.computeIfAbsent(component, key -> new LinkedHashSet<>()).add(ambientType);
+    }
+
+    /** Component to the ambient types it injects, rendered as external roots in the graph. */
+    public Map<String, Set<String>> ambientEdges() {
+        return Collections.unmodifiableMap(ambientEdges);
     }
 
     public void markHidden(String type, String packageName) {

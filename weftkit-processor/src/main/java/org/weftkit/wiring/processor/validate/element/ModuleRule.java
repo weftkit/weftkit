@@ -85,6 +85,10 @@ public final class ModuleRule {
      * unknown disabled id is an error.
      */
     public void resolve() {
+        for (String name : contributedAmbient()) {
+            TypeElement element = mirrors.typeElement(name);
+            if (element != null) collector.addAmbientType(element.asType());
+        }
         List<String> contributed = contributions();
         Map<String, TypeElement> selected = new LinkedHashMap<>();
         Map<String, String> moduleIds = new LinkedHashMap<>();
@@ -136,10 +140,18 @@ public final class ModuleRule {
 
     private static List<String> contributions() {
         List<String> contributed = new ArrayList<>();
-        for (ModuleContributor contributor :
-                ServiceLoader.load(ModuleContributor.class, ModuleContributor.class.getClassLoader()))
-            contributed.addAll(contributor.modules());
+        for (ModuleContributor contributor : contributors()) contributed.addAll(contributor.modules());
         return contributed;
+    }
+
+    private static List<String> contributedAmbient() {
+        List<String> types = new ArrayList<>();
+        for (ModuleContributor contributor : contributors()) types.addAll(contributor.ambientTypes());
+        return types;
+    }
+
+    private static ServiceLoader<ModuleContributor> contributors() {
+        return ServiceLoader.load(ModuleContributor.class, ModuleContributor.class.getClassLoader());
     }
 
     private String id(TypeElement element, String name) {

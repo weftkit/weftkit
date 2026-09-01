@@ -26,4 +26,12 @@ public @interface Registry {
      * components are absent from the generated wiring. An unknown id fails the build.
      */
     String[] disable() default {};
+
+    /**
+     * Extra ambient types beyond the registry class and its constructor parameters, for values
+     * handed to the loader at runtime, e.g. from {@code ambientValues()}. Ambient resolution is
+     * declaration based: a value matching no declared type is rejected when the loader is created,
+     * and an undeclared dependency fails the build instead of the server.
+     */
+    Class<?>[] ambient() default {};
 }
