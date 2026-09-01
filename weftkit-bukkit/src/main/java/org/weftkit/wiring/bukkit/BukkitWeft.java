@@ -4,9 +4,9 @@ import java.util.logging.Level;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.weftkit.wiring.runtime.Modules;
 import org.weftkit.wiring.runtime.WeftLoader;
 import org.weftkit.wiring.runtime.registry.ComponentRegistry;
+import org.weftkit.wiring.runtime.spi.Modules;
 
 /**
  * The Bukkit entry points for weftkit: {@link #enable} from {@code onEnable} and {@link #disable}
