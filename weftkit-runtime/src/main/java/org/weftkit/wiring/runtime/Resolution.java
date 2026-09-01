@@ -16,7 +16,7 @@ final class Resolution implements DependencyResolver {
 
     private final LazyRegistry registry;
 
-    private final Object[] ambient;
+    private final AmbientValues ambient;
 
     private final Weft weft;
 
@@ -34,7 +34,7 @@ final class Resolution implements DependencyResolver {
 
     Resolution(
             LazyRegistry registry,
-            Object[] ambient,
+            AmbientValues ambient,
             Weft weft,
             WeftView view,
             Instantiator components,
@@ -56,21 +56,24 @@ final class Resolution implements DependencyResolver {
             if (outcome != UNRESOLVED) return outcome;
         }
         if (dependency.optional()) return null;
-        throw new ResolutionException(
-                "Cannot resolve dependency " + dependency.type().getName() + " for " + component.getName());
+        String message = "Cannot resolve dependency " + dependency.type().getName() + " for " + component.getName();
+        if (dependency.qualifier().isEmpty() && ambient.declared(dependency.type()))
+            message += ". A matching ambient type is declared but its value is absent";
+        throw new ResolutionException(message);
     }
 
-    // Arguments carry no qualifier, so only an unqualified dependency may match one
+    // Arguments carry no qualifier, so only an unqualified dependency may match one. Among
+    // several assignable arguments the first given wins
     private Object fromArgument(Dependency dependency, Object[] arguments, Class<?> component) {
         if (!dependency.qualifier().isEmpty()) return UNRESOLVED;
-        Object match = unique(arguments, dependency.type(), component, "argument");
-        return match != null ? match : UNRESOLVED;
+        for (Object candidate : arguments) if (dependency.type().isInstance(candidate)) return candidate;
+        return UNRESOLVED;
     }
 
     // Ambient roots carry no qualifier either
     private Object fromAmbient(Dependency dependency, Object[] arguments, Class<?> component) {
         if (!dependency.qualifier().isEmpty()) return UNRESOLVED;
-        Object match = unique(ambient, dependency.type(), component, "ambient value");
+        Object match = ambient.match(dependency.type());
         return match != null ? match : UNRESOLVED;
     }
 
@@ -112,18 +115,6 @@ final class Resolution implements DependencyResolver {
             throw new ResolutionException(
                     "Dependency is not available yet: " + dependency.type().getName());
         return product;
-    }
-
-    private Object unique(Object[] candidates, Class<?> type, Class<?> component, String kind) {
-        Object match = null;
-        for (Object candidate : candidates) {
-            if (!type.isInstance(candidate)) continue;
-            if (match != null)
-                throw new ResolutionException(
-                        "Ambiguous " + kind + " for " + type.getName() + " of " + component.getName());
-            match = candidate;
-        }
-        return match;
     }
 
     // One resolution layer: a value, null for a dependency resolved as absent, or UNRESOLVED

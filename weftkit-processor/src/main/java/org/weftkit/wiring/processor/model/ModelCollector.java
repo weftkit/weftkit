@@ -4,12 +4,12 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Stream;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import org.weftkit.wiring.FeatureFlag;
@@ -36,7 +36,7 @@ public final class ModelCollector {
 
     private String registryPackage;
 
-    private List<TypeMirror> ambient = List.of();
+    private final List<TypeMirror> ambient = new ArrayList<>();
 
     public ModelCollector(WiringModel model, Mirrors mirrors, Diagnostics diagnostics) {
         this.model = model;
@@ -57,13 +57,34 @@ public final class ModelCollector {
         return registryPackage;
     }
 
-    public void registerRegistry(TypeElement element, ExecutableElement constructor) {
+    public void registerRegistry(TypeElement element, ExecutableElement constructor, List<TypeMirror> attribute) {
         registry = element.getQualifiedName().toString();
         registryPackage = mirrors.packageName(element);
-        ambient = Stream.concat(
-                        Stream.of(element.asType()),
-                        constructor.getParameters().stream().map(VariableElement::asType))
-                .toList();
+        addAmbientType(element.asType());
+        for (VariableElement parameter : constructor.getParameters()) collectAmbientParameter(parameter);
+        attribute.forEach(this::addAmbientType);
+    }
+
+    // Mirrors collectParameter: the type ends up as a class literal in the generated registry
+    private void collectAmbientParameter(VariableElement parameter) {
+        TypeMirror type = parameter.asType();
+        if (!(type instanceof DeclaredType)) {
+            diagnostics.error(parameter, "@Registry constructor parameters must be classes or interfaces: " + type);
+            return;
+        }
+        if (!mirrors.isAccessibleFrom(type, registryPackage)) {
+            diagnostics.error(
+                    parameter,
+                    "@Registry constructor parameter types must be public or live in the registry package: "
+                            + mirrors.erased(type));
+            return;
+        }
+        addAmbientType(type);
+    }
+
+    public void addAmbientType(TypeMirror type) {
+        ambient.add(type);
+        model.addAmbientType(mirrors.erased(type));
     }
 
     public void collect(TypeElement component, ExecutableElement constructor) {

@@ -77,7 +77,9 @@ public final class Sample {
         }
     }
 
-    @Registry(modules = {AlphaModule.class, ZuluModule.class})
+    @Registry(
+            modules = {AlphaModule.class, ZuluModule.class},
+            ambient = {Notifier.class, Cache.class, Storage.class})
     public static final class Wiring {
         private final Probe probe;
 
@@ -193,6 +195,20 @@ public final class Sample {
     }
 
     public interface Cache {}
+
+    // Requires the declared ambient Cache, which most tests leave unfilled
+    @Wired
+    public static final class CacheUser {
+        private final Cache cache;
+
+        public CacheUser(Cache cache) {
+            this.cache = cache;
+        }
+
+        public Cache cache() {
+            return cache;
+        }
+    }
 
     @Wired
     public static final class Tuner {

@@ -625,6 +625,8 @@ class WiredProcessorTest {
                         "import org.weftkit.wiring.Singleton;",
                         "@Wired @Singleton public final class Uses { public Uses(Optional<Maybe> maybe) {} }"));
         assertThat(compilation).succeeded();
+        // A singleton's optional nothing can fill resolves empty forever, worth a warning
+        assertThat(compilation).hadWarningContaining("can never be present");
     }
 
     @Test
@@ -869,53 +871,68 @@ class WiredProcessorTest {
         assertThat(compilation).succeeded();
     }
 
+    private static JavaFileObject externalStoreImplementations() {
+        return JavaFileObjects.forSourceLines(
+                "test.SqlStore",
+                "package test;",
+                "import org.weftkit.wiring.Wired;",
+                "import org.weftkit.wiring.Singleton;",
+                "import org.weftkit.wiring.processor.fixture.ExternalStore;",
+                "@Wired @Singleton public final class SqlStore implements ExternalStore { public SqlStore() {} }");
+    }
+
+    private static JavaFileObject secondExternalStoreImplementation() {
+        return JavaFileObjects.forSourceLines(
+                "test.FileStore",
+                "package test;",
+                "import org.weftkit.wiring.Wired;",
+                "import org.weftkit.wiring.Singleton;",
+                "import org.weftkit.wiring.processor.fixture.ExternalStore;",
+                "@Wired @Singleton public final class FileStore implements ExternalStore { public FileStore() {} }");
+    }
+
     @Test
-    void warnsWhenExternalInterfaceHasMultipleImplementations() {
+    void warnsWhenExternalInterfaceHasMultipleImplementationsForAPlainComponent() {
         Compilation compilation = compile(
                 registry(),
-                JavaFileObjects.forSourceLines(
-                        "test.SqlStore",
-                        "package test;",
-                        "import org.weftkit.wiring.Wired;",
-                        "import org.weftkit.wiring.Singleton;",
-                        "import org.weftkit.wiring.processor.fixture.ExternalStore;",
-                        "@Wired @Singleton public final class SqlStore implements ExternalStore { public SqlStore() {} }"),
-                JavaFileObjects.forSourceLines(
-                        "test.FileStore",
-                        "package test;",
-                        "import org.weftkit.wiring.Wired;",
-                        "import org.weftkit.wiring.Singleton;",
-                        "import org.weftkit.wiring.processor.fixture.ExternalStore;",
-                        "@Wired @Singleton public final class FileStore implements ExternalStore { public FileStore() {} }"),
+                externalStoreImplementations(),
+                secondExternalStoreImplementation(),
                 JavaFileObjects.forSourceLines(
                         "test.Uses",
                         "package test;",
                         "import org.weftkit.wiring.Wired;",
-                        "import org.weftkit.wiring.Singleton;",
                         "import org.weftkit.wiring.processor.fixture.ExternalStore;",
-                        "@Wired @Singleton public final class Uses { public Uses(ExternalStore store) {} }"));
+                        "@Wired public final class Uses { public Uses(ExternalStore store) {} }"));
         assertThat(compilation).succeeded();
         assertThat(compilation).hadWarningContaining("has multiple @Wired implementations");
     }
 
     @Test
-    void leavesAmbiguousExternalInterfaceUnbound() {
+    void rejectsAmbiguousExternalInterfaceOnASingleton() {
         Compilation compilation = compile(
                 registry(),
+                externalStoreImplementations(),
+                secondExternalStoreImplementation(),
                 JavaFileObjects.forSourceLines(
-                        "test.SqlStore",
+                        "test.Uses",
                         "package test;",
                         "import org.weftkit.wiring.Wired;",
                         "import org.weftkit.wiring.Singleton;",
                         "import org.weftkit.wiring.processor.fixture.ExternalStore;",
-                        "@Wired @Singleton public final class SqlStore implements ExternalStore { public SqlStore() {} }"),
+                        "@Wired @Singleton public final class Uses { public Uses(ExternalStore store) {} }"));
+        assertThat(compilation)
+                .hadErrorContaining("Ambiguous dependency org.weftkit.wiring.processor.fixture.ExternalStore");
+    }
+
+    @Test
+    void resolvesExternalSingletonDependencyThroughADeclaredAmbientType() {
+        Compilation compilation = compile(
                 JavaFileObjects.forSourceLines(
-                        "test.FileStore",
+                        "test.Reg",
                         "package test;",
-                        "import org.weftkit.wiring.Wired;",
-                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Registry;",
                         "import org.weftkit.wiring.processor.fixture.ExternalStore;",
-                        "@Wired @Singleton public final class FileStore implements ExternalStore { public FileStore() {} }"),
+                        "@Registry(ambient = ExternalStore.class) public final class Reg { public Reg() {} }"),
                 JavaFileObjects.forSourceLines(
                         "test.Uses",
                         "package test;",
@@ -924,6 +941,245 @@ class WiredProcessorTest {
                         "import org.weftkit.wiring.processor.fixture.ExternalStore;",
                         "@Wired @Singleton public final class Uses { public Uses(ExternalStore store) {} }"));
         assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("ambientTypes");
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("org.weftkit.wiring.processor.fixture.ExternalStore.class");
+    }
+
+    @Test
+    void bindsSingleImplementationEvenUnderAmbientCoverage() {
+        Compilation compilation = compile(
+                JavaFileObjects.forSourceLines(
+                        "test.Reg",
+                        "package test;",
+                        "import org.weftkit.wiring.Registry;",
+                        "import org.weftkit.wiring.processor.fixture.ExternalStore;",
+                        "@Registry(ambient = ExternalStore.class) public final class Reg { public Reg() {} }"),
+                externalStoreImplementations(),
+                JavaFileObjects.forSourceLines(
+                        "test.Uses",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.processor.fixture.ExternalStore;",
+                        "@Wired @Singleton public final class Uses { public Uses(ExternalStore store) {} }"));
+        assertThat(compilation).succeeded();
+        // The binding backs an absent ambient value, the ambient layer wins when one is present
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .containsMatch("BINDINGS[\\s\\S]*ExternalStore.class,[\\s\\S]*test.SqlStore.class");
+    }
+
+    @Test
+    void registryConstructorParametersAreDeclaredAmbientTypes() {
+        Compilation compilation = compile(
+                JavaFileObjects.forSourceLines(
+                        "test.Reg",
+                        "package test;",
+                        "import org.weftkit.wiring.Registry;",
+                        "import org.weftkit.wiring.processor.fixture.ExternalStore;",
+                        "@Registry public final class Reg { public Reg(ExternalStore store) {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Uses",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.processor.fixture.ExternalStore;",
+                        "@Wired @Singleton public final class Uses { public Uses(ExternalStore store) {} }"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("test.Reg.class");
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("org.weftkit.wiring.processor.fixture.ExternalStore.class");
+    }
+
+    @Test
+    void rejectsPrimitiveRegistryConstructorParameter() {
+        Compilation compilation = compile(JavaFileObjects.forSourceLines(
+                "test.Reg",
+                "package test;",
+                "import org.weftkit.wiring.Registry;",
+                "@Registry public final class Reg { public Reg(int size) {} }"));
+        assertThat(compilation).hadErrorContaining("@Registry constructor parameters must be classes or interfaces");
+    }
+
+    @Test
+    void rejectsUndeclaredExternalSingletonDependency() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Uses",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.processor.fixture.ExternalStore;",
+                        "@Wired @Singleton public final class Uses { public Uses(ExternalStore store) {} }"));
+        assertThat(compilation).hadErrorContaining("must be wired, a product, or a declared ambient type");
+    }
+
+    @Test
+    void acceptsUndeclaredExternalDependencyOnAPlainComponent() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Uses",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.processor.fixture.ExternalStore;",
+                        "@Wired public final class Uses { public Uses(ExternalStore store) {} }"));
+        assertThat(compilation).succeeded();
+    }
+
+    @Test
+    void rejectsInjectingAComponentThatNeedsCreateArguments() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Needs",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.processor.fixture.ExternalStore;",
+                        "@Wired public final class Needs { public Needs(ExternalStore store) {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Uses",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "@Wired public final class Uses { public Uses(Needs needs) {} }"));
+        assertThat(compilation).hadErrorContaining("needs explicit create arguments and cannot be injected");
+    }
+
+    @Test
+    void rejectsUnrelatedAmbientDeclarationsCoveringOneParameter() {
+        Compilation compilation = compile(
+                JavaFileObjects.forSourceLines("test.Api", "package test;", "public interface Api {}"),
+                JavaFileObjects.forSourceLines(
+                        "test.One", "package test;", "public final class One implements Api { public One() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Two", "package test;", "public final class Two implements Api { public Two() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Reg",
+                        "package test;",
+                        "import org.weftkit.wiring.Registry;",
+                        "@Registry(ambient = {One.class, Two.class}) public final class Reg { public Reg() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Uses",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton public final class Uses { public Uses(Api api) {} }"));
+        assertThat(compilation).hadErrorContaining("Ambient declarations are ambiguous for test.Api");
+    }
+
+    @Test
+    void acceptsSubtypeRelatedAmbientDeclarationsCoveringOneParameter() {
+        Compilation compilation = compile(
+                JavaFileObjects.forSourceLines("test.Api", "package test;", "public interface Api {}"),
+                JavaFileObjects.forSourceLines(
+                        "test.One", "package test;", "public class One implements Api { public One() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Sub", "package test;", "public final class Sub extends One { public Sub() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Reg",
+                        "package test;",
+                        "import org.weftkit.wiring.Registry;",
+                        "@Registry(ambient = {One.class, Sub.class}) public final class Reg { public Reg() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Uses",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton public final class Uses { public Uses(Api api) {} }"));
+        assertThat(compilation).succeeded();
+    }
+
+    @Test
+    void rejectsAmbiguousAmbientDeclarationsCoveringAProductType() {
+        Compilation compilation = compile(
+                JavaFileObjects.forSourceLines("test.Api", "package test;", "public interface Api {}"),
+                JavaFileObjects.forSourceLines(
+                        "test.One", "package test;", "public final class One implements Api { public One() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Two", "package test;", "public final class Two implements Api { public Two() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Reg",
+                        "package test;",
+                        "import org.weftkit.wiring.Registry;",
+                        "@Registry(ambient = {One.class, Two.class}) public final class Reg { public Reg() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Owner",
+                        "package test;",
+                        "import org.weftkit.wiring.Provides;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Wired;",
+                        "@Wired @Singleton public final class Owner {",
+                        "  public Owner() {}",
+                        "  @Provides public Api api() { return null; }",
+                        "}"),
+                JavaFileObjects.forSourceLines(
+                        "test.Uses",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "@Wired public final class Uses { public Uses(Api api) {} }"));
+        // The ambient layer outranks products, so the ambiguity is caught for product parameters too
+        assertThat(compilation).hadErrorContaining("Ambient declarations are ambiguous for test.Api");
+    }
+
+    @Test
+    void warnsOnASingletonOptionalDependencyNothingCanFill() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Uses",
+                        "package test;",
+                        "import java.util.Optional;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.processor.fixture.ExternalStore;",
+                        "@Wired @Singleton public final class Uses { public Uses(Optional<ExternalStore> store) {} }"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation).hadWarningContaining("can never be present");
+    }
+
+    @Test
+    void acceptsFeatureFlagsDependencyWithoutAWiredImplementation() {
+        Compilation compilation = compile(
+                registry(),
+                JavaFileObjects.forSourceLines(
+                        "test.Uses",
+                        "package test;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.runtime.FeatureFlags;",
+                        "@Wired @Singleton public final class Uses { public Uses(FeatureFlags flags) {} }"));
+        // The loader declares FeatureFlags implicitly, so an ambient value may arrive
+        assertThat(compilation).succeeded();
+    }
+
+    @Test
+    void rejectsAmbientDeclarationShadowingAWiredComponent() {
+        Compilation compilation = compile(
+                JavaFileObjects.forSourceLines(
+                        "test.Reg",
+                        "package test;",
+                        "import org.weftkit.wiring.Registry;",
+                        "@Registry(ambient = Svc.class) public final class Reg { public Reg() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Svc",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton public final class Svc { public Svc() {} }"));
+        assertThat(compilation).hadErrorContaining("Ambient declaration shadows the @Wired component test.Svc");
     }
 
     private static JavaFileObject settingsHolder() {
@@ -1021,6 +1277,33 @@ class WiredProcessorTest {
                 .generatedFile(StandardLocation.SOURCE_OUTPUT, "test", "weftkit-graph.dot")
                 .contentsAsUtf8String()
                 .contains("\"test.Settings\" -> \"test.Init\"");
+    }
+
+    @Test
+    void graphIncludesAmbientRoots() {
+        Compilation compilation = compile(
+                JavaFileObjects.forSourceLines(
+                        "test.Reg",
+                        "package test;",
+                        "import org.weftkit.wiring.Registry;",
+                        "import org.weftkit.wiring.processor.fixture.ExternalStore;",
+                        "@Registry(ambient = ExternalStore.class) public final class Reg { public Reg() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Uses",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "import org.weftkit.wiring.processor.fixture.ExternalStore;",
+                        "@Wired @Singleton public final class Uses { public Uses(ExternalStore store) {} }"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedFile(StandardLocation.SOURCE_OUTPUT, "test", "weftkit-graph.dot")
+                .contentsAsUtf8String()
+                .contains("shape=parallelogram");
+        assertThat(compilation)
+                .generatedFile(StandardLocation.SOURCE_OUTPUT, "test", "weftkit-graph.dot")
+                .contentsAsUtf8String()
+                .contains("\"test.Uses\" -> \"org.weftkit.wiring.processor.fixture.ExternalStore\"");
     }
 
     @Test

@@ -40,9 +40,42 @@ injection point, or depend on the concrete class.
 
 ### External dependency has multiple @Wired implementations (warning)
 
-Same situation for a type from another module or jar. The dependency stays unbound because such
-a value may legitimately arrive as an ambient root. Either qualify the implementations or
-supply one instance as an ambient value through `WeftPlugin.ambientValues`.
+Same situation for a type from another module or jar, on a plain component. The dependency
+stays unbound because a plain component may receive the value as a `create` argument. Qualify
+the implementations, or pass one at the call site. On a singleton the same situation is a
+build error, since nothing could ever disambiguate it at runtime.
+
+### Optional dependency of a singleton can never be present (warning)
+
+A singleton's `Optional<X>` parameter has no wired implementation, no product, and no declared
+ambient type, and arguments never reach singletons, so it resolves empty on every load. Declare
+an ambient type for `X` or drop the parameter.
+
+### Dependency of a singleton must be wired, a product, or a declared ambient type
+
+A singleton (or module) depends on an external type that nothing covers: no `@Wired`
+implementation, no `@Provides` product, and no declared [ambient
+type](components.md#ambient-roots). Arguments never reach singletons, so this dependency could
+never resolve. Declare the type with `@Registry(ambient = X.class)` or a registry constructor
+parameter, or wire an implementation.
+
+### Ambient declarations are ambiguous for ...
+
+Two unrelated declared ambient types are assignable to the same constructor parameter, so the
+runtime could not pick one. Narrow the parameter type or drop one declaration. Declarations
+related by subtyping are fine, they share one value.
+
+### Ambient declaration shadows the @Wired component ...
+
+A type is declared ambient and `@Wired` at once. The ambient layer would always win, so the
+wired component could never be injected. Drop one of the two.
+
+### Dependency ... needs explicit create arguments and cannot be injected
+
+A plain component with a parameter only `create` arguments can fill was used as a dependency.
+Arguments do not travel into resolved dependencies, so the injection would always fail. Build
+the component with `create(X.class, ...)` at the call site, or declare the parameter type as an
+ambient type.
 
 ### @Wired components need exactly one accessible constructor
 
@@ -91,14 +124,27 @@ check the server log for the first exception.
 
 ### Cannot resolve dependency ... for ...
 
-A dependency on an external type was left unbound at compile time and nothing supplied it at
-runtime. Supply an instance through `WeftPlugin.ambientValues` (or the extra arguments to
-`BukkitWeft.enable` or the `WeftLoader` constructor), or pass it as a call argument.
+A dependency was left to the runtime, usually a declared ambient type without a value or a
+`create` parameter without a matching argument. Supply the instance through
+`WeftPlugin.ambientValues` (or the extra arguments to `BukkitWeft.enable` or the `WeftLoader`
+constructor), or pass it as a call argument.
 
-### Ambiguous argument / Ambiguous ambient value
+### Ambient value ... matches no declared ambient type
 
-Two of the values you passed, either to `create`/`createAll` or as ambient roots, are assignable
-to the same constructor parameter. Pass a single unambiguous value or use a qualified binding.
+A value handed to the loader is assignable to none of the declared [ambient
+types](components.md#ambient-roots). Declare its type with `@Registry(ambient = X.class)` or a
+registry constructor parameter.
+
+### Ambiguous ambient value
+
+Two of the values handed to the loader match the same declared ambient type. The loader rejects
+this when it is created, before any component resolves. Pass one value per declared type.
+
+### Arguments never reach a singleton
+
+`create` was called with arguments for a `@Singleton` component. The cached instance is built
+from the graph, so the arguments would be silently ignored. Drop them, or make the component
+plain if each call should really build a fresh instance.
 
 ### Singleton dependency is not loaded
 

@@ -1,5 +1,10 @@
 package org.weftkit.wiring.processor.validate.graph;
 
+import java.util.List;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
 import org.weftkit.wiring.processor.compiler.Diagnostics;
 import org.weftkit.wiring.processor.compiler.Mirrors;
 import org.weftkit.wiring.processor.model.WiringModel;
@@ -21,4 +26,13 @@ abstract class GraphRule {
     }
 
     abstract void validate();
+
+    final List<? extends VariableElement> constructorParameters(TypeElement component) {
+        List<ExecutableElement> constructors = mirrors.accessibleConstructors(component);
+        return constructors.size() == 1 ? constructors.get(0).getParameters() : List.of();
+    }
+
+    final Element anchor(TypeElement component, List<? extends VariableElement> parameters, int index) {
+        return index >= 0 && index < parameters.size() ? parameters.get(index) : component;
+    }
 }

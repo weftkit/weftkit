@@ -18,7 +18,10 @@ public abstract class WeftPlugin extends JavaPlugin {
     /** Returns the generated registry, {@code WeftWiring.INSTANCE} in the plugin main package. */
     protected abstract ComponentRegistry registry();
 
-    /** Extra ambient values offered to every component, in addition to the plugin itself. */
+    /**
+     * Extra ambient values offered to every component, in addition to the plugin itself. Each
+     * value must match a declared ambient type, e.g. from {@code @Registry(ambient)}.
+     */
     protected Object[] ambientValues() {
         return new Object[0];
     }

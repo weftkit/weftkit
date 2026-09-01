@@ -26,7 +26,7 @@ public final class WeftLoader {
 
     private final Thread owner = Thread.currentThread();
 
-    private final Object[] ambient;
+    private final AmbientValues ambient;
 
     private final Weft weft = new Weft(this);
 
@@ -39,12 +39,14 @@ public final class WeftLoader {
     private final FlagGate gate;
 
     /**
-     * Creates a loader over the registry. The ambient values are offered to every component by
-     * type, before the graph resolves, and at most one value may match a parameter type.
+     * Creates a loader over the registry. Every ambient value must match one of the registry's
+     * declared ambient types, with {@code FeatureFlags} always declared implicitly, and each
+     * declared type takes at most one value. A value matching no declared type or a second value
+     * for a declared type is rejected here, before any component resolves.
      */
     public WeftLoader(ComponentRegistry registry, Object... ambient) {
         this.registry = registry;
-        this.ambient = ambient.clone();
+        this.ambient = new AmbientValues(registry, ambient);
         this.components = new Components(registry);
         this.lazy = new LazyScope(components);
         for (Class<?> type : registry.lazySingletons()) components.scope(type, lazy);
@@ -96,17 +98,12 @@ public final class WeftLoader {
     }
 
     /**
-     * Returns the unique ambient root assignable to the type, or null when none matches. Throws when
-     * more than one ambient value fits, mirroring how ambient injection rejects ambiguity.
+     * Returns the ambient value whose declared type is assignable to the type, or null when no
+     * declared type matches or its value is absent. Throws when several declared types match with
+     * different values.
      */
     public <T> T ambient(Class<T> type) {
-        T match = null;
-        for (Object candidate : ambient) {
-            if (!type.isInstance(candidate)) continue;
-            if (match != null) throw new ResolutionException("Ambiguous ambient value for " + type.getName());
-            match = type.cast(candidate);
-        }
-        return match;
+        return type.cast(ambient.match(type));
     }
 
     /** Returns the registry this loader drives. */
@@ -138,7 +135,8 @@ public final class WeftLoader {
     /**
      * Creates or fetches every enabled component assignable to the supertype, sorted by class
      * name. Components gated off by their feature flag are skipped without being constructed.
-     * Arguments are matched to constructor parameters by type; they only reach plain components,
+     * Arguments are matched to constructor parameters by type, the first assignable argument
+     * wins, and arguments a component cannot use are ignored. They only reach plain components,
      * since a singleton's cached state must not depend on whichever call materialized it.
      */
     public <T> List<T> createAll(Class<T> supertype, Object... arguments) {
@@ -177,16 +175,25 @@ public final class WeftLoader {
 
     /**
      * Creates a component of the type, resolving interface bindings. Singletons resolve to their
-     * cached instance, lazy ones materializing on demand. Plain components are built fresh, each
-     * constructor parameter resolved from the given arguments, the ambient values, and the graph.
-     * Throws for a component gated off by its feature flag.
+     * cached instance, lazy ones materializing on demand, and passing them arguments throws since
+     * arguments never reach a singleton. Plain components are built fresh, each constructor
+     * parameter resolved from the given arguments, the ambient values, and the graph. Among
+     * several assignable arguments the first given wins. Throws for a component gated off by its
+     * feature flag.
      */
     public <T> T create(Class<T> type, Object... arguments) {
         requireOwnerThread();
         Class<?> target = components.bound(type, "");
         if (target != null && !gate.enabled(target))
             throw new ResolutionException("Component is disabled by its feature flag: " + target.getName());
+        if (arguments.length > 0 && singleton(target))
+            throw new ResolutionException(
+                    "Arguments never reach a singleton, drop them or make the component plain: " + target.getName());
         return type.cast(components.instance(target, arguments));
+    }
+
+    private boolean singleton(Class<?> type) {
+        return registry.loadOrder().contains(type) || registry.lazySingletons().contains(type);
     }
 
     private void requireOwnerThread() {

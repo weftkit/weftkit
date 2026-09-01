@@ -54,7 +54,8 @@ public class WiredValidator {
         this.singletonRule = new SingletonRule(mirrors, diagnostics, collector);
         this.initializesRule = new InitializesRule(mirrors, diagnostics, collector);
         this.requiresRule = new RequiresRule(mirrors, diagnostics, collector);
-        this.graph = new GraphValidator(model, mirrors, diagnostics, collector::registryPackage);
+        this.graph =
+                new GraphValidator(model, mirrors, diagnostics, collector::registryPackage, collector::registryClass);
     }
 
     public void addSources(RoundEnvironment roundEnvironment) {

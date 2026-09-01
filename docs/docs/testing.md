@@ -32,7 +32,9 @@ component costs no testability. See [internal components](internal-components.md
 
 `WeftLoader` runs anywhere, a Bukkit server is not required. Pass fakes as ambient values: an
 ambient value satisfies a dependency before the graph does, so it reaches every injection point
-of its type.
+of its declared type. Shadowing a wired implementation needs its abstraction
+[declared](components.md#ambient-roots), e.g. `@Registry(ambient = SpawnerStorage.class)`. The
+wired implementation backs the type when no value arrives, so production stays unchanged.
 
 ```java
 FakeStorage storage = new FakeStorage();
@@ -54,7 +56,7 @@ Two boundaries to know:
   `org.weftkit.wiring.runtime.spi`.
 
 An ambient `FeatureFlags` pins [feature flags](modules.md#feature-flags) for a test, since an
-ambient value wins over a wired implementation.
+ambient value wins over a wired implementation. `FeatureFlags` is always declared implicitly.
 
 ## Related
 

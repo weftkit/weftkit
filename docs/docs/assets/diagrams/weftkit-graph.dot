@@ -11,8 +11,13 @@ digraph weftkit {
     "org.weftkit.wiring.bukkit.commands.CommandModule" [label="CommandModule", tooltip="org.weftkit.wiring.bukkit.commands.CommandModule (module)", fillcolor="#ECFDF5", color="#0D9488", penwidth=1.8];
     "org.weftkit.wiring.bukkit.listeners.ListenerModule" [label="ListenerModule", tooltip="org.weftkit.wiring.bukkit.listeners.ListenerModule (module)", fillcolor="#ECFDF5", color="#0D9488", penwidth=1.8];
     "org.weftkit.wiring.bukkit.metrics.MetricsModule" [label="MetricsModule", tooltip="org.weftkit.wiring.bukkit.metrics.MetricsModule (module)", fillcolor="#ECFDF5", color="#0D9488", penwidth=1.8];
+    "org.bukkit.plugin.java.JavaPlugin" [label="JavaPlugin", tooltip="org.bukkit.plugin.java.JavaPlugin (ambient)", shape=parallelogram, style=filled, fillcolor="#F1F5F9", color="#64748B", fontcolor="#1E1B2E"];
     "org.weftkit.examples.homes.commands.HomeCommand" -> "org.weftkit.examples.homes.storage.HomeStore";
     "org.weftkit.examples.homes.commands.SetHomeCommand" -> "org.weftkit.examples.homes.storage.HomeStore";
     "org.weftkit.examples.homes.storage.HomeStore" -> "org.weftkit.examples.homes.storage.HomesFile";
     "org.weftkit.wiring.bukkit.metrics.MetricsModule" -> "org.weftkit.examples.homes.WeftMetricsSettingsDefaults";
+    "org.weftkit.examples.homes.storage.HomesFile" -> "org.bukkit.plugin.java.JavaPlugin" [style=dashed, color="#64748B"];
+    "org.weftkit.wiring.bukkit.commands.CommandModule" -> "org.bukkit.plugin.java.JavaPlugin" [style=dashed, color="#64748B"];
+    "org.weftkit.wiring.bukkit.listeners.ListenerModule" -> "org.bukkit.plugin.java.JavaPlugin" [style=dashed, color="#64748B"];
+    "org.weftkit.wiring.bukkit.metrics.MetricsModule" -> "org.bukkit.plugin.java.JavaPlugin" [style=dashed, color="#64748B"];
 }

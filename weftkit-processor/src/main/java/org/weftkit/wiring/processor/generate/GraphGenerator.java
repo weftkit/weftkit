@@ -53,6 +53,11 @@ public class GraphGenerator {
     private static final String HOLDER_STYLE =
             ", style=\"rounded,filled,dashed\", fillcolor=\"#F5F5F4\", color=\"#78716C\"";
 
+    private static final String AMBIENT_STYLE =
+            "shape=parallelogram, style=filled, fillcolor=\"#F1F5F9\", " + "color=\"#64748B\", fontcolor=\"#1E1B2E\"";
+
+    private static final String AMBIENT_EDGE = " [style=dashed, color=\"#64748B\"]";
+
     private static final String FLAG_COLOR = "#B45309";
 
     private String render() {
@@ -71,6 +76,9 @@ public class GraphGenerator {
         holders()
                 .forEach(holder -> graph.append("    \"%s\" [label=\"%s\", tooltip=\"%s\"%s];\n"
                         .formatted(holder, simpleName(holder), holder, HOLDER_STYLE)));
+        ambientRoots()
+                .forEach(type -> graph.append("    \"%s\" [label=\"%s\", tooltip=\"%s (ambient)\", %s];\n"
+                        .formatted(type, simpleName(type), type, AMBIENT_STYLE)));
         model.components()
                 .forEach((component, definition) -> model.injectionDependencies(component)
                         .forEach(dependency ->
@@ -81,7 +89,16 @@ public class GraphGenerator {
         model.initializers()
                 .forEach((holder, initializer) -> graph.append(
                         "    \"%s\" -> \"%s\" [style=dashed, color=\"#F59E0B\"];\n".formatted(holder, initializer)));
+        model.ambientEdges()
+                .forEach((component, types) -> types.forEach(
+                        type -> graph.append("    \"%s\" -> \"%s\"%s;\n".formatted(component, type, AMBIENT_EDGE))));
         return graph.append("}\n").toString();
+    }
+
+    private Set<String> ambientRoots() {
+        Set<String> roots = new TreeSet<>();
+        model.ambientEdges().values().forEach(roots::addAll);
+        return roots;
     }
 
     private Set<String> holders() {
