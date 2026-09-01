@@ -1,10 +1,12 @@
 package org.weftkit.wiring.runtime;
 
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import org.weftkit.wiring.runtime.registry.ComponentRegistry;
+import org.weftkit.wiring.runtime.exception.ResolutionException;
 import org.weftkit.wiring.runtime.registry.Flag;
+import org.weftkit.wiring.runtime.registry.FlagRegistry;
 
 /**
  * Decides per component whether its feature flag lets it be constructed. Resolves the
@@ -13,7 +15,9 @@ import org.weftkit.wiring.runtime.registry.Flag;
  */
 final class FlagGate {
 
-    private final ComponentRegistry registry;
+    private final FlagRegistry registry;
+
+    private final Supplier<Set<Class<?>>> wiredTypes;
 
     private final Supplier<FeatureFlags> ambient;
 
@@ -23,8 +27,13 @@ final class FlagGate {
 
     private boolean resolved;
 
-    FlagGate(ComponentRegistry registry, Supplier<FeatureFlags> ambient, Function<Class<?>, Object> instances) {
+    FlagGate(
+            FlagRegistry registry,
+            Supplier<Set<Class<?>>> wiredTypes,
+            Supplier<FeatureFlags> ambient,
+            Function<Class<?>, Object> instances) {
         this.registry = registry;
+        this.wiredTypes = wiredTypes;
         this.ambient = ambient;
         this.instances = instances;
     }
@@ -53,7 +62,7 @@ final class FlagGate {
     }
 
     private FeatureFlags graphFlags() {
-        List<Class<?>> implementations = registry.parameters().keySet().stream()
+        List<Class<?>> implementations = wiredTypes.get().stream()
                 .filter(FeatureFlags.class::isAssignableFrom)
                 .toList();
         if (implementations.isEmpty()) return null;

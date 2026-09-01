@@ -1,6 +1,7 @@
 package org.weftkit.wiring.runtime;
 
 import java.util.List;
+import org.weftkit.wiring.runtime.exception.ResolutionException;
 
 /**
  * Enumerates the components of a loaded graph, injectable via a {@code Weft} constructor

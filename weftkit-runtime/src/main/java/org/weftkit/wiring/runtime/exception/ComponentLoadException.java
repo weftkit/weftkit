@@ -1,4 +1,4 @@
-package org.weftkit.wiring.runtime;
+package org.weftkit.wiring.runtime.exception;
 
 /**
  * Thrown when a component constructor fails during creation, or when the load hook of a lazy

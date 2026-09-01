@@ -15,9 +15,9 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.weftkit.wiring.runtime.ComponentLoadException;
-import org.weftkit.wiring.runtime.ResolutionException;
 import org.weftkit.wiring.runtime.WeftLoader;
+import org.weftkit.wiring.runtime.exception.ComponentLoadException;
+import org.weftkit.wiring.runtime.exception.ResolutionException;
 import org.weftkit.wiring.runtime.sample.internal.Machine;
 
 class WeftLoaderIntegrationTest {

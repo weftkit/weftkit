@@ -3,6 +3,7 @@ package org.weftkit.wiring.runtime;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import org.weftkit.wiring.runtime.exception.ResolutionException;
 
 /**
  * A read-only view of a loaded graph, injectable alongside {@link Weft}. Shares the loader's
