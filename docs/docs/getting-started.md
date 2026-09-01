@@ -31,7 +31,7 @@ dependencies {
 }
 ```
 
-`weftkit-bukkit` brings the runtime and the annotations. The processor path stays out of your
+`weftkit-bukkit` brings the runtime and the wiring API. The processor path stays out of your
 jar: `weftkit-processor` validates the graph and generates the registry during compilation, and
 `weftkit-bukkit-processor` weaves in the bundled Bukkit modules and checks listeners and
 commands.

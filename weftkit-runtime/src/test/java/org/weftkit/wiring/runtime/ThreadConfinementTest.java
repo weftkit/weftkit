@@ -12,8 +12,8 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import org.junit.jupiter.api.Test;
-import org.weftkit.wiring.runtime.registry.ComponentRegistry;
-import org.weftkit.wiring.runtime.registry.Dependency;
+import org.weftkit.wiring.registry.ComponentRegistry;
+import org.weftkit.wiring.registry.Dependency;
 
 // Hand-built registry, the thread confinement contract needs no generated wiring
 class ThreadConfinementTest {

@@ -5,9 +5,10 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import org.weftkit.wiring.FeatureFlags;
 import org.weftkit.wiring.Loader;
+import org.weftkit.wiring.registry.ComponentRegistry;
 import org.weftkit.wiring.runtime.exception.ResolutionException;
-import org.weftkit.wiring.runtime.registry.ComponentRegistry;
 
 /**
  * Instantiates and injects the components of a {@link ComponentRegistry}. Eager singletons are

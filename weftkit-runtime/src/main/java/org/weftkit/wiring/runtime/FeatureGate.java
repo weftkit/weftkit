@@ -1,6 +1,7 @@
 package org.weftkit.wiring.runtime;
 
-import org.weftkit.wiring.runtime.registry.Flag;
+import org.weftkit.wiring.FeatureFlags;
+import org.weftkit.wiring.registry.Flag;
 
 /** The pure feature-flag decision, split out so it holds no graph state and tests without one. */
 final class FeatureGate {

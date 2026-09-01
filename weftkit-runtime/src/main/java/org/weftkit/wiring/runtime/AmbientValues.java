@@ -3,8 +3,9 @@ package org.weftkit.wiring.runtime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.weftkit.wiring.FeatureFlags;
+import org.weftkit.wiring.registry.AmbientRegistry;
 import org.weftkit.wiring.runtime.exception.ResolutionException;
-import org.weftkit.wiring.runtime.registry.AmbientRegistry;
 
 /**
  * The ambient values, one slot per declared type: a value may fill every slot it matches, a slot

@@ -2,7 +2,7 @@ package org.weftkit.examples.homes;
 
 import org.weftkit.wiring.Registry;
 import org.weftkit.wiring.bukkit.WeftPlugin;
-import org.weftkit.wiring.runtime.registry.ComponentRegistry;
+import org.weftkit.wiring.registry.ComponentRegistry;
 
 @Registry
 public final class HomesPlugin extends WeftPlugin {

@@ -153,7 +153,7 @@ runs on it as its wiring and lifecycle framework.
 
 | Module | Description |
 | --- | --- |
-| `weftkit-annotations` | The wiring vocabulary - `@Registry`, `@Wired`, `@Singleton`, `@Provides`, `@Qualified`, `@Initializes`, `@Requires`, `@StaticHolder` - and the `Loader` lifecycle interface (`load`/`unload`). |
+| `weftkit-api` | The wiring API. The vocabulary - `@Registry`, `@Wired`, `@Singleton`, `@Provides`, `@Qualified`, `@Initializes`, `@Requires`, `@StaticHolder` - the `Loader` and `ModuleLifecycle` lifecycle interfaces and the `FeatureFlags` hook, plus the `ComponentRegistry` contract the processor generates against. Depends on nothing. |
 | `weftkit-runtime` | The runtime. `WeftLoader` instantiates components in dependency order, injects by type, and drives the `Loader` lifecycle, working against the `ComponentRegistry` the processor generates. |
 | `weftkit-processor` | The platform-neutral annotation processor that validates the graph at compile time and generates the registry. Platform-specific checks are contributed through the `ComponentRule` service interface. |
 | `weftkit-bukkit` | The Bukkit adapter runtime. `WeftPlugin` runs the whole lifecycle from `onEnable` to `onDisable` (with `BukkitWeft` as the manual entry point), plus the bundled listener, command, and metrics modules. |

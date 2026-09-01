@@ -15,13 +15,14 @@ The build uses a Java 17 toolchain and Gradle:
 ./gradlew build
 ```
 
-This compiles all four modules, runs the tests, and produces the jars under
+This compiles all five modules, runs the tests, and produces the jars under
 `weftkit-*/build/libs/`. Test coverage reports are written to
 `weftkit-*/build/reports/jacoco/`.
 
-The modules are layered: `weftkit-annotations` (the wiring vocabulary) is consumed by
-`weftkit-runtime` (the loader) and `weftkit-processor` (compile-time validation and code
-generation), and `weftkit-bukkit` adapts everything to the Bukkit plugin lifecycle. Keep
+The modules are layered: `weftkit-api` (the wiring API - vocabulary, lifecycle interfaces, and the
+generated registry contract) is consumed by `weftkit-runtime` (the loader) and `weftkit-processor`
+(compile-time validation and code generation, which depends on `weftkit-api` alone), and
+`weftkit-bukkit` adapts everything to the Bukkit plugin lifecycle. Keep
 platform-specific code in the adapter. The core modules must stay Bukkit-free (the processor is
 extended through the `ComponentRule` SPI instead).
 

@@ -1,6 +1,4 @@
-package org.weftkit.wiring.runtime;
-
-import org.weftkit.wiring.FeatureFlag;
+package org.weftkit.wiring;
 
 /**
  * Resolves whether a named {@link FeatureFlag} is on. A plugin provides one implementation as a

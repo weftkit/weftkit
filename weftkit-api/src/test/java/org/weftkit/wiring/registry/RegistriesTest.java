@@ -1,4 +1,4 @@
-package org.weftkit.wiring.runtime.registry;
+package org.weftkit.wiring.registry;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;

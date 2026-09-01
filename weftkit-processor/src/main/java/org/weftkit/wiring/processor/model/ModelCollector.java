@@ -13,11 +13,11 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import org.weftkit.wiring.FeatureFlag;
+import org.weftkit.wiring.FeatureFlags;
 import org.weftkit.wiring.Singleton;
 import org.weftkit.wiring.processor.compiler.Diagnostics;
 import org.weftkit.wiring.processor.compiler.Mirrors;
-import org.weftkit.wiring.runtime.FeatureFlags;
-import org.weftkit.wiring.runtime.registry.Flag;
+import org.weftkit.wiring.registry.Flag;
 
 /** Builds the {@link WiringModel} from validated elements, reporting entries it cannot parse. */
 public final class ModelCollector {

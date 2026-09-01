@@ -1,7 +1,7 @@
 package org.weftkit.wiring.runtime;
 
 import java.util.List;
-import org.weftkit.wiring.runtime.registry.ModuleRegistry;
+import org.weftkit.wiring.registry.ModuleRegistry;
 
 /**
  * Builds the initializers of a component's required static holders before the component itself,

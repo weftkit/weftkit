@@ -160,7 +160,7 @@ without one, each flag's `enabledByDefault` decides.
 
 ## Publishing a module
 
-A module artifact needs only `weftkit-annotations` on its compile classpath; the consumer's
+A module artifact needs only `weftkit-api` on its compile classpath; the consumer's
 annotation processor reads the module class straight from the jar. Components the module ships
 are ordinary public `@Wired` classes, listed on the annotation so they are woven, and dropped,
 together with the module:

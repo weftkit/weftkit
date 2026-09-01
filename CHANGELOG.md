@@ -59,8 +59,11 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
 - The Bukkit adapter's compile-time side ships as the new `weftkit-bukkit-processor` artifact:
   declare it on `annotationProcessor` instead of `weftkit-bukkit`. The listener validation rule
   moved there, and plugin jars stop shipping processor service files.
-- `ComponentRegistry`, `Dependency`, and `Registries` moved to
-  `org.weftkit.wiring.runtime.registry`.
+- The `weftkit-annotations` module is renamed `weftkit-api` and now holds the whole compile-time
+  API: the annotations, the `Loader` and `ModuleLifecycle` lifecycle interfaces, the `FeatureFlags`
+  hook (moved from the runtime to `org.weftkit.wiring`), and the generated registry contract. The
+  processor depends on `weftkit-api` alone, no longer on the runtime.
+- The registry contract moved to `org.weftkit.wiring.registry` in `weftkit-api`.
 - `ComponentLoadException` and `ResolutionException` moved to
   `org.weftkit.wiring.runtime.exception`.
 - `create` and `createAll` arguments resolve deterministically: among several assignable

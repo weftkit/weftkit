@@ -53,7 +53,7 @@ Two boundaries to know:
   most of the graph testable without one.
 - `load()` does not activate [modules](modules.md). A test that needs their hooks drives them
   with `Modules.activate(loader)` and `Modules.deactivate(loader)` from
-  `org.weftkit.wiring.runtime.spi`.
+  `org.weftkit.wiring.runtime`.
 
 An ambient `FeatureFlags` pins [feature flags](modules.md#feature-flags) for a test, since an
 ambient value wins over a wired implementation. `FeatureFlags` is always declared implicitly.

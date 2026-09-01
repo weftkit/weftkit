@@ -8,7 +8,7 @@ dependencyResolutionManagement {
 }
 
 include(
-    "weftkit-annotations",
+    "weftkit-api",
     "weftkit-runtime",
     "weftkit-processor",
     "weftkit-bukkit",

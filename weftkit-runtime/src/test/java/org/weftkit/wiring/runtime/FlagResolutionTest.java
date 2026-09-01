@@ -12,11 +12,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import org.junit.jupiter.api.Test;
+import org.weftkit.wiring.FeatureFlags;
+import org.weftkit.wiring.registry.ComponentRegistry;
+import org.weftkit.wiring.registry.Dependency;
+import org.weftkit.wiring.registry.Flag;
 import org.weftkit.wiring.runtime.exception.ComponentLoadException;
 import org.weftkit.wiring.runtime.exception.ResolutionException;
-import org.weftkit.wiring.runtime.registry.ComponentRegistry;
-import org.weftkit.wiring.runtime.registry.Dependency;
-import org.weftkit.wiring.runtime.registry.Flag;
 
 // Hand-built registries reach the runtime flag guards that the processor rejects at compile
 // time, and the FeatureFlags resolution corners the generated sample cannot express

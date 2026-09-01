@@ -1,9 +1,9 @@
 package org.weftkit.wiring.runtime;
 
 import java.util.List;
+import org.weftkit.wiring.registry.Dependency;
+import org.weftkit.wiring.registry.LazyRegistry;
 import org.weftkit.wiring.runtime.exception.ResolutionException;
-import org.weftkit.wiring.runtime.registry.Dependency;
-import org.weftkit.wiring.runtime.registry.LazyRegistry;
 
 /**
  * Resolves one constructor dependency through ordered layers: explicit arguments, ambient
