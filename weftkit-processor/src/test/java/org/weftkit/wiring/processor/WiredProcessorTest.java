@@ -373,7 +373,7 @@ class WiredProcessorTest {
                 "package test;",
                 "import org.weftkit.wiring.Wired;",
                 "import org.weftkit.wiring.Singleton;",
-                "import org.weftkit.wiring.runtime.FeatureFlags;",
+                "import org.weftkit.wiring.FeatureFlags;",
                 "@Wired @Singleton public final class " + name + " implements FeatureFlags {",
                 "    public " + name + "() {}",
                 "    public boolean isEnabled(String key) { return true; }",
@@ -1159,7 +1159,7 @@ class WiredProcessorTest {
                         "package test;",
                         "import org.weftkit.wiring.Singleton;",
                         "import org.weftkit.wiring.Wired;",
-                        "import org.weftkit.wiring.runtime.FeatureFlags;",
+                        "import org.weftkit.wiring.FeatureFlags;",
                         "@Wired @Singleton public final class Uses { public Uses(FeatureFlags flags) {} }"));
         // The loader declares FeatureFlags implicitly, so an ambient value may arrive
         assertThat(compilation).succeeded();

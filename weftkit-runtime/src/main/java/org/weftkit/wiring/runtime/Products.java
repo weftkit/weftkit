@@ -3,8 +3,8 @@ package org.weftkit.wiring.runtime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import org.weftkit.wiring.registry.ProductRegistry;
 import org.weftkit.wiring.runtime.exception.ResolutionException;
-import org.weftkit.wiring.runtime.registry.ProductRegistry;
 
 /**
  * The {@code @Provides} product feature: captures each singleton's products as it loads, serves

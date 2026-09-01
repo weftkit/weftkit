@@ -4,9 +4,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import org.weftkit.wiring.FeatureFlags;
+import org.weftkit.wiring.registry.Flag;
+import org.weftkit.wiring.registry.FlagRegistry;
 import org.weftkit.wiring.runtime.exception.ResolutionException;
-import org.weftkit.wiring.runtime.registry.Flag;
-import org.weftkit.wiring.runtime.registry.FlagRegistry;
 
 /**
  * Decides per component whether its feature flag lets it be constructed. Resolves the

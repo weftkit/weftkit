@@ -15,9 +15,9 @@ import java.util.Set;
 import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 import org.weftkit.wiring.Loader;
+import org.weftkit.wiring.registry.ComponentRegistry;
+import org.weftkit.wiring.registry.Dependency;
 import org.weftkit.wiring.runtime.exception.ComponentLoadException;
-import org.weftkit.wiring.runtime.registry.ComponentRegistry;
-import org.weftkit.wiring.runtime.registry.Dependency;
 
 // Hand-built registries keep the eager to lazy edges out of the shared generated sample fixture
 class LazyLifecycleTest {

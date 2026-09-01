@@ -4,7 +4,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.weftkit.wiring.Loader;
 import org.weftkit.wiring.Singleton;
 import org.weftkit.wiring.Wired;
-import org.weftkit.wiring.runtime.FeatureFlags;
+import org.weftkit.wiring.FeatureFlags;
 
 /** Resolves feature flags from config.yml. A flag missing there counts as off. */
 @Wired

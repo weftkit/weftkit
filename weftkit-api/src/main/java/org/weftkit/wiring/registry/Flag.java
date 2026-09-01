@@ -1,4 +1,4 @@
-package org.weftkit.wiring.runtime.registry;
+package org.weftkit.wiring.registry;
 
 /**
  * A component's feature flag as recorded in the registry: the key resolved against a

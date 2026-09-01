@@ -1,8 +1,7 @@
 description = "The weftkit annotation processor that validates the wiring graph and generates the registry"
 
 dependencies {
-    implementation(project(":weftkit-annotations"))
-    implementation(project(":weftkit-runtime"))
+    implementation(project(":weftkit-api"))
     implementation(libs.javapoet)
 
     compileOnly(libs.auto.service.annotations)
@@ -11,4 +10,5 @@ dependencies {
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation(libs.compile.testing)
+    testImplementation(project(":weftkit-runtime"))
 }

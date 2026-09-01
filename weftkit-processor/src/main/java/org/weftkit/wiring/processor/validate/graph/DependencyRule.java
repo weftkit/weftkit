@@ -11,16 +11,13 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
+import org.weftkit.wiring.FeatureFlags;
 import org.weftkit.wiring.ModuleSettings;
 import org.weftkit.wiring.processor.compiler.Diagnostics;
 import org.weftkit.wiring.processor.compiler.Mirrors;
 import org.weftkit.wiring.processor.model.Component;
 import org.weftkit.wiring.processor.model.Parameter;
 import org.weftkit.wiring.processor.model.WiringModel;
-import org.weftkit.wiring.runtime.FeatureFlags;
-import org.weftkit.wiring.runtime.Weft;
-import org.weftkit.wiring.runtime.WeftLoader;
-import org.weftkit.wiring.runtime.WeftView;
 
 // Resolves every constructor parameter against the graph and records the interface bindings the
 // generators read. Ambient resolution is declaration based, so a singleton parameter no layer
@@ -28,11 +25,11 @@ import org.weftkit.wiring.runtime.WeftView;
 // create arguments
 final class DependencyRule extends GraphRule {
 
-    private static final String WEFT_LOADER = WeftLoader.class.getCanonicalName();
+    private static final String WEFT_LOADER = "org.weftkit.wiring.runtime.WeftLoader";
 
-    private static final String WEFT = Weft.class.getCanonicalName();
+    private static final String WEFT = "org.weftkit.wiring.runtime.Weft";
 
-    private static final String WEFT_VIEW = WeftView.class.getCanonicalName();
+    private static final String WEFT_VIEW = "org.weftkit.wiring.runtime.WeftView";
 
     private static final String FEATURE_FLAGS = FeatureFlags.class.getCanonicalName();
 

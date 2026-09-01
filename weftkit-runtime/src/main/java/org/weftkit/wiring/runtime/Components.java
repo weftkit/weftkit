@@ -10,10 +10,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.weftkit.wiring.Loader;
+import org.weftkit.wiring.registry.CoreRegistry;
+import org.weftkit.wiring.registry.Dependency;
 import org.weftkit.wiring.runtime.exception.ComponentLoadException;
 import org.weftkit.wiring.runtime.exception.ResolutionException;
-import org.weftkit.wiring.runtime.registry.CoreRegistry;
-import org.weftkit.wiring.runtime.registry.Dependency;
 
 /**
  * The wired component core: builds components, caches singletons, runs {@link Loader} hooks, and
