@@ -1,8 +1,9 @@
-package org.weftkit.wiring.runtime;
+package org.weftkit.wiring.runtime.spi;
 
 import java.util.List;
 import org.weftkit.wiring.ModuleLifecycle;
 import org.weftkit.wiring.WeftModule;
+import org.weftkit.wiring.runtime.WeftLoader;
 
 /**
  * Drives the {@link ModuleLifecycle} hooks of a loaded graph's {@link WeftModule}s. Adapters call

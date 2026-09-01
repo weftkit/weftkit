@@ -379,9 +379,11 @@ public final class Sample {
 
     // The lazy members below have no eager dependents, so load() itself never materializes them
 
+    public interface Chiller {}
+
     @Wired
     @Singleton(lazy = true)
-    public static final class Frost implements Loader {
+    public static final class Frost implements Chiller, Loader {
         private final Probe probe;
 
         public Frost(Probe probe) {
@@ -396,6 +398,20 @@ public final class Sample {
 
         public void unload() {
             probe.unloads.add("Frost");
+        }
+    }
+
+    // Consumes Frost through its interface, so the registry records the Chiller binding
+    @Wired
+    public static final class ChillerUser {
+        private final Chiller chiller;
+
+        public ChillerUser(Chiller chiller) {
+            this.chiller = chiller;
+        }
+
+        public Chiller chiller() {
+            return chiller;
         }
     }
 
@@ -592,6 +608,58 @@ public final class Sample {
 
         public Optional<Frozen> frozen() {
             return frozen;
+        }
+    }
+
+    public static final class Tool {}
+
+    // Flagged and lazy at once, so its product exercises the gate before materialization
+    @Wired
+    @Singleton(lazy = true)
+    @FeatureFlag("tools")
+    public static final class ToolProvider implements Loader {
+        private final Probe probe;
+        private final Tool tool = new Tool();
+
+        public ToolProvider(Probe probe) {
+            this.probe = probe;
+        }
+
+        public boolean load() {
+            probe.loads.add("ToolProvider");
+            return true;
+        }
+
+        @Provides
+        public Tool tool() {
+            return tool;
+        }
+    }
+
+    @Wired
+    public static final class OptionalToolUser {
+        private final Optional<Tool> tool;
+
+        public OptionalToolUser(Optional<Tool> tool) {
+            this.tool = tool;
+        }
+
+        public Optional<Tool> tool() {
+            return tool;
+        }
+    }
+
+    // Plain consumer of the ambient Probe, letting an explicit argument compete with it
+    @Wired
+    public static final class Reporter {
+        private final Probe probe;
+
+        public Reporter(Probe probe) {
+            this.probe = probe;
+        }
+
+        public Probe probe() {
+            return probe;
         }
     }
 

@@ -10,11 +10,11 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.weftkit.wiring.runtime.FeatureFlags;
-import org.weftkit.wiring.runtime.Modules;
 import org.weftkit.wiring.runtime.ResolutionException;
 import org.weftkit.wiring.runtime.Weft;
 import org.weftkit.wiring.runtime.WeftLoader;
 import org.weftkit.wiring.runtime.WeftView;
+import org.weftkit.wiring.runtime.spi.Modules;
 
 class ModulesIntegrationTest {
 
