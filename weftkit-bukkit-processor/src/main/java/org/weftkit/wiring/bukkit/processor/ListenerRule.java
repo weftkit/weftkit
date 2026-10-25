@@ -1,5 +1,7 @@
 package org.weftkit.wiring.bukkit.processor;
 
+import static org.weftkit.wiring.processor.spi.AnnotationMirrors.annotation;
+
 import com.google.auto.service.AutoService;
 import java.util.List;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -45,8 +47,6 @@ public final class ListenerRule implements ComponentRule {
     }
 
     private boolean isEventHandler(ExecutableElement method) {
-        return method.getAnnotationMirrors().stream()
-                .map(annotation -> (TypeElement) annotation.getAnnotationType().asElement())
-                .anyMatch(annotation -> annotation.getQualifiedName().contentEquals(EVENT_HANDLER));
+        return annotation(method, EVENT_HANDLER) != null;
     }
 }

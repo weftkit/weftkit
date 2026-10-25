@@ -1,5 +1,8 @@
 package org.weftkit.wiring.runtime.sample;
 
+import java.lang.annotation.Repeatable;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -7,6 +10,7 @@ import java.util.Optional;
 import java.util.Set;
 import org.weftkit.wiring.FeatureFlag;
 import org.weftkit.wiring.FeatureFlags;
+import org.weftkit.wiring.HandledBy;
 import org.weftkit.wiring.Initializes;
 import org.weftkit.wiring.Loader;
 import org.weftkit.wiring.ModuleLifecycle;
@@ -176,7 +180,36 @@ public final class Sample {
         }
     }
 
+    @HandledBy(AlphaModule.class)
+    @Retention(RetentionPolicy.RUNTIME)
+    public @interface Marked {
+        String value() default "marked";
+
+        int[] counts() default {1, 2};
+    }
+
+    @HandledBy(AlphaModule.class)
+    @Repeatable(Tags.class)
+    @Retention(RetentionPolicy.CLASS)
+    public @interface Tagged {
+        String value();
+    }
+
+    @Retention(RetentionPolicy.CLASS)
+    public @interface Tags {
+        Tagged[] value();
+    }
+
+    @HandledBy(AbsentModule.class)
+    @Retention(RetentionPolicy.CLASS)
+    public @interface Orphaned {}
+
+    @HandledBy(AbsentModule.class)
+    @Retention(RetentionPolicy.CLASS)
+    public @interface Silenced {}
+
     @Wired
+    @Orphaned
     public static final class Consumer implements Service {
         private final Widget widget;
 
@@ -190,6 +223,9 @@ public final class Sample {
     }
 
     @Wired
+    @Marked
+    @Tagged("first")
+    @Tagged("second")
     public static final class Worker implements Service {
         public Worker() {}
     }
@@ -580,11 +616,17 @@ public final class Sample {
         }
     }
 
+    @WeftModule(id = "sample:absent")
+    public static final class AbsentModule {
+        public AbsentModule() {}
+    }
+
     public interface GatedService {}
 
     @Wired
     @Singleton
     @FeatureFlag("frozen")
+    @Silenced
     public static final class Frozen implements GatedService, Loader {
         private final Probe probe;
 

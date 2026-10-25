@@ -28,6 +28,13 @@ public final class Mirrors {
         return processingEnv.getTypeUtils().erasure(type).toString();
     }
 
+    public String binaryName(DeclaredType type) {
+        return processingEnv
+                .getElementUtils()
+                .getBinaryName((TypeElement) type.asElement())
+                .toString();
+    }
+
     public Element asElement(TypeMirror type) {
         return processingEnv.getTypeUtils().asElement(type);
     }

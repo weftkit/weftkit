@@ -12,6 +12,7 @@ import com.palantir.javapoet.TypeName;
 import com.palantir.javapoet.TypeSpec;
 import com.palantir.javapoet.WildcardTypeName;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +22,7 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 import javax.annotation.processing.Generated;
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.Modifier;
 import javax.tools.Diagnostic;
@@ -60,6 +62,14 @@ public class RegistryGenerator {
     private static final TypeName FACTORY =
             ParameterizedTypeName.get(ClassName.get(Function.class), ArrayTypeName.of(OBJECT), OBJECT);
 
+    private static final TypeName ANNOTATION_LIST =
+            ParameterizedTypeName.get(ClassName.get(List.class), ClassName.get(Annotation.class));
+
+    private static final TypeName HANDLERS = ParameterizedTypeName.get(
+            ClassName.get(Map.class),
+            ParameterizedTypeName.get(ClassName.get(Class.class), WildcardTypeName.subtypeOf(Annotation.class)),
+            ClassName.get(String.class));
+
     private static final TypeName GETTER = ParameterizedTypeName.get(ClassName.get(Function.class), OBJECT, OBJECT);
 
     private final WiringModel model;
@@ -68,12 +78,15 @@ public class RegistryGenerator {
 
     private final Fragments fragments;
 
+    private final AnnotationRenderer annotations;
+
     private final List<Section> sections;
 
-    public RegistryGenerator(WiringModel model, String registryPackage) {
+    public RegistryGenerator(WiringModel model, String registryPackage, ProcessingEnvironment processingEnv) {
         this.model = model;
         this.registryPackage = registryPackage;
         this.fragments = new Fragments(model, registryPackage);
+        this.annotations = new AnnotationRenderer(processingEnv);
         this.sections = sections();
     }
 
@@ -144,6 +157,12 @@ public class RegistryGenerator {
                         () -> flagEntries(centralComponents()),
                         fragment -> flagEntries(fragment.components())),
                 new Section(
+                        "annotations",
+                        mapOf(ANNOTATION_LIST),
+                        Container.MAP,
+                        () -> annotationEntries(centralComponents()),
+                        fragment -> annotationEntries(fragment.components())),
+                new Section(
                         "parameters",
                         mapOf(ParameterizedTypeName.get(ClassName.get(List.class), DEPENDENCY)),
                         Container.MAP,
@@ -209,6 +228,11 @@ public class RegistryGenerator {
                     .initializer("$T.of(\n$L)", List.class, moduleEntries())
                     .build());
         }
+        if (!model.handlers().isEmpty()) {
+            type.addField(FieldSpec.builder(HANDLERS, "HANDLERS", Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
+                    .initializer("$T.ofEntries(\n$L)", Map.class, handlerEntries())
+                    .build());
+        }
         type.addField(FieldSpec.builder(CLASS_LIST, "AMBIENT_TYPES", Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
                 .initializer("$T.of(\n$L)", List.class, ambientEntries())
                 .build());
@@ -218,6 +242,7 @@ public class RegistryGenerator {
         type.addMethod(accessor("requirements", mapOf(CLASS_LIST), "REQUIREMENTS"));
         type.addMethod(accessor("ambientTypes", CLASS_LIST, "AMBIENT_TYPES"));
         if (!model.modules().isEmpty()) type.addMethod(accessor("modules", CLASS_LIST, "MODULES"));
+        if (!model.handlers().isEmpty()) type.addMethod(accessor("handlers", HANDLERS, "HANDLERS"));
         for (Section section : sections)
             type.addMethod(accessor(section.accessor(), section.type(), section.constant()));
         for (Element element : originating) type.addOriginatingElement(element);
@@ -382,6 +407,29 @@ public class RegistryGenerator {
 
     private static CodeBlock flag(Flag flag) {
         return CodeBlock.of("new $T($S, $L)", FLAG, flag.key(), flag.enabledByDefault());
+    }
+
+    private CodeBlock annotationEntries(Map<String, Component> components) {
+        return components.keySet().stream()
+                .filter(model.handledAnnotations()::containsKey)
+                .map(component -> mapEntry(
+                        component, annotationList(model.handledAnnotations().get(component))))
+                .collect(CodeBlock.joining(",\n"));
+    }
+
+    private CodeBlock annotationList(List<AnnotationMirror> recorded) {
+        CodeBlock entries = recorded.stream().map(annotations::render).collect(CodeBlock.joining(", "));
+        return CodeBlock.of("$T.<$T>of($L)", List.class, Annotation.class, entries);
+    }
+
+    private CodeBlock handlerEntries() {
+        return model.handlers().keySet().stream()
+                .map(type -> CodeBlock.of(
+                        "$T.entry($L, $S)",
+                        Map.class,
+                        classLiteral(type),
+                        model.handler(type).binaryName()))
+                .collect(CodeBlock.joining(",\n"));
     }
 
     private CodeBlock parameterEntries(Map<String, Component> components) {

@@ -9,6 +9,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.weftkit.wiring.ModuleLifecycle;
 import org.weftkit.wiring.WeftModule;
 import org.weftkit.wiring.bukkit.BukkitModules;
+import org.weftkit.wiring.runtime.Annotated;
 import org.weftkit.wiring.runtime.Weft;
 
 /**
@@ -33,9 +34,10 @@ public final class CommandModule implements ModuleLifecycle {
 
     @Override
     public boolean activate() {
-        for (CommandExecutor executor : weft.all(CommandExecutor.class)) {
-            CommandHandler handler = executor.getClass().getAnnotation(CommandHandler.class);
-            if (handler == null) continue;
+        for (Annotated<CommandExecutor, CommandHandler> annotated :
+                weft.annotated(CommandExecutor.class, CommandHandler.class)) {
+            CommandExecutor executor = annotated.component();
+            CommandHandler handler = annotated.annotation();
             PluginCommand command = plugin.getCommand(handler.value());
             if (command == null) {
                 plugin.getLogger()

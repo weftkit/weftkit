@@ -1,10 +1,13 @@
 package org.weftkit.wiring.processor.model;
 
+import java.lang.annotation.Repeatable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import javax.annotation.processing.RoundEnvironment;
+import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
@@ -14,15 +17,21 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import org.weftkit.wiring.FeatureFlag;
 import org.weftkit.wiring.FeatureFlags;
+import org.weftkit.wiring.HandledBy;
 import org.weftkit.wiring.Singleton;
 import org.weftkit.wiring.processor.compiler.Diagnostics;
 import org.weftkit.wiring.processor.compiler.Mirrors;
+import org.weftkit.wiring.processor.spi.AnnotationMirrors;
 import org.weftkit.wiring.registry.Flag;
 
 /** Builds the {@link WiringModel} from validated elements, reporting entries it cannot parse. */
 public final class ModelCollector {
 
     private static final String FEATURE_FLAGS = FeatureFlags.class.getCanonicalName();
+
+    private static final String HANDLED_BY = HandledBy.class.getCanonicalName();
+
+    private static final String REPEATABLE = Repeatable.class.getCanonicalName();
 
     private final WiringModel model;
 
@@ -100,6 +109,52 @@ public final class ModelCollector {
                         mirrors.qualifier(component),
                         featureFlag == null ? null : new Flag(featureFlag.value(), featureFlag.enabledByDefault()),
                         parameters(constructor)));
+        collectHandledAnnotations(component);
+    }
+
+    private void collectHandledAnnotations(TypeElement component) {
+        for (AnnotationMirror annotation : component.getAnnotationMirrors()) {
+            collectHandledAnnotation(component, annotation);
+            for (AnnotationMirror repeated : repeated(annotation)) collectHandledAnnotation(component, repeated);
+        }
+    }
+
+    private void collectHandledAnnotation(TypeElement component, AnnotationMirror annotation) {
+        TypeElement type = (TypeElement) annotation.getAnnotationType().asElement();
+        AnnotationMirror handledBy = AnnotationMirrors.annotation(type, HANDLED_BY);
+        if (handledBy == null) return;
+        AnnotationValue module = AnnotationMirrors.annotationValue(handledBy, "value");
+        if (module == null || !(module.getValue() instanceof DeclaredType moduleType)) return;
+        model.addHandledAnnotation(
+                component.getQualifiedName().toString(),
+                annotation,
+                type.getQualifiedName().toString(),
+                new Handler(mirrors.erased(moduleType), mirrors.binaryName(moduleType)));
+    }
+
+    private static List<AnnotationMirror> repeated(AnnotationMirror annotation) {
+        AnnotationValue value = AnnotationMirrors.annotationValue(annotation, "value");
+        if (value == null || !(value.getValue() instanceof List<?> entries)) return List.of();
+        List<AnnotationMirror> contained = new ArrayList<>();
+        for (Object entry : entries)
+            if (((AnnotationValue) entry).getValue() instanceof AnnotationMirror nested
+                    && isRepeatedIn(nested, annotation)) contained.add(nested);
+        return contained;
+    }
+
+    private static boolean isRepeatedIn(AnnotationMirror annotation, AnnotationMirror container) {
+        AnnotationMirror repeatable =
+                AnnotationMirrors.annotation(annotation.getAnnotationType().asElement(), REPEATABLE);
+        return repeatable != null
+                && AnnotationMirrors.annotationValue(repeatable, "value").getValue() instanceof DeclaredType type
+                && type.asElement().equals(container.getAnnotationType().asElement());
+    }
+
+    /** Records that the replacement module took over the id of the replaced one. */
+    public void replaceModule(TypeElement replaced, TypeElement replacement) {
+        DeclaredType type = (DeclaredType) replacement.asType();
+        model.replaceModule(
+                replaced.getQualifiedName().toString(), new Handler(mirrors.erased(type), mirrors.binaryName(type)));
     }
 
     /** Collects a {@code @WeftModule} class, always an eager singleton. */

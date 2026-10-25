@@ -20,4 +20,6 @@ digraph weftkit {
     "org.weftkit.wiring.bukkit.commands.CommandModule" -> "org.bukkit.plugin.java.JavaPlugin" [style=dashed, color="#64748B"];
     "org.weftkit.wiring.bukkit.listeners.ListenerModule" -> "org.bukkit.plugin.java.JavaPlugin" [style=dashed, color="#64748B"];
     "org.weftkit.wiring.bukkit.metrics.MetricsModule" -> "org.bukkit.plugin.java.JavaPlugin" [style=dashed, color="#64748B"];
+    "org.weftkit.wiring.bukkit.commands.CommandModule" -> "org.weftkit.examples.homes.commands.HomeCommand" [style=dotted, color="#0D9488", fontcolor="#0D9488", fontname="Helvetica", fontsize=9, label="@CommandHandler"];
+    "org.weftkit.wiring.bukkit.commands.CommandModule" -> "org.weftkit.examples.homes.commands.SetHomeCommand" [style=dotted, color="#0D9488", fontcolor="#0D9488", fontname="Helvetica", fontsize=9, label="@CommandHandler"];
 }

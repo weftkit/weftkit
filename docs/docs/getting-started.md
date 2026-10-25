@@ -36,6 +36,9 @@ jar: `weftkit-processor` validates the graph and generates the registry during c
 `weftkit-bukkit-processor` weaves in the bundled Bukkit modules and checks listeners and
 commands.
 
+On Paper, use `weftkit-paper` and `weftkit-paper-processor` instead to register Brigadier
+commands without `plugin.yml`, see [Paper commands](listeners-and-commands.md#paper-commands).
+
 ## A minimal plugin
 
 Three classes make a plugin that welcomes joining players. The plugin main carries `@Registry`,

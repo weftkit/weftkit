@@ -10,6 +10,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.weftkit.wiring.FeatureFlags;
+import org.weftkit.wiring.runtime.Annotated;
 import org.weftkit.wiring.runtime.Modules;
 import org.weftkit.wiring.runtime.Weft;
 import org.weftkit.wiring.runtime.WeftLoader;
@@ -106,6 +107,51 @@ class ModulesIntegrationTest {
     }
 
     @Test
+    void weftFacadeEnumeratesAnnotatedComponentsOnly() {
+        WeftLoader loader = loadedLoader();
+        Weft weft = loader.create(Sample.WeftUser.class).weft();
+        List<Annotated<Sample.Service, Sample.Marked>> marked =
+                weft.annotated(Sample.Service.class, Sample.Marked.class);
+        assertEquals(1, marked.size());
+        assertTrue(marked.get(0).component() instanceof Sample.Worker);
+        assertEquals("marked", marked.get(0).annotation().value());
+    }
+
+    @Test
+    void pairsAComponentOncePerRepeatedAnnotation() {
+        Weft weft = loadedLoader().create(Sample.WeftUser.class).weft();
+        List<Annotated<Sample.Service, Sample.Tagged>> tagged =
+                weft.annotated(Sample.Service.class, Sample.Tagged.class);
+        assertEquals(
+                List.of("first", "second"),
+                tagged.stream().map(entry -> entry.annotation().value()).toList());
+        assertSame(tagged.get(0).component(), tagged.get(1).component());
+    }
+
+    @Test
+    void recordedAnnotationsHonorTheAnnotationContract() {
+        Weft weft = loadedLoader().create(Sample.WeftUser.class).weft();
+        Sample.Marked recorded =
+                weft.annotated(Sample.Service.class, Sample.Marked.class).get(0).annotation();
+        Sample.Marked reflected = Sample.Worker.class.getAnnotation(Sample.Marked.class);
+        assertEquals(reflected, recorded);
+        assertEquals(recorded, reflected);
+        assertEquals(reflected.hashCode(), recorded.hashCode());
+        assertTrue(recorded.toString().contains("value=marked"));
+    }
+
+    @Test
+    void namesAnnotationsWhoseHandlingModuleIsMissing() {
+        assertEquals(List.of(Sample.Orphaned.class), Modules.unhandled(loadedLoader()));
+    }
+
+    @Test
+    void namesUnhandledAnnotationsOfFlaggedComponentsOnlyWhileOn() {
+        probe.enabledFlags.add("frozen");
+        assertEquals(List.of(Sample.Orphaned.class, Sample.Silenced.class), Modules.unhandled(loadedLoader()));
+    }
+
+    @Test
     void weftViewNamesEnabledTypesWithoutConstructingThem() {
         WeftLoader loader = loadedLoader();
         WeftView view = loader.create(Sample.WeftUser.class).view();
@@ -113,6 +159,8 @@ class ModulesIntegrationTest {
         // A flagged component is named by neither weft.all nor view.types while its flag is off
         assertTrue(view.types(Sample.GatedService.class).isEmpty());
         assertThrows(ResolutionException.class, () -> view.types(Object.class));
+        List<Class<? extends Sample.Service>> types = view.types(Sample.Service.class);
+        assertThrows(UnsupportedOperationException.class, () -> types.remove(Sample.Consumer.class));
     }
 
     @Test

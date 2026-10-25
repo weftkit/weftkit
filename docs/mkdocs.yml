@@ -99,6 +99,7 @@ nav:
       - join-leave-messages: examples/join-leave-messages.md
       - player-homes: examples/player-homes.md
       - announcer: examples/announcer.md
+      - warps: examples/warps.md
   - Guides:
       - Distribution: distribution.md
       - Testing: testing.md

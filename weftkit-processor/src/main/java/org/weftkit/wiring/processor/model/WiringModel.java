@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import javax.lang.model.element.AnnotationMirror;
 
 public class WiringModel {
 
@@ -37,6 +38,12 @@ public class WiringModel {
     private final Map<String, Set<String>> ambientEdges = new TreeMap<>();
 
     private final Map<String, List<String>> dependencyCache = new HashMap<>();
+
+    private final Map<String, List<AnnotationMirror>> handledAnnotations = new TreeMap<>();
+
+    private final Map<String, Handler> handlers = new TreeMap<>();
+
+    private final Map<String, Handler> replacedModules = new HashMap<>();
 
     public void addComponent(String component, Component definition) {
         components.put(component, definition);
@@ -115,6 +122,32 @@ public class WiringModel {
     /** Component to the ambient types it injects, rendered as external roots in the graph. */
     public Map<String, Set<String>> ambientEdges() {
         return Collections.unmodifiableMap(ambientEdges);
+    }
+
+    /** Records a component annotation whose type names its handling module through {@code @HandledBy}. */
+    public void addHandledAnnotation(String component, AnnotationMirror annotation, String type, Handler handler) {
+        handledAnnotations.computeIfAbsent(component, key -> new ArrayList<>()).add(annotation);
+        handlers.put(type, handler);
+    }
+
+    public Map<String, List<AnnotationMirror>> handledAnnotations() {
+        return Collections.unmodifiableMap(handledAnnotations);
+    }
+
+    /** Handled annotation type to the module its {@code @HandledBy} names. */
+    public Map<String, Handler> handlers() {
+        return Collections.unmodifiableMap(handlers);
+    }
+
+    /** Records that a module took over the id of another, so it handles that module's annotations. */
+    public void replaceModule(String module, Handler replacement) {
+        replacedModules.put(module, replacement);
+    }
+
+    /** The module handling an annotation type, the one that took over its id when replaced. */
+    public Handler handler(String type) {
+        Handler handler = handlers.get(type);
+        return replacedModules.getOrDefault(handler.module(), handler);
     }
 
     public void markHidden(String type, String packageName) {

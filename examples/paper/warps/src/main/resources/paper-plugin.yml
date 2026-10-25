@@ -1,0 +1,5 @@
+name: Warps
+version: 1.0.0
+main: org.weftkit.examples.warps.WarpsPlugin
+api-version: "1.21"
+description: Named warps with /warp and /warps, registered as Paper commands by weftkit.

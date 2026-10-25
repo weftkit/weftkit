@@ -2,10 +2,13 @@ package org.weftkit.wiring.processor.generate;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.TypeElement;
 import javax.tools.Diagnostic;
 import javax.tools.StandardLocation;
 import org.weftkit.wiring.processor.model.Component;
@@ -58,21 +61,26 @@ public class GraphGenerator {
 
     private static final String AMBIENT_EDGE = " [style=dashed, color=\"#64748B\"]";
 
+    private static final String HANDLED_EDGE =
+            " [style=dotted, color=\"#0D9488\", fontcolor=\"#0D9488\", fontname=\"Helvetica\", fontsize=9, label=\"@%s\"]";
+
     private static final String FLAG_COLOR = "#B45309";
+
+    private static final String INERT_COLOR = "#B91C1C";
 
     private String render() {
         StringBuilder graph = new StringBuilder(HEADER);
-        model.components()
-                .forEach((component, definition) -> graph.append("    \"%s\" [%s, tooltip=\"%s\"%s%s];\n"
-                        .formatted(
-                                component,
-                                label(simpleName(component), flagKey(definition)),
-                                tooltip(component, flagKey(definition))
-                                        + (model.isModule(component) ? " (module)" : ""),
-                                model.isModule(component)
-                                        ? MODULE_STYLE
-                                        : definition.singleton() ? SINGLETON_STYLE : "",
-                                model.isHidden(component) ? HIDDEN_STYLE : "")));
+        model.components().forEach((component, definition) -> {
+            String flag = flagKey(definition);
+            List<String> missing = missingModules(component);
+            graph.append("    \"%s\" [%s, tooltip=\"%s\"%s%s];\n"
+                    .formatted(
+                            component,
+                            label(simpleName(component), flag, missing),
+                            tooltip(component, flag, missing) + (model.isModule(component) ? " (module)" : ""),
+                            model.isModule(component) ? MODULE_STYLE : definition.singleton() ? SINGLETON_STYLE : "",
+                            model.isHidden(component) ? HIDDEN_STYLE : ""));
+        });
         holders()
                 .forEach(holder -> graph.append("    \"%s\" [label=\"%s\", tooltip=\"%s\"%s];\n"
                         .formatted(holder, simpleName(holder), holder, HOLDER_STYLE)));
@@ -92,7 +100,31 @@ public class GraphGenerator {
         model.ambientEdges()
                 .forEach((component, types) -> types.forEach(
                         type -> graph.append("    \"%s\" -> \"%s\"%s;\n".formatted(component, type, AMBIENT_EDGE))));
+        model.handledAnnotations()
+                .forEach((component, annotations) -> annotations.forEach(annotation -> {
+                    String type = annotationType(annotation);
+                    String module = model.handler(type).module();
+                    if (model.isModule(module))
+                        graph.append("    \"%s\" -> \"%s\"%s;\n"
+                                .formatted(module, component, HANDLED_EDGE.formatted(simpleName(type))));
+                }));
         return graph.append("}\n").toString();
+    }
+
+    // Modules a component's handled annotations name but the registry lacks, leaving it inert
+    private List<String> missingModules(String component) {
+        return model.handledAnnotations().getOrDefault(component, List.of()).stream()
+                .map(annotation -> model.handler(annotationType(annotation)).module())
+                .filter(module -> !model.isModule(module))
+                .map(GraphGenerator::simpleName)
+                .distinct()
+                .toList();
+    }
+
+    private static String annotationType(AnnotationMirror annotation) {
+        return ((TypeElement) annotation.getAnnotationType().asElement())
+                .getQualifiedName()
+                .toString();
     }
 
     private Set<String> ambientRoots() {
@@ -116,14 +148,22 @@ public class GraphGenerator {
         return definition.featureFlag() == null ? "" : definition.featureFlag().key();
     }
 
-    private static String label(String name, String featureFlag) {
-        if (featureFlag.isEmpty()) return "label=\"" + name + "\"";
-        return "label=<%s<br/><font point-size=\"9\" color=\"%s\">feature: %s</font>>"
-                .formatted(escapeHtml(name), FLAG_COLOR, escapeHtml(featureFlag));
+    private static String label(String name, String featureFlag, List<String> missing) {
+        StringBuilder notes = new StringBuilder();
+        if (!featureFlag.isEmpty()) notes.append(note(FLAG_COLOR, "feature: " + featureFlag));
+        for (String module : missing) notes.append(note(INERT_COLOR, "inert: no " + module));
+        if (notes.isEmpty()) return "label=\"" + name + "\"";
+        return "label=<%s%s>".formatted(escapeHtml(name), notes);
     }
 
-    private static String tooltip(String component, String featureFlag) {
-        return featureFlag.isEmpty() ? component : component + " (feature: " + featureFlag + ")";
+    private static String note(String color, String text) {
+        return "<br/><font point-size=\"9\" color=\"%s\">%s</font>".formatted(color, escapeHtml(text));
+    }
+
+    private static String tooltip(String component, String featureFlag, List<String> missing) {
+        String tooltip = featureFlag.isEmpty() ? component : component + " (feature: " + featureFlag + ")";
+        for (String module : missing) tooltip += " (inert, no " + module + ")";
+        return tooltip;
     }
 
     private static String escapeHtml(String text) {

@@ -2,6 +2,8 @@ package org.weftkit.wiring.processor.generate;
 
 import com.palantir.javapoet.CodeBlock;
 import com.palantir.javapoet.TypeName;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -13,6 +15,12 @@ record Section(
         Container container,
         Supplier<CodeBlock> centralEntries,
         Function<Fragment, CodeBlock> fragmentEntries) {
+
+    Section {
+        Map<Fragment, CodeBlock> rendered = new HashMap<>();
+        Function<Fragment, CodeBlock> render = fragmentEntries;
+        fragmentEntries = fragment -> rendered.computeIfAbsent(fragment, render);
+    }
 
     String constant() {
         return constantFor(accessor);

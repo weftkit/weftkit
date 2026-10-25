@@ -83,7 +83,8 @@ public class WiredProcessor extends AbstractProcessor {
             validator.validateGraph();
             if (validator.registryPackage() != null) {
                 Element[] originating = originatingElements();
-                new RegistryGenerator(model, validator.registryPackage()).write(processingEnv, originating);
+                new RegistryGenerator(model, validator.registryPackage(), processingEnv)
+                        .write(processingEnv, originating);
                 new GraphGenerator(model, validator.registryPackage()).write(processingEnv, originating);
             }
             generated = true;

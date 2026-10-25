@@ -15,15 +15,28 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
   or wired `FeatureFlags` implementation. Nothing may require a flagged component, enforced at
   compile time. A consumer that tolerates its absence depends on it as `Optional<T>`, which
   resolves empty while the flag is off. This lets a config-gated subsystem reach its consumers.
-- `Weft`, the injectable enumeration facade: `all(supertype)` returns every enabled component.
+- `Weft`, the injectable enumeration facade: `all(supertype)` returns every enabled component,
+  and `annotated(supertype, annotation)` only the annotated ones, each paired with its
+  annotation, leaving the rest unbuilt.
+- `@HandledBy` names the module that reads a component annotation. The processor records such
+  annotations in the generated registry, so modules read them without reflection. Adapters warn
+  at enable when that module is missing from the registry, and the build fails when a component
+  carries an annotation of a module the registry disables.
 - `ModuleContributor` SPI for adapters to contribute modules to every generated registry.
 - Command binding: `@CommandHandler` executors bind to their `plugin.yml` commands through the
   bundled `bukkit:commands` module, with the handler contract checked at compile time.
+- Paper adapter: `weftkit-paper` and `weftkit-paper-processor`, built on the Bukkit adapter for
+  Paper 1.21.1 or newer. `@PaperCommand` registers a wired `BasicCommand` or `CommandTree` with
+  Paper's Brigadier registrar through the bundled `paper:commands` module, no `plugin.yml` entry
+  needed, so `paper-plugin.yml` plugins work too. Disabling hides the commands, since Paper
+  cannot unregister them.
 - Plugin metrics: `MetricsSettings.serviceId()` plus `MetricsContributor` and `PluginMetrics`
   publish your plugin's own bStats charts through the bundled `bukkit:metrics` module.
 - Runnable example plugins under `examples/`, built in CI.
 - The rendered dependency graph marks modules and feature-flagged components, and draws ambient
-  roots as input nodes with the edges into them.
+  roots as input nodes with the edges into them. Dotted edges link each module to the components
+  it handles through a `@HandledBy` annotation, and a component whose module is missing is
+  marked inert.
 - `WeftLoader.ambient(type)` and `WeftLoader.registry()` accessors.
 - `WeftLoader` is confined to its creating thread: any access touching mutable loader state,
   reads like `get` and the load timings included, fails fast from another thread with a clear

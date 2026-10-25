@@ -8,6 +8,7 @@ import org.weftkit.wiring.processor.compiler.Diagnostics;
 import org.weftkit.wiring.processor.compiler.Mirrors;
 import org.weftkit.wiring.processor.model.ModelCollector;
 import org.weftkit.wiring.processor.model.WiringModel;
+import org.weftkit.wiring.processor.validate.element.HandledByRule;
 import org.weftkit.wiring.processor.validate.element.InitializesRule;
 import org.weftkit.wiring.processor.validate.element.ModuleRule;
 import org.weftkit.wiring.processor.validate.element.ProvidesRule;
@@ -40,6 +41,8 @@ public class WiredValidator {
 
     private final RequiresRule requiresRule;
 
+    private final HandledByRule handledByRule;
+
     private final GraphValidator graph;
 
     public WiredValidator(ProcessingEnvironment processingEnv, WiringModel model) {
@@ -54,6 +57,7 @@ public class WiredValidator {
         this.singletonRule = new SingletonRule(mirrors, diagnostics, collector);
         this.initializesRule = new InitializesRule(mirrors, diagnostics, collector);
         this.requiresRule = new RequiresRule(mirrors, diagnostics, collector);
+        this.handledByRule = new HandledByRule(model, mirrors, processingEnv.getElementUtils(), diagnostics);
         this.graph =
                 new GraphValidator(model, mirrors, diagnostics, collector::registryPackage, collector::registryClass);
     }
@@ -97,6 +101,7 @@ public class WiredValidator {
     public void validateGraph() {
         if (collector.registryClass() == null)
             diagnostics.error("No @Registry class to generate the component registry for");
+        handledByRule.check(moduleRule.disabledModules());
         graph.validate();
     }
 

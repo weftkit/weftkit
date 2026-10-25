@@ -1,10 +1,12 @@
 package org.weftkit.wiring.runtime;
 
+import java.lang.annotation.Annotation;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 import org.weftkit.wiring.FeatureFlags;
 import org.weftkit.wiring.Loader;
 import org.weftkit.wiring.registry.ComponentRegistry;
@@ -142,25 +144,49 @@ public final class WeftLoader {
      */
     public <T> List<T> createAll(Class<T> supertype, Object... arguments) {
         requireOwnerThread();
-        return registry.parameters().keySet().stream()
-                .filter(supertype::isAssignableFrom)
-                .filter(gate::enabled)
-                .sorted(Comparator.comparing(Class::getName))
+        return enabled(registry.parameters().keySet().stream(), supertype)
                 .map(type -> supertype.cast(components.instance(type, arguments)))
                 .toList();
+    }
+
+    <T, A extends Annotation> List<Annotated<T, A>> createAnnotated(Class<T> supertype, Class<A> marker) {
+        requireOwnerThread();
+        Map<Class<?>, List<A>> annotated = new HashMap<>();
+        registry.annotations().forEach((type, annotations) -> {
+            List<A> matching = annotations.stream()
+                    .filter(marker::isInstance)
+                    .map(marker::cast)
+                    .toList();
+            if (!matching.isEmpty()) annotated.put(type, matching);
+        });
+        return enabled(annotated.keySet().stream(), supertype)
+                .flatMap(type -> {
+                    T component = supertype.cast(components.instance(type));
+                    return annotated.get(type).stream().map(annotation -> new Annotated<>(component, annotation));
+                })
+                .toList();
+    }
+
+    Stream<Annotation> enabledAnnotations() {
+        requireOwnerThread();
+        return registry.annotations().entrySet().stream()
+                .filter(entry -> gate.enabled(entry.getKey()))
+                .flatMap(entry -> entry.getValue().stream());
     }
 
     // Read-only counterpart of createAll, surfaced through WeftView. Still owner-thread only,
     // flag resolution may materialize the FeatureFlags singleton
     <T> List<Class<? extends T>> types(Class<T> supertype) {
         requireOwnerThread();
-        List<Class<? extends T>> matches = new ArrayList<>();
-        registry.parameters().keySet().stream()
-                .filter(supertype::isAssignableFrom)
+        return enabled(registry.parameters().keySet().stream(), supertype)
+                .<Class<? extends T>>map(type -> type.asSubclass(supertype))
+                .toList();
+    }
+
+    private Stream<Class<?>> enabled(Stream<Class<?>> types, Class<?> supertype) {
+        return types.filter(supertype::isAssignableFrom)
                 .filter(gate::enabled)
-                .sorted(Comparator.comparing(Class::getName))
-                .forEach(type -> matches.add(type.asSubclass(supertype)));
-        return matches;
+                .sorted(Comparator.comparing(Class::getName));
     }
 
     boolean contains(Class<?> type) {

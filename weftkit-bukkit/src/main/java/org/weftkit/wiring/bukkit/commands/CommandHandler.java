@@ -4,14 +4,16 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import org.weftkit.wiring.HandledBy;
 
 /**
  * Binds a wired {@code CommandExecutor} to the named {@code plugin.yml} command. The bundled
  * command module reads it during enable and sets the executor, so there is no {@code setExecutor}
  * call to write by hand. Make the component a {@code @Singleton}; a {@code @FeatureFlag} binds it
- * only while its flag is on. Runtime retention, read while the server runs.
+ * only while its flag is on.
  */
-@Retention(RetentionPolicy.RUNTIME)
+@HandledBy(CommandModule.class)
+@Retention(RetentionPolicy.CLASS)
 @Target(ElementType.TYPE)
 public @interface CommandHandler {
 

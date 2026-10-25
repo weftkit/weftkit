@@ -158,6 +158,8 @@ runs on it as its wiring and lifecycle framework.
 | `weftkit-processor` | The platform-neutral annotation processor that validates the graph at compile time and generates the registry. Platform-specific checks are contributed through the `ComponentRule` service interface. |
 | `weftkit-bukkit` | The Bukkit adapter runtime. `WeftPlugin` runs the whole lifecycle from `onEnable` to `onDisable` (with `BukkitWeft` as the manual entry point), plus the bundled listener, command, and metrics modules. |
 | `weftkit-bukkit-processor` | The Bukkit adapter's compile-time side: contributes the bundled modules to every generated registry and validates `Listener` and `@CommandHandler` components. Goes on the `annotationProcessor` path, never in the jar. |
+| `weftkit-paper` | The Paper adapter runtime, on top of `weftkit-bukkit`: the bundled `paper:commands` module registers `@PaperCommand` components with Paper's Brigadier registrar, no `plugin.yml` entry needed. Paper 1.21.1 or newer. |
+| `weftkit-paper-processor` | The Paper adapter's compile-time side: brings in `weftkit-bukkit-processor`, contributes the Paper modules, and validates `@PaperCommand` components. Goes on the `annotationProcessor` path, never in the jar. |
 
 ## License
 

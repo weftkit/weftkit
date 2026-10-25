@@ -7,4 +7,10 @@ package org.weftkit.wiring.registry;
  * immutable.
  */
 public interface ComponentRegistry
-        extends CoreRegistry, LazyRegistry, ProductRegistry, FlagRegistry, ModuleRegistry, AmbientRegistry {}
+        extends CoreRegistry,
+                LazyRegistry,
+                ProductRegistry,
+                FlagRegistry,
+                ModuleRegistry,
+                AmbientRegistry,
+                AnnotationRegistry {}

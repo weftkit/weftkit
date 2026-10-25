@@ -115,8 +115,8 @@ loader.loadTimings().forEach((type, duration) ->
 
 The processor also writes the full dependency graph as `weftkit-graph.dot` next to the generated
 registry sources (under `build/generated/sources/annotationProcessor`). Render it with
-[Graphviz](https://graphviz.org/) to see your plugin's wiring, where every edge points at a
-dependency:
+[Graphviz](https://graphviz.org/) to see your plugin's wiring, where every solid or dashed edge
+points at a dependency:
 
 ```sh
 dot -Tsvg weftkit-graph.dot -o weftkit-graph.svg
@@ -124,10 +124,10 @@ dot -Tsvg weftkit-graph.dot -o weftkit-graph.svg
 
 The [player-homes example](examples/player-homes.md) renders to this, its two commands sharing
 the `HomeStore` singleton, which loads homes through the package-private `HomesFile`, alongside
-the bundled listener, command, and metrics modules:
+the bundled listener, command, and metrics modules. The command module picks up both commands:
 
 <figure class="wk-graph" markdown>
-![Dependency graph of the player-homes plugin. HomeCommand and SetHomeCommand, both amber singletons, point at the HomeStore singleton, which points at the dashed-bordered package-private HomesFile. The teal MetricsModule points at a plain WeftMetricsSettingsDefaults, and the teal ListenerModule and CommandModule stand alone.](assets/diagrams/weftkit-graph.svg)
+![Dependency graph of the player-homes plugin. HomeCommand and SetHomeCommand, both amber singletons, point at the HomeStore singleton, which points at the dashed-bordered package-private HomesFile. The teal CommandModule points at both commands with dotted edges labelled @CommandHandler, the teal MetricsModule points at a plain WeftMetricsSettingsDefaults, and the teal ListenerModule stands alone.](assets/diagrams/weftkit-graph.svg)
 <figcaption>The generated <code>weftkit-graph.dot</code> for the player-homes example, rendered with Graphviz.</figcaption>
 </figure>
 
@@ -141,8 +141,10 @@ The nodes and edges carry a small visual vocabulary:
 | Grey dashed box | A static holder ordered through `@Requires` / `@Initializes`. |
 | Dashed border | A [package-private component](internal-components.md), kept off your public surface. |
 | `feature: name` badge | The component is gated by a `@FeatureFlag`; the badge names the flag. |
+| `inert: no Module` badge | The component carries a `@HandledBy` annotation whose module the registry lacks. |
 | Solid edge | A constructor dependency. |
 | Dashed edge | A `@Requires` ordering edge, amber when it points at the holder's initializer. |
+| Dotted teal edge | A module handling the component through the labelled `@HandledBy` annotation. |
 
 ## The Loader hook
 

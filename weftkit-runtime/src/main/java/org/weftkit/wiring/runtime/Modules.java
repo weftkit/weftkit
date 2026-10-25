@@ -1,8 +1,15 @@
 package org.weftkit.wiring.runtime;
 
+import java.lang.annotation.Annotation;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.weftkit.wiring.HandledBy;
 import org.weftkit.wiring.ModuleLifecycle;
 import org.weftkit.wiring.WeftModule;
+import org.weftkit.wiring.registry.ComponentRegistry;
 
 /**
  * Drives the {@link ModuleLifecycle} hooks of a loaded graph's {@link WeftModule}s. Adapters call
@@ -65,6 +72,26 @@ public final class Modules {
             }
         }
         if (failure != null) throw failure;
+    }
+
+    /**
+     * The handled annotations carried by an enabled component whose {@link HandledBy} module is
+     * missing from the registry, sorted by name. Those components stay inert. Owner thread only.
+     */
+    public static List<Class<? extends Annotation>> unhandled(WeftLoader loader) {
+        ComponentRegistry registry = loader.registry();
+        Set<String> modules = registry.modules().stream().map(Class::getName).collect(Collectors.toSet());
+        Set<Class<? extends Annotation>> missing = registry.handlers().entrySet().stream()
+                .filter(handler -> !modules.contains(handler.getValue()))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
+        if (missing.isEmpty()) return List.of();
+        return loader.enabledAnnotations()
+                .<Class<? extends Annotation>>map(Annotation::annotationType)
+                .filter(missing::contains)
+                .distinct()
+                .sorted(Comparator.comparing(Class::getName))
+                .toList();
     }
 
     private static ModuleLifecycle lifecycle(WeftLoader loader, Class<?> type) {

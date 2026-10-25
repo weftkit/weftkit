@@ -45,7 +45,13 @@ public final class HologramModule implements ModuleLifecycle {
 ```
 
 `Weft` does one thing: `all` enumerates the wired components by supertype, feature flagged ones
-excluded. It exists because that set is not statically known; everything else a module needs, the
+excluded. `annotated(CommandExecutor.class, CommandHandler.class)` builds only the components
+carrying the annotation, each paired with the one it carries. Such an
+annotation must be marked `@HandledBy(TheModule.class)`. The processor then records it in the
+generated registry, so `annotated` never reflects, the adapter warns at enable when the module is
+missing, and disabling the module while components still carry the annotation fails the build. The
+annotation and the types its values name must be public. `Weft`
+exists because that set is not statically known; everything else a module needs, the
 plugin included, arrives through its constructor. Its read-only sibling `WeftView` inspects the
 same graph without building anything: `types` names the wired classes by supertype, and `contains`,
 `enabled`, `loadOrder`, `loadTimings`, and `modules` report membership and load state.

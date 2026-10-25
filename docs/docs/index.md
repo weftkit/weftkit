@@ -123,7 +123,7 @@ it.
 ## See your plugin's structure
 
 <figure class="wk-graph" markdown>
-![Dependency graph of the player-homes example: the amber HomeCommand and SetHomeCommand singletons point at the HomeStore singleton, which points at the dashed package-private HomesFile, while the teal MetricsModule points at WeftMetricsSettingsDefaults and the teal ListenerModule and CommandModule stand alone.](assets/diagrams/weftkit-graph.svg)
+![Dependency graph of the player-homes example: the amber HomeCommand and SetHomeCommand singletons point at the HomeStore singleton, which points at the dashed package-private HomesFile, while the teal CommandModule points at both commands with dotted @CommandHandler edges, the teal MetricsModule points at WeftMetricsSettingsDefaults, and the teal ListenerModule stands alone.](assets/diagrams/weftkit-graph.svg)
 <figcaption markdown="span">The processor also [renders the whole dependency graph](lifecycle.md#diagnostics) as Graphviz. Every component and every edge, package-private classes included. This is the [player-homes](examples/player-homes.md) example.</figcaption>
 </figure>
 

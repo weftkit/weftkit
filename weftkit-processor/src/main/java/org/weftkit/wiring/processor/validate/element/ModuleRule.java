@@ -53,6 +53,8 @@ public final class ModuleRule {
 
     private final List<String> disabled = new ArrayList<>();
 
+    private final Map<String, String> disabledModules = new HashMap<>();
+
     private TypeElement registry;
 
     public ModuleRule(
@@ -81,8 +83,8 @@ public final class ModuleRule {
      * Resolves declared and adapter-contributed modules into the model. Contributions come from
      * {@link ModuleContributor} services on the processor path; a contributed class missing from
      * the compile classpath is skipped, its adapter is not in use. Declarations win over
-     * contributions with the same id, disabled ids drop the module and its components, and an
-     * unknown disabled id is an error.
+     * contributions with the same id and handle their annotations, disabled ids drop the module
+     * and its components, and an unknown disabled id is an error.
      */
     public void resolve() {
         for (String name : contributedAmbient()) {
@@ -121,6 +123,7 @@ public final class ModuleRule {
             if (id == null) continue;
             String clash = byId.putIfAbsent(id, name);
             if (clash != null) {
+                collector.replaceModule(element, selected.get(clash));
                 if (!declaredIds.contains(id))
                     diagnostics.warning(
                             registry,
@@ -134,8 +137,15 @@ public final class ModuleRule {
         for (String id : disabled)
             if (!byId.containsKey(id))
                 diagnostics.error(registry, "@Registry(disable) names an unknown module id: " + id);
-        selected.keySet().removeIf(name -> disabled.contains(moduleIds.get(name)));
+        for (String name : selected.keySet())
+            if (disabled.contains(moduleIds.get(name))) disabledModules.put(name, moduleIds.get(name));
+        selected.keySet().removeIf(disabledModules::containsKey);
         for (TypeElement module : selected.values()) collectModule(module);
+    }
+
+    /** The disabled modules by class name, each mapped to its id. Filled by {@link #resolve}. */
+    public Map<String, String> disabledModules() {
+        return disabledModules;
     }
 
     private static List<String> contributions() {

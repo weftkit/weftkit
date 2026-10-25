@@ -1,5 +1,6 @@
 package org.weftkit.wiring.runtime;
 
+import java.lang.annotation.Annotation;
 import java.util.List;
 import org.weftkit.wiring.runtime.exception.ResolutionException;
 
@@ -25,5 +26,15 @@ public final class Weft {
         if (supertype == Object.class)
             throw new ResolutionException("Refusing to enumerate the whole graph, pass a specific supertype");
         return loader.createAll(supertype);
+    }
+
+    /**
+     * Every enabled component assignable to the supertype whose class carries the
+     * {@code @HandledBy} annotation, paired with it and sorted by class name. A repeated
+     * annotation pairs the component once per instance, in declaration order. Only those
+     * components are constructed.
+     */
+    public <T, A extends Annotation> List<Annotated<T, A>> annotated(Class<T> supertype, Class<A> marker) {
+        return loader.createAnnotated(supertype, marker);
     }
 }

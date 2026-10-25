@@ -20,7 +20,8 @@ public final class WeftView {
 
     /**
      * The wired component classes assignable to the supertype, sorted by class name, feature
-     * flagged ones excluded. The read-only mirror of {@link Weft#all}. Rejects {@code Object}.
+     * flagged ones excluded. The read-only mirror of {@link Weft#all}.
+     * Rejects {@code Object}.
      */
     public <T> List<Class<? extends T>> types(Class<T> supertype) {
         if (supertype == Object.class)

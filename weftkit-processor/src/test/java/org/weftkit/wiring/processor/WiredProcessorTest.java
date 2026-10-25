@@ -5,9 +5,17 @@ import static com.google.testing.compile.Compiler.javac;
 
 import com.google.testing.compile.Compilation;
 import com.google.testing.compile.JavaFileObjects;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardLocation;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class WiredProcessorTest {
 
@@ -123,6 +131,294 @@ class WiredProcessorTest {
                 .generatedSourceFile("test.WeftWiring")
                 .contentsAsUtf8String()
                 .doesNotContain("Contributed");
+    }
+
+    @Test
+    void recordsHandledAnnotationsWithEveryValueKind() {
+        Compilation compilation = compile(
+                moduleRegistry(),
+                component(),
+                module(),
+                JavaFileObjects.forSourceLines(
+                        "test.Tag",
+                        "package test;",
+                        "import java.lang.annotation.*;",
+                        "import org.weftkit.wiring.HandledBy;",
+                        "@HandledBy(Mod.class) @Retention(RetentionPolicy.CLASS)",
+                        "public @interface Tag {",
+                        "    String value();",
+                        "    int count() default 3;",
+                        "    long big() default Long.MIN_VALUE;",
+                        "    char letter() default 'x';",
+                        "    double ratio() default Double.NaN;",
+                        "    float scale() default 1.5f;",
+                        "    String[] names() default {\"a\", \"b\"};",
+                        "    Class<? extends Number> type() default Integer.class;",
+                        "    Class<?>[] types() default {};",
+                        "    ElementType kind() default ElementType.TYPE;",
+                        "    Deprecated nested() default @Deprecated(since = \"1\");",
+                        "}"),
+                JavaFileObjects.forSourceLines(
+                        "test.Tagged",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "@Wired @Tag(value = \"t\", names = \"only\") public final class Tagged { public Tagged() {} }"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("new String[] {\"only\"}");
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("Map.entry(test.Tag.class, \"test.Mod\")");
+        assertThat(compilation)
+                .generatedFile(StandardLocation.SOURCE_OUTPUT, "test", "weftkit-graph.dot")
+                .contentsAsUtf8String()
+                .contains("\"test.Mod\" -> \"test.Tagged\" [style=dotted");
+    }
+
+    @Test
+    void marksAComponentInertWhenItsHandlingModuleIsMissing() {
+        Compilation compilation = compile(
+                registry(),
+                component(),
+                JavaFileObjects.forSourceLines(
+                        "test.Orphan",
+                        "package test;",
+                        "import org.weftkit.wiring.HandledBy;",
+                        "@HandledBy(Absent.class) public @interface Orphan {}"),
+                JavaFileObjects.forSourceLines(
+                        "test.Absent",
+                        "package test;",
+                        "import org.weftkit.wiring.WeftModule;",
+                        "@WeftModule(id = \"test:absent\") public final class Absent { public Absent() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Orphaned",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "@Wired @Orphan public final class Orphaned { public Orphaned() {} }"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedFile(StandardLocation.SOURCE_OUTPUT, "test", "weftkit-graph.dot")
+                .contentsAsUtf8String()
+                .contains("inert: no Absent");
+        assertThat(compilation)
+                .generatedFile(StandardLocation.SOURCE_OUTPUT, "test", "weftkit-graph.dot")
+                .contentsAsUtf8String()
+                .doesNotContain("\"test.Absent\" -> \"test.Orphaned\"");
+    }
+
+    @Test
+    void rendersHandledAnnotationsWithoutLintWarnings() {
+        Compilation compilation = javac().withProcessors(new WiredProcessor())
+                .withOptions("-Xlint:rawtypes,unchecked,cast", "-Werror")
+                .compile(
+                        moduleRegistry(),
+                        component(),
+                        module(),
+                        JavaFileObjects.forSourceLines(
+                                "test.Tag",
+                                "package test;",
+                                "import org.weftkit.wiring.HandledBy;",
+                                "@HandledBy(Mod.class) public @interface Tag {",
+                                "    Class<?>[] types() default {String.class};",
+                                "    Class<? extends Number>[] numbers() default {Integer.class};",
+                                "    Class<? extends Number> number() default Long.class;",
+                                "}"),
+                        JavaFileObjects.forSourceLines(
+                                "test.Tagged",
+                                "package test;",
+                                "import org.weftkit.wiring.Wired;",
+                                "@Wired @Tag public final class Tagged { public Tagged() {} }"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("new Class<?>[] {String.class}");
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("public boolean equals(Object other)");
+    }
+
+    @Test
+    void recordsEveryRepeatedHandledAnnotation() {
+        Compilation compilation = compile(
+                moduleRegistry(),
+                component(),
+                module(),
+                JavaFileObjects.forSourceLines(
+                        "test.Tag",
+                        "package test;",
+                        "import java.lang.annotation.Repeatable;",
+                        "import org.weftkit.wiring.HandledBy;",
+                        "@HandledBy(Mod.class) @Repeatable(Tags.class) public @interface Tag { String value(); }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Tags", "package test;", "public @interface Tags { Tag[] value(); }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Tagged",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "@Wired @Tag(\"first\") @Tag(\"second\") public final class Tagged { public Tagged() {} }"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("return \"first\"");
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("return \"second\"");
+    }
+
+    @Test
+    void recordsAHandledRepeatableContainer() {
+        Compilation compilation = compile(
+                moduleRegistry(),
+                component(),
+                module(),
+                JavaFileObjects.forSourceLines(
+                        "test.Route",
+                        "package test;",
+                        "import java.lang.annotation.Repeatable;",
+                        "@Repeatable(Routes.class) public @interface Route { String value(); }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Routes",
+                        "package test;",
+                        "import org.weftkit.wiring.HandledBy;",
+                        "@HandledBy(Mod.class) public @interface Routes { Route[] value(); }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Routed",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "@Wired @Route(\"first\") @Route(\"second\") public final class Routed {"
+                                + " public Routed() {} }"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("Map.entry(test.Routes.class, \"test.Mod\")");
+    }
+
+    @Test
+    void rejectsAHandlerThatIsNotAModule() {
+        Compilation compilation = compile(
+                registry(),
+                component(),
+                JavaFileObjects.forSourceLines(
+                        "test.Orphan",
+                        "package test;",
+                        "import org.weftkit.wiring.HandledBy;",
+                        "@HandledBy(Svc.class) public @interface Orphan {}"),
+                JavaFileObjects.forSourceLines(
+                        "test.Orphaned",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "@Wired @Orphan public final class Orphaned { public Orphaned() {} }"));
+        assertThat(compilation)
+                .hadErrorContaining(
+                        "Component test.Orphaned carries @Orphan, handled by test.Svc, which is not a @WeftModule");
+    }
+
+    @Test
+    void rejectsAHandledAnnotationTheRegistryCannotReach() {
+        Compilation compilation = compile(
+                moduleRegistry(),
+                component(),
+                module(),
+                JavaFileObjects.forSourceLines(
+                        "test.other.Hidden",
+                        "package test.other;",
+                        "import org.weftkit.wiring.HandledBy;",
+                        "@HandledBy(test.Mod.class) @interface Hidden {}"),
+                JavaFileObjects.forSourceLines(
+                        "test.other.Carrier",
+                        "package test.other;",
+                        "import org.weftkit.wiring.Wired;",
+                        "@Wired @Hidden public final class Carrier { public Carrier() {} }"));
+        assertThat(compilation)
+                .hadErrorContaining(
+                        "Component test.other.Carrier carries @Hidden naming test.other.Hidden, which must be public");
+    }
+
+    @Test
+    void rejectsAHandledAnnotationMemberTypeTheRegistryCannotReach() {
+        Compilation compilation = compile(
+                moduleRegistry(),
+                component(),
+                module(),
+                JavaFileObjects.forSourceLines("test.other.Level", "package test.other;", "enum Level { LOW }"),
+                JavaFileObjects.forSourceLines(
+                        "test.other.Ranked",
+                        "package test.other;",
+                        "import org.weftkit.wiring.HandledBy;",
+                        "@HandledBy(test.Mod.class) public @interface Ranked {",
+                        "  Level[] levels() default {};",
+                        "  Class<? extends Level> kind() default Level.class;",
+                        "}"),
+                JavaFileObjects.forSourceLines(
+                        "test.other.Carrier",
+                        "package test.other;",
+                        "import org.weftkit.wiring.Wired;",
+                        "@Wired @Ranked public final class Carrier { public Carrier() {} }"));
+        assertThat(compilation)
+                .hadErrorContaining(
+                        "Component test.other.Carrier carries @Ranked naming test.other.Level, which must be public");
+    }
+
+    private static List<File> classpathWith(Path classes, Compilation library) throws IOException {
+        for (JavaFileObject file : library.generatedFiles()) {
+            Path target = classes.resolve(file.toUri().getPath().replaceFirst("^/CLASS_OUTPUT/", ""));
+            Files.createDirectories(target.getParent());
+            try (InputStream in = file.openInputStream()) {
+                Files.copy(in, target);
+            }
+        }
+        List<File> classpath = new ArrayList<>(List.of(classes.toFile()));
+        for (String entry : System.getProperty("java.class.path").split(File.pathSeparator))
+            classpath.add(new File(entry));
+        return classpath;
+    }
+
+    @Test
+    void rejectsAModuleComponentWhoseHandlerIsDisabled(@TempDir Path classes) throws IOException {
+        Compilation library = javac().withOptions("-proc:none")
+                .compile(
+                        JavaFileObjects.forSourceLines(
+                                "lib.Off",
+                                "package lib;",
+                                "import org.weftkit.wiring.WeftModule;",
+                                "@WeftModule(id = \"lib:off\") public final class Off { public Off() {} }"),
+                        JavaFileObjects.forSourceLines(
+                                "lib.Gated",
+                                "package lib;",
+                                "import org.weftkit.wiring.HandledBy;",
+                                "@HandledBy(Off.class) public @interface Gated {}"),
+                        JavaFileObjects.forSourceLines(
+                                "lib.Shipped",
+                                "package lib;",
+                                "import org.weftkit.wiring.Wired;",
+                                "@Wired @Gated public final class Shipped { public Shipped() {} }"),
+                        JavaFileObjects.forSourceLines(
+                                "lib.On",
+                                "package lib;",
+                                "import org.weftkit.wiring.WeftModule;",
+                                "@WeftModule(id = \"lib:on\", components = Shipped.class)",
+                                "public final class On { public On() {} }"));
+        assertThat(library).succeeded();
+        List<File> classpath = classpathWith(classes, library);
+        Compilation compilation = javac().withProcessors(new WiredProcessor())
+                .withClasspath(classpath)
+                .compile(JavaFileObjects.forSourceLines(
+                        "test.Reg",
+                        "package test;",
+                        "import org.weftkit.wiring.Registry;",
+                        "@Registry(modules = {lib.On.class, lib.Off.class}, disable = \"lib:off\")",
+                        "public final class Reg { public Reg() {} }"));
+        assertThat(compilation)
+                .hadErrorContaining(
+                        "Component lib.Shipped carries @Gated, handled by module lib:off, which @Registry disables");
     }
 
     @Test
