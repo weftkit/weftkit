@@ -1,7 +1,7 @@
 [versions]
 auto-service = "1.1.1"
-junit = "5.11.4"
-junit-platform = "1.11.4"
+junit = "6.1.0"
+junit-platform = "6.1.0"
 maven-publish = "0.37.0"
 spotless = "8.8.0"
 
