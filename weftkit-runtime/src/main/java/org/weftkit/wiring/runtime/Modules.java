@@ -76,7 +76,8 @@ public final class Modules {
 
     /**
      * The handled annotations carried by an enabled component whose {@link HandledBy} module is
-     * missing from the registry, sorted by name. Those components stay inert. Owner thread only.
+     * missing from the registry, sorted by name. Those components stay inert. Owner thread only
+     * until the graph is loaded.
      */
     public static List<Class<? extends Annotation>> unhandled(WeftLoader loader) {
         ComponentRegistry registry = loader.registry();

@@ -30,12 +30,26 @@ protected void onWeftEnable(WeftLoader loader) {
 
 ## Threading
 
-The loader is confined to the thread that created it, on Bukkit the server main thread. Any
-call touching mutable loader state fails immediately from another thread with a clear exception
-instead of silently racing the graph. That covers creating components inside an async task as
-well as reads like `get` and the load timings; only views of the immutable registry, such as
-`loadOrder` or `contains`, work from anywhere. Async work should gather its inputs up front or
-hop back to the main thread before touching components.
+Loading and unloading belong to the thread that created the loader, on Bukkit the server main
+thread:
+
+- `load`, `unload`, and `resetFailure` throw from any other thread.
+- While `load` runs, every other call throws from any other thread too.
+- Views of the immutable registry, such as `loadOrder` or `contains`, work from anywhere at any
+  time.
+
+Once `load` has returned true, any thread may call `get`, `create`, `Weft.all`, the view methods,
+and the load timings. Reads are lock-free, and plain components build without waiting on each
+other. Singleton creation is serialized inside the loader, so a lazy singleton materializes
+exactly once even when two threads demand it at the same moment: one builds, the other waits for
+the instance.
+
+A lazy `load` hook therefore runs on whichever thread asked first, in an async task or on a Folia
+region thread as easily as on the main thread. Inside it, never assume the main thread and never
+block waiting for another thread to touch the graph. A singleton that needs the main thread
+should be eager. `unload` does not wait for other threads, so stop async work before disabling.
+An async materialization that arrives after the unload throws instead of reviving the graph,
+and `get` never hands out a singleton whose `load` hook has not completed.
 
 ## Load order
 

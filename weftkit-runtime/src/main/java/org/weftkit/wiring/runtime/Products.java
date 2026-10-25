@@ -2,6 +2,7 @@ package org.weftkit.wiring.runtime;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import org.weftkit.wiring.registry.ProductRegistry;
 import org.weftkit.wiring.runtime.exception.ResolutionException;
@@ -15,8 +16,9 @@ final class Products implements CreationListener {
 
     private final ProductRegistry registry;
 
-    // Captured product values, nested product type then qualifier, mirroring the registry maps
-    private final Map<Class<?>, Map<String, Object>> store = new HashMap<>();
+    // Captured product values, nested product type then qualifier, mirroring the registry maps.
+    // Written under the graph lock, read lock-free by prototype builds on any thread
+    private final Map<Class<?>, Map<String, Object>> store = new ConcurrentHashMap<>();
 
     Products(ProductRegistry registry) {
         this.registry = registry;
@@ -34,7 +36,7 @@ final class Products implements CreationListener {
             captured.computeIfAbsent(product, key -> new HashMap<>()).put(qualifier, value);
         });
         captured.forEach((product, values) ->
-                store.computeIfAbsent(product, key -> new HashMap<>()).putAll(values));
+                store.computeIfAbsent(product, key -> new ConcurrentHashMap<>()).putAll(values));
     }
 
     @Override

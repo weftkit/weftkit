@@ -8,13 +8,15 @@ import org.weftkit.wiring.runtime.exception.ComponentLoadException;
  * The lazy singleton scope: builds its component on first demand, caches the instance, and keeps
  * a failure sticky so a broken singleton is not retried until {@link #resetFailure} or unload.
  * Rides the shared managed-creation kernel, so the core stays unaware of lazy singletons, and
- * observes creation only to clear failures on unload.
+ * observes creation only to clear failures on unload. Materializes under the graph lock, one
+ * instance per type across threads.
  */
 final class LazyScope implements Scope, CreationListener {
 
     private final Components core;
 
-    // First failure per lazy singleton, blocks further attempts until resetFailure or unload
+    // First failure per lazy singleton, blocks further attempts until resetFailure or unload.
+    // Graph lock only
     private final Map<Class<?>, RuntimeException> failures = new HashMap<>();
 
     LazyScope(Components core) {
@@ -24,6 +26,10 @@ final class LazyScope implements Scope, CreationListener {
     // The cached instance must not depend on one call site, so lazy singletons ignore arguments
     @Override
     public Object obtain(Class<?> type, Object[] arguments) {
+        return core.locked(() -> materialize(type));
+    }
+
+    private Object materialize(Class<?> type) {
         Object existing = core.created(type);
         if (existing != null) return existing;
         RuntimeException earlier = failures.get(type);
@@ -40,7 +46,7 @@ final class LazyScope implements Scope, CreationListener {
     }
 
     boolean resetFailure(Class<?> type) {
-        return failures.remove(type) != null;
+        return core.locked(() -> failures.remove(type) != null);
     }
 
     @Override

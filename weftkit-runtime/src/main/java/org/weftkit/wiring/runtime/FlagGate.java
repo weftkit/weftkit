@@ -11,8 +11,8 @@ import org.weftkit.wiring.runtime.exception.ResolutionException;
 
 /**
  * Decides per component whether its feature flag lets it be constructed. Resolves the
- * {@link FeatureFlags} provider once, ambient values winning over a wired implementation, and
- * caches the instance, not its answers, so checks stay live.
+ * {@link FeatureFlags} provider once, under the graph lock, ambient values winning over a wired
+ * implementation, and caches the instance, not its answers, so checks stay live.
  */
 final class FlagGate {
 
@@ -24,19 +24,24 @@ final class FlagGate {
 
     private final Function<Class<?>, Object> instances;
 
-    private FeatureFlags flags;
+    private final Function<Supplier<FeatureFlags>, FeatureFlags> locked;
 
-    private boolean resolved;
+    // One reference, so reset and the lock-free read cannot interleave
+    private record Resolved(FeatureFlags flags) {}
+
+    private volatile Resolved resolved;
 
     FlagGate(
             FlagRegistry registry,
             Supplier<Set<Class<?>>> wiredTypes,
             Supplier<FeatureFlags> ambient,
-            Function<Class<?>, Object> instances) {
+            Function<Class<?>, Object> instances,
+            Function<Supplier<FeatureFlags>, FeatureFlags> locked) {
         this.registry = registry;
         this.wiredTypes = wiredTypes;
         this.ambient = ambient;
         this.instances = instances;
+        this.locked = locked;
     }
 
     // Flags come from the registry, no annotation lookup at runtime
@@ -47,18 +52,23 @@ final class FlagGate {
 
     // The provider may have come from the graph that unload just tore down
     void reset() {
-        flags = null;
-        resolved = false;
+        resolved = null;
+    }
+
+    private FeatureFlags flags() {
+        Resolved current = resolved;
+        return current != null ? current.flags() : locked.apply(this::resolve);
     }
 
     // The processor orders a FeatureFlags component before every flagged component, so
     // resolution here never hits an unloaded eager singleton
-    private FeatureFlags flags() {
-        if (resolved) return flags;
+    private FeatureFlags resolve() {
+        Resolved current = resolved;
+        if (current != null) return current.flags();
         FeatureFlags provided = ambient.get();
-        flags = provided != null ? provided : graphFlags();
+        FeatureFlags flags = provided != null ? provided : graphFlags();
         // Only on success, so a failed resolution rethrows instead of defaulting
-        resolved = true;
+        resolved = new Resolved(flags);
         return flags;
     }
 

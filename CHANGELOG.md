@@ -38,10 +38,13 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
   it handles through a `@HandledBy` annotation, and a component whose module is missing is
   marked inert.
 - `WeftLoader.ambient(type)` and `WeftLoader.registry()` accessors.
-- `WeftLoader` is confined to its creating thread: any access touching mutable loader state,
-  reads like `get` and the load timings included, fails fast from another thread with a clear
-  exception instead of silently racing the graph. Views of the immutable registry stay
-  accessible from any thread, and `loadTimings` returns a snapshot instead of a live view.
+- `WeftLoader` threading contract: `load`, `unload`, and `resetFailure` stay on the loader's
+  creating thread, and every other call fails fast from another thread while the graph loads or
+  stands unloaded. Once loaded, any thread may call `get`, `create`, `Weft.all`, the view
+  methods, and the timings. Reads are lock-free, creation serializes on an internal lock, so a
+  lazy singleton materializes once, its `load` hook running on the thread that demanded it
+  first. Views of the immutable registry work from any thread, and `loadTimings` returns a
+  snapshot.
 - A lazy singleton whose materialization failed stays failed: further injections rethrow the
   first failure cheaply until `WeftLoader.resetFailure(type)` or an unload clears the marker.
 - `ComponentRegistry.featureFlags()` records each `@FeatureFlag` in the generated registry, so
@@ -65,6 +68,8 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
 
 ### Changed
 
+- `WeftLoader.load` throws when the graph is already loaded instead of running the eager loop
+  over it again, and `unload` clears the load timings.
 - Listener registration and weftkit's bStats reporting run as the bundled modules
   `bukkit:listeners` and `bukkit:metrics`, disable them via `BukkitModules`.
 - Metrics configuration moved from annotations on the plugin main to a wired `MetricsSettings`

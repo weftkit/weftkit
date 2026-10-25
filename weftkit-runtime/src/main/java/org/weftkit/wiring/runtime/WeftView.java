@@ -7,8 +7,8 @@ import org.weftkit.wiring.runtime.exception.ResolutionException;
 
 /**
  * A read-only view of a loaded graph, injectable alongside {@link Weft}. Shares the loader's
- * thread confinement: {@link #contains}, {@link #loadOrder}, and {@link #modules} read immutable
- * registry data and work from any thread, the rest is owner thread only.
+ * threading contract: {@link #contains}, {@link #loadOrder}, and {@link #modules} work from any
+ * thread at any time, the rest once the graph is loaded.
  */
 public final class WeftView {
 
