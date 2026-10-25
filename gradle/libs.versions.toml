@@ -11,7 +11,7 @@ spotless = "8.8.0"
 bukkit = { module = "org.bukkit:bukkit", version = "1.8-R0.1-20150227.224714-194" }
 paper = { module = "io.papermc.paper:paper-api", version = "1.21.1-R0.1-20250328.161643-128" }
 bstats = { module = "org.bstats:bstats-bukkit", version = "3.2.1" }
-javapoet = { module = "com.palantir.javapoet:javapoet", version = "0.17.0" }
+javapoet = { module = "com.palantir.javapoet:javapoet", version = "0.18.0" }
 auto-service = { module = "com.google.auto.service:auto-service", version.ref = "auto-service" }
 auto-service-annotations = { module = "com.google.auto.service:auto-service-annotations", version.ref = "auto-service" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
