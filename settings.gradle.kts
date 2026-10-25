@@ -18,7 +18,9 @@ include(
     "weftkit-paper-processor",
 )
 
-includeBuild("examples/bukkit/join-leave-messages")
-includeBuild("examples/bukkit/player-homes")
-includeBuild("examples/bukkit/announcer")
-includeBuild("examples/paper/warps")
+if (providers.gradleProperty("weftkit.examples").getOrElse("true").toBoolean()) {
+    includeBuild("examples/bukkit/join-leave-messages")
+    includeBuild("examples/bukkit/player-homes")
+    includeBuild("examples/bukkit/announcer")
+    includeBuild("examples/paper/warps")
+}
