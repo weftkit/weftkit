@@ -8,8 +8,10 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 import org.weftkit.wiring.Loader;
@@ -29,16 +31,14 @@ final class Components implements Instantiator {
 
     private final CoreRegistry registry;
 
-    // Reentrant: a load hook may materialize further lazy singletons and products
     private final ReentrantLock graph = new ReentrantLock();
 
     // Scope per registered type, eager built in. A type with no entry is a per-call prototype
     private final Map<Class<?>, Scope> scopes = new HashMap<>();
 
-    // Singletons whose load hook succeeded
     private final Map<Class<?>, Object> singletons = new ConcurrentHashMap<>();
 
-    // Singletons inside their load hook, visible to the loading thread only. Graph lock only
+    // Graph lock only
     private final Map<Class<?>, Object> loading = new HashMap<>();
 
     // Completion order of singleton creation, eager and lazy interleaved, driving reverse-order
@@ -46,8 +46,8 @@ final class Components implements Instantiator {
     // singleton is inserted after its consumer but completes before it. Graph lock only
     private final List<Class<?>> creationOrder = new ArrayList<>();
 
-    // Replaced under the graph lock, never mutated in place
-    private volatile Map<Class<?>, Duration> timings = Map.of();
+    // Never clear in place, teardown replaces it
+    private volatile Queue<Timing> timings = new ConcurrentLinkedQueue<>();
 
     private final List<CreationListener> listeners = new ArrayList<>();
 
@@ -63,9 +63,7 @@ final class Components implements Instantiator {
         for (Class<?> type : registry.loadOrder()) scopes.put(type, eager);
     }
 
-    // The resolver and the gate call back into the core, so they attach after construction. The
-    // admission check runs again under the lock before any singleton loads, so a thread that
-    // passed the lock-free check before an unload cannot materialize into the torn-down graph
+    // The resolver and the gate call back into the core, so they attach after construction
     void connect(DependencyResolver resolution, FlagGate gate, Runnable admission) {
         this.resolution = resolution;
         this.gate = gate;
@@ -76,6 +74,11 @@ final class Components implements Instantiator {
     // and keep precedence, so a registry listing a type as both eager and lazy stays eager
     void scope(Class<?> type, Scope scope) {
         scopes.putIfAbsent(type, scope);
+    }
+
+    /** Runs the admission check. Under the graph lock, before a scope starts a singleton load. */
+    void admit() {
+        admission.run();
     }
 
     // Feature listeners attach after construction, since they may call back into the core
@@ -139,7 +142,7 @@ final class Components implements Instantiator {
         }
         singletons.clear();
         creationOrder.clear();
-        timings = Map.of();
+        timings = new ConcurrentLinkedQueue<>();
         listeners.forEach(CreationListener::reset);
         gate.reset();
         return failure;
@@ -166,11 +169,13 @@ final class Components implements Instantiator {
     }
 
     Map<Class<?>, Duration> timingsSnapshot() {
-        return timings;
+        Map<Class<?>, Duration> snapshot = new LinkedHashMap<>();
+        for (Timing timing : timings) snapshot.put(timing.type(), timing.duration());
+        return Collections.unmodifiableMap(snapshot);
     }
 
     Duration totalTime() {
-        return timings.values().stream().reduce(Duration.ZERO, Duration::plus);
+        return timings.stream().map(Timing::duration).reduce(Duration.ZERO, Duration::plus);
     }
 
     @Override
@@ -190,7 +195,6 @@ final class Components implements Instantiator {
     }
 
     private boolean load(Class<?> type, Object[] arguments) {
-        admission.run();
         long start = System.nanoTime();
         Object singleton = build(type, arguments);
         loading.put(type, singleton);
@@ -198,14 +202,14 @@ final class Components implements Instantiator {
         int notified = 0;
         try {
             if (singleton instanceof Loader loader && !loader.load()) return false;
-            // Other threads see the singleton only now, with its load hook complete
-            singletons.put(type, singleton);
             creationOrder.add(type);
             recorded = true;
             for (CreationListener listener : listeners) {
                 listener.onLoaded(type, singleton);
                 notified++;
             }
+            // Publish only after every lifecycle observer has accepted the instance.
+            singletons.put(type, singleton);
         } catch (RuntimeException ex) {
             // Roll back only this singleton, the caller decides whether the wider graph comes down
             if (recorded) {
@@ -225,9 +229,7 @@ final class Components implements Instantiator {
         } finally {
             loading.remove(type);
         }
-        Map<Class<?>, Duration> timed = new LinkedHashMap<>(timings);
-        timed.put(type, Duration.ofNanos(System.nanoTime() - start));
-        timings = Collections.unmodifiableMap(timed);
+        timings.add(new Timing(type, Duration.ofNanos(System.nanoTime() - start)));
         return true;
     }
 
@@ -244,8 +246,7 @@ final class Components implements Instantiator {
         return registry.parameters().containsKey(type);
     }
 
-    // Lock-free: reads only immutable registry data and the singleton cache, and a singleton
-    // dependency it has to materialize takes the lock itself
+    // Never take the graph lock here, prototypes build on any thread while a load hook runs
     private Object build(Class<?> target, Object... arguments) {
         // A listener may need to run before the target, e.g. to fill required static holders
         for (CreationListener listener : listeners) listener.onBuilding(target);
@@ -271,4 +272,6 @@ final class Components implements Instantiator {
         if (singleton == null) throw new ResolutionException("Singleton dependency is not loaded: " + type.getName());
         return singleton;
     }
+
+    private record Timing(Class<?> type, Duration duration) {}
 }

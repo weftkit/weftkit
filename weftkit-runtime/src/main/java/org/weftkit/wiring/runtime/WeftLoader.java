@@ -20,20 +20,22 @@ import org.weftkit.wiring.runtime.exception.ResolutionException;
  * to the injection site while the rest of the graph stays loaded. The failure sticks, further
  * injections rethrow cheaply until {@link #resetFailure} or {@link #unload}.
  *
- * <p>Threading. {@link #load}, {@link #unload}, {@link #resetFailure}: creating thread only, on
- * Bukkit the server main thread. Every other call: creating thread only until {@code load()}
- * returned true, then any thread. Reads are lock-free, creation and lazy materialization
- * serialize on an internal lock, so a lazy load hook runs once, on the thread that demanded it
- * first. Unloading does not wait for other threads, a materialization from another thread that
- * arrives after it throws instead of reviving the graph. Not injectable, components reach the
- * graph through {@link Weft} and {@link WeftView}.
+ * <p>Threading. {@link #load}: creating thread only, on Bukkit the server main thread. Every
+ * other call: creating thread only until {@code load()} returned true, then any thread. Reads
+ * are lock-free, creation, lazy materialization, and teardown serialize on an internal lock, so
+ * a lazy load hook runs once, on the thread that demanded it first, and a loaded lazy singleton
+ * resolves lock-free. Unloading waits for a lazy materialization in progress and for nothing
+ * else, a materialization that arrives after it throws instead of reviving the graph. Never
+ * block on the owner thread inside a lazy load hook, unload waits for the hook there. Not
+ * injectable, components reach the graph through {@link Weft} and {@link WeftView}.
  */
 public final class WeftLoader {
 
     private enum State {
         UNLOADED,
         LOADING,
-        LOADED
+        LOADED,
+        UNLOADING
     }
 
     private final ComponentRegistry registry;
@@ -41,6 +43,8 @@ public final class WeftLoader {
     private final Thread owner = Thread.currentThread();
 
     private volatile State state = State.UNLOADED;
+
+    private volatile Thread unloader;
 
     private final AmbientValues ambient;
 
@@ -91,7 +95,11 @@ public final class WeftLoader {
         requireOwnerThread();
         if (state != State.UNLOADED)
             throw new IllegalStateException("WeftLoader is already "
-                    + (state == State.LOADED ? "loaded, unload it before loading again" : "loading"));
+                    + switch (state) {
+                        case LOADED -> "loaded, unload it before loading again";
+                        case UNLOADING -> "unloading";
+                        default -> "loading";
+                    });
         state = State.LOADING;
         boolean loaded = false;
         try {
@@ -105,22 +113,34 @@ public final class WeftLoader {
     /**
      * Runs the {@link Loader} teardown hooks in reverse creation order, lazy singletons
      * interleaved where they materialized, and drops every cached singleton. Teardown continues
-     * past failures, rethrowing the first with the rest suppressed. Safe to call repeatedly. A
+     * past failures, rethrowing the first with the rest suppressed. Safe to call repeatedly on
+     * the owner thread, any other thread may call it only while the graph is loaded. A
      * component materialized by an unload hook during teardown is dropped without its own hook.
-     * Owner thread only.
+     * Waits for a lazy materialization in progress. The hooks run on the calling thread, which
+     * keeps graph access for their duration.
      */
     public void unload() {
-        requireOwnerThread();
-        state = State.UNLOADED;
-        components.unloadAll();
+        requireLoadedOrOwner();
+        components.locked(() -> {
+            requireLoadedOrOwner();
+            unloader = Thread.currentThread();
+            state = State.UNLOADING;
+            try {
+                components.unloadAll();
+            } finally {
+                unloader = null;
+                state = State.UNLOADED;
+            }
+            return null;
+        });
     }
 
     /**
      * Clears the failure marker of a lazy singleton, resolving interface bindings, so the next
-     * injection retries. Returns whether a marker was set. Owner thread only.
+     * injection retries. Returns whether a marker was set.
      */
     public boolean resetFailure(Class<?> type) {
-        requireOwnerThread();
+        requireLoadedOrOwner();
         return lazy.resetFailure(components.bound(type, ""));
     }
 
@@ -258,15 +278,18 @@ public final class WeftLoader {
 
     private void requireOwnerThread() {
         if (Thread.currentThread() == owner) return;
-        throw confinement("Loading, unloading, and resetting failures stay on the owner thread");
+        throw confinement("Loading stays on the owner thread");
     }
 
     private void requireLoadedOrOwner() {
-        if (state == State.LOADED || Thread.currentThread() == owner) return;
+        Thread current = Thread.currentThread();
+        if (state == State.LOADED || current == owner || current == unloader) return;
         throw confinement(
-                state == State.LOADING
-                        ? "The graph is still loading, schedule graph access back on the owner thread"
-                        : "The graph is not loaded, only the owner thread may touch it");
+                switch (state) {
+                    case LOADING -> "The graph is still loading, schedule graph access back on the owner thread";
+                    case UNLOADING -> "The graph is unloading, only the unloading thread may touch it";
+                    default -> "The graph is not loaded, only the owner thread may touch it";
+                });
     }
 
     private IllegalStateException confinement(String detail) {

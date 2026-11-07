@@ -26,7 +26,7 @@ final class FlagGate {
 
     private final Function<Supplier<FeatureFlags>, FeatureFlags> locked;
 
-    // One reference, so reset and the lock-free read cannot interleave
+    // Never unwrap, a resolved null must stay distinct from unresolved
     private record Resolved(FeatureFlags flags) {}
 
     private volatile Resolved resolved;

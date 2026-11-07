@@ -16,8 +16,7 @@ final class Products implements CreationListener {
 
     private final ProductRegistry registry;
 
-    // Captured product values, nested product type then qualifier, mirroring the registry maps.
-    // Written under the graph lock, read lock-free by prototype builds on any thread
+    // Captured product values, nested product type then qualifier, mirroring the registry maps
     private final Map<Class<?>, Map<String, Object>> store = new ConcurrentHashMap<>();
 
     Products(ProductRegistry registry) {

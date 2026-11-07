@@ -7,21 +7,20 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.weftkit.wiring.registry.TestRegistry.on;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.weftkit.wiring.Loader;
 import org.weftkit.wiring.registry.ComponentRegistry;
-import org.weftkit.wiring.registry.Dependency;
+import org.weftkit.wiring.registry.TestRegistry;
 import org.weftkit.wiring.runtime.exception.ComponentLoadException;
 
 // Hand-built registry, the thread confinement contract needs no generated wiring
@@ -31,13 +30,10 @@ class ThreadConfinementTest {
 
         final AtomicReference<WeftLoader> loader = new AtomicReference<>();
 
-        // Run on a fresh thread from Core's load hook
         volatile Runnable duringLoad;
 
         volatile Throwable duringLoadFailure;
 
-        // Set: the Cache constructor, or its load hook with cacheParksInLoad, blocks until
-        // cacheRelease
         volatile CountDownLatch cacheEntered;
 
         volatile CountDownLatch cacheRelease;
@@ -45,6 +41,14 @@ class ThreadConfinementTest {
         volatile boolean cacheParksInLoad;
 
         volatile boolean cacheFails;
+
+        volatile boolean cacheUnloadTouchesGraph;
+
+        volatile boolean cacheParksInUnload;
+
+        volatile CountDownLatch bindingsEntered;
+
+        volatile CountDownLatch bindingsRelease;
 
         final AtomicInteger cacheConstructions = new AtomicInteger();
 
@@ -87,6 +91,12 @@ class ThreadConfinementTest {
         Worker(Core core) {}
     }
 
+    public static final class Store {}
+
+    public static final class Reader {
+        Reader(Store store) {}
+    }
+
     public static final class Cache implements Loader, Service {
 
         private final Events events;
@@ -95,7 +105,7 @@ class ThreadConfinementTest {
             this.events = events;
             events.cacheConstructions.incrementAndGet();
             if (events.cacheFails) throw new IllegalStateException("cache failure");
-            if (!events.cacheParksInLoad) park();
+            if (!events.cacheParksInLoad && !events.cacheParksInUnload) park();
         }
 
         @Override
@@ -117,53 +127,33 @@ class ThreadConfinementTest {
         @Override
         public void unload() {
             events.cacheUnloads.incrementAndGet();
+            if (events.cacheUnloadTouchesGraph) {
+                assertNotNull(events.loader.get().get(Core.class));
+                assertNotNull(events.loader.get().create(Worker.class));
+            }
+            if (events.cacheParksInUnload) park();
         }
     }
 
     private static ComponentRegistry registry(Events events) {
-        return new ComponentRegistry() {
-
-            @Override
-            public List<Class<?>> loadOrder() {
-                return List.of(Core.class);
-            }
-
-            @Override
-            public Set<Class<?>> lazySingletons() {
-                return Set.of(Cache.class);
-            }
-
-            @Override
-            public Map<Class<?>, List<Dependency>> parameters() {
-                return Map.of(
-                        Core.class, List.of(),
-                        Cache.class, List.of(),
-                        Worker.class, List.of(new Dependency(Core.class, "", false)));
-            }
-
-            @Override
-            public Map<Class<?>, Function<Object[], Object>> factories() {
-                return Map.of(
-                        Core.class, arguments -> new Core(events),
-                        Cache.class, arguments -> new Cache(events),
-                        Worker.class, arguments -> new Worker((Core) arguments[0]));
-            }
-
-            @Override
-            public Map<Class<?>, Map<String, Class<?>>> productOwners() {
-                return Map.of();
-            }
-
-            @Override
-            public Map<Class<?>, Map<String, Function<Object, Object>>> productGetters() {
-                return Map.of();
-            }
-
-            @Override
-            public Map<Class<?>, Map<String, Class<?>>> bindings() {
-                return Map.of();
-            }
-        };
+        return new TestRegistry()
+                .eager(Core.class, arguments -> new Core(events))
+                .lazy(Cache.class, arguments -> new Cache(events))
+                .plain(Worker.class, arguments -> new Worker((Core) arguments[0]), on(Core.class))
+                .lazy(Store.class, arguments -> new Store())
+                .plain(Reader.class, arguments -> new Reader((Store) arguments[0]), on(Store.class))
+                .bindings(() -> {
+                    if (events.bindingsEntered != null
+                            && Thread.currentThread().getName().equals("second")) {
+                        events.bindingsEntered.countDown();
+                        try {
+                            assertTrue(events.bindingsRelease.await(5, TimeUnit.SECONDS));
+                        } catch (InterruptedException ex) {
+                            Thread.currentThread().interrupt();
+                        }
+                    }
+                    return Map.of();
+                });
     }
 
     private static WeftLoader loaded(Events events) {
@@ -213,17 +203,82 @@ class ThreadConfinementTest {
     }
 
     @Test
-    void lifecycleCallsOffTheOwnerThreadFailFast() throws InterruptedException {
+    void loadOffTheOwnerThreadFailsFast() throws InterruptedException {
         WeftLoader loader = loaded(new Events());
+        loader.unload();
         for (Runnable call : List.<Runnable>of(loader::load, () -> loader.resetFailure(Cache.class), loader::unload)) {
             Throwable thrown = onOtherThread(call);
             assertInstanceOf(IllegalStateException.class, thrown);
             assertTrue(thrown.getMessage().contains("async-task"));
         }
+        assertTrue(loader.load());
+        Throwable thrown = onOtherThread(loader::load);
+        assertInstanceOf(IllegalStateException.class, thrown);
+        assertTrue(thrown.getMessage().contains("async-task"));
         // The graph stayed intact and the owner thread keeps full access
         assertNotNull(loader.get(Core.class));
         assertNotNull(loader.create(Worker.class));
         loader.unload();
+    }
+
+    @Test
+    void loadedGraphUnloadsAndResetsFromAnotherThread() throws InterruptedException {
+        Events events = new Events();
+        events.cacheFails = true;
+        WeftLoader loader = loaded(events);
+        assertInstanceOf(ComponentLoadException.class, onOtherThread(() -> loader.create(Cache.class)));
+        assertNull(onOtherThread(() -> assertTrue(loader.resetFailure(Cache.class))));
+        events.cacheFails = false;
+        assertNotNull(loader.create(Cache.class));
+        assertNull(onOtherThread(loader::unload));
+        assertEquals(1, events.cacheUnloads.get());
+        assertNull(loader.get(Core.class));
+        assertInstanceOf(IllegalStateException.class, onOtherThread(() -> loader.get(Core.class)));
+        assertTrue(loader.load());
+        loader.unload();
+    }
+
+    @Test
+    void unloadHooksKeepGraphAccessOnTheUnloadingThread() throws InterruptedException {
+        Events events = new Events();
+        events.cacheUnloadTouchesGraph = true;
+        WeftLoader loader = loaded(events);
+        assertNotNull(loader.create(Cache.class));
+        assertNull(onOtherThread(loader::unload));
+        assertEquals(1, events.cacheUnloads.get());
+        assertNull(loader.get(Core.class));
+    }
+
+    @Test
+    void unloadFromAnotherThreadDuringAReloadIsTurnedAway() {
+        Events events = new Events();
+        events.duringLoad = () -> events.loader.get().unload();
+        WeftLoader loader = loaded(events);
+        Throwable thrown = events.duringLoadFailure;
+        assertInstanceOf(IllegalStateException.class, thrown);
+        assertTrue(thrown.getMessage().contains("still loading"));
+        assertNotNull(loader.get(Core.class));
+        loader.unload();
+    }
+
+    @Test
+    void otherThreadsAreTurnedAwayWhileAnotherThreadUnloads() throws InterruptedException {
+        Events events = new Events();
+        events.cacheParksInUnload = true;
+        events.cacheEntered = new CountDownLatch(1);
+        events.cacheRelease = new CountDownLatch(1);
+        WeftLoader loader = loaded(events);
+        assertNotNull(loader.create(Cache.class));
+        AtomicReference<Throwable> thrown = new AtomicReference<>();
+        Thread first = start("first", loader::unload, thrown);
+        assertTrue(events.cacheEntered.await(5, TimeUnit.SECONDS));
+        Throwable turnedAway = onOtherThread(() -> loader.get(Core.class));
+        assertInstanceOf(IllegalStateException.class, turnedAway);
+        assertTrue(turnedAway.getMessage().contains("unloading"));
+        events.cacheRelease.countDown();
+        first.join();
+        assertNull(thrown.get());
+        assertNull(loader.get(Core.class));
     }
 
     @Test
@@ -282,7 +337,6 @@ class ThreadConfinementTest {
         Thread one = start("first", () -> first.set(loader.create(Cache.class)), thrown);
         assertTrue(events.cacheEntered.await(5, TimeUnit.SECONDS));
         Thread two = start("second", () -> second.set(loader.create(Cache.class)), thrown);
-        // Second thread parks on the graph lock
         awaitParked(two);
         events.cacheRelease.countDown();
         one.join();
@@ -330,9 +384,66 @@ class ThreadConfinementTest {
         AtomicReference<Throwable> thrown = new AtomicReference<>();
         Thread one = start("first", () -> loader.create(Cache.class), thrown);
         assertTrue(events.cacheEntered.await(5, TimeUnit.SECONDS));
-        // Would park on the graph lock until the hook's latch times out if prototypes took it
         assertNotNull(loader.create(Worker.class));
         assertNull(onOtherThread(() -> assertNotNull(loader.create(Worker.class))));
+        events.cacheRelease.countDown();
+        one.join();
+        assertNull(thrown.get());
+        loader.unload();
+    }
+
+    @Test
+    void lazyCreationWaitsForProductValidationBeforePublishing() throws InterruptedException {
+        CountDownLatch entered = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        TestRegistry registry = new TestRegistry()
+                .lazy(Store.class, args -> new Store())
+                .product(String.class, Store.class, owner -> {
+                    entered.countDown();
+                    try {
+                        assertTrue(release.await(5, TimeUnit.SECONDS));
+                    } catch (InterruptedException ex) {
+                        Thread.currentThread().interrupt();
+                        throw new IllegalStateException(ex);
+                    }
+                    return null;
+                });
+        WeftLoader loader = new WeftLoader(registry);
+        assertTrue(loader.load());
+        AtomicReference<Throwable> firstFailure = new AtomicReference<>();
+        AtomicReference<Throwable> secondFailure = new AtomicReference<>();
+        Thread first = start("first", () -> loader.create(Store.class), firstFailure);
+        assertTrue(entered.await(5, TimeUnit.SECONDS));
+        Thread second = start("second", () -> loader.create(Store.class), secondFailure);
+        try {
+            awaitParked(second);
+            assertNull(loader.get(Store.class));
+        } finally {
+            release.countDown();
+            first.join();
+            second.join();
+            loader.unload();
+        }
+        assertInstanceOf(RuntimeException.class, firstFailure.get());
+        assertInstanceOf(ComponentLoadException.class, secondFailure.get());
+    }
+
+    @Test
+    void aLoadedLazySingletonResolvesWhileAnotherLazyLoadHookRuns() throws InterruptedException {
+        Events events = new Events();
+        events.cacheParksInLoad = true;
+        events.cacheEntered = new CountDownLatch(1);
+        events.cacheRelease = new CountDownLatch(1);
+        WeftLoader loader = loaded(events);
+        Object store = loader.create(Store.class);
+        AtomicReference<Throwable> thrown = new AtomicReference<>();
+        Thread one = start("first", () -> loader.create(Cache.class), thrown);
+        assertTrue(events.cacheEntered.await(5, TimeUnit.SECONDS));
+        assertSame(store, loader.create(Store.class));
+        assertNull(onOtherThread(() -> {
+            assertSame(store, loader.create(Store.class));
+            assertNotNull(loader.create(Reader.class));
+        }));
         events.cacheRelease.countDown();
         one.join();
         assertNull(thrown.get());
@@ -350,7 +461,6 @@ class ThreadConfinementTest {
         AtomicReference<Object> second = new AtomicReference<>();
         AtomicReference<Throwable> thrown = new AtomicReference<>();
         AtomicReference<Throwable> secondThrown = new AtomicReference<>();
-        // The owner lives on a helper thread, so the test thread can time its unload
         CountDownLatch unloadNow = new CountDownLatch(1);
         Thread owner = start(
                 "owner",
@@ -371,7 +481,6 @@ class ThreadConfinementTest {
         WeftLoader loader = built.get();
         Thread one = start("first", () -> first.set(loader.create(Cache.class)), thrown);
         assertTrue(events.cacheEntered.await(5, TimeUnit.SECONDS));
-        // Passed the lock-free check while loaded, parks on the graph lock behind the hook
         Thread two = start("second", () -> second.set(loader.create(Cache.class)), secondThrown);
         awaitParked(two);
         unloadNow.countDown();
@@ -382,11 +491,30 @@ class ThreadConfinementTest {
         owner.join();
         assertNull(thrown.get());
         assertNotNull(first.get());
-        // Either the second caller got the live instance before the unload or was turned away
         if (secondThrown.get() == null) assertSame(first.get(), second.get());
         else assertInstanceOf(IllegalStateException.class, secondThrown.get());
         assertEquals(1, events.cacheConstructions.get());
         assertEquals(1, events.cacheUnloads.get());
+    }
+
+    @Test
+    void aMaterializationTurnedAwayAfterUnloadDoesNotPoisonTheNextLoad() throws InterruptedException {
+        Events events = new Events();
+        events.bindingsEntered = new CountDownLatch(1);
+        events.bindingsRelease = new CountDownLatch(1);
+        WeftLoader loader = loaded(events);
+        AtomicReference<Throwable> thrown = new AtomicReference<>();
+        Thread second = start("second", () -> loader.create(Cache.class), thrown);
+        assertTrue(events.bindingsEntered.await(5, TimeUnit.SECONDS));
+        loader.unload();
+        events.bindingsRelease.countDown();
+        second.join();
+        assertInstanceOf(IllegalStateException.class, thrown.get());
+        assertEquals(0, events.cacheConstructions.get());
+        assertTrue(loader.load());
+        assertNotNull(loader.create(Cache.class));
+        assertEquals(1, events.cacheConstructions.get());
+        loader.unload();
     }
 
     @Test
