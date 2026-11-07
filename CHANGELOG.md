@@ -111,6 +111,9 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
 
 ### Fixed
 
+- Module activation runs once per loaded graph; repeated activation while active and repeated
+  deactivation do not repeat hooks. Unload deactivates still-active modules, and retry after a
+  failed attempt requires unload/load.
 - Cleanup continues when hooks throw the same exception instance, without attempting exception
   self-suppression.
 - Unchecked errors during component construction, load, module activation, and teardown trigger

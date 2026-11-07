@@ -68,6 +68,11 @@ one, deactivate in reverse. Cleanup must tolerate partial activation. Then the g
 and the plugin is disabled. A module may also implement `Loader` for work at its own load
 position.
 
+Activation is attempted once per loaded graph. Repeating activation while active or deactivation
+after cleanup is a no-op; retry after failure or deactivation requires unload/load. Unload also
+deactivates any still-active modules. Hooks run under the graph lock, so do not wait on another
+thread's graph access inside them.
+
 Activation order follows the dependency graph. A module that must run after another injects it,
 and the deactivation order is the exact reverse. There is no separate ordering mechanism. Modules
 and their dependencies load before every other component and unload after them.

@@ -14,7 +14,8 @@ import org.weftkit.wiring.registry.ComponentRegistry;
 /**
  * Drives the {@link ModuleLifecycle} hooks of a loaded graph's {@link WeftModule}s. Adapters call
  * {@link #activate} after {@link WeftLoader#load()} and {@link #deactivate} before
- * {@link WeftLoader#unload()}. Activation runs in load order, deactivation in reverse, on the
+ * {@link WeftLoader#unload()}, which also deactivates any still-active modules. Activation runs
+ * in load order, deactivation in reverse, on the
  * graph's singleton instances.
  */
 public final class Modules {
@@ -24,55 +25,16 @@ public final class Modules {
     /**
      * Activates every module. When one returns false or throws, the attempted modules are
      * deactivated in reverse before returning false or rethrowing (teardown failures suppressed).
-     * The graph stays loaded either way.
+     * The graph stays loaded either way. Repeated activation while active is a no-op; after
+     * deactivation or a failed attempt, unload and load before retrying.
      */
     public static boolean activate(WeftLoader loader) {
-        List<Class<?>> modules = loader.registry().modules();
-        for (int index = 0; index < modules.size(); index++) {
-            ModuleLifecycle module = lifecycle(loader, modules.get(index));
-            if (module == null) continue;
-            boolean activated;
-            try {
-                activated = module.activate();
-            } catch (RuntimeException | Error ex) {
-                try {
-                    deactivate(loader, index + 1);
-                } catch (RuntimeException | Error teardown) {
-                    if (ex != teardown) ex.addSuppressed(teardown);
-                }
-                throw ex;
-            }
-            if (!activated) {
-                deactivate(loader, index + 1);
-                return false;
-            }
-        }
-        return true;
+        return loader.activateModules();
     }
 
-    /**
-     * Deactivates every module in reverse order, continuing past failures and rethrowing the first
-     * with the rest suppressed. Must run before the graph unloads.
-     */
+    /** Deactivates the attempted modules once, in reverse order. Also called by graph unload. */
     public static void deactivate(WeftLoader loader) {
-        deactivate(loader, loader.registry().modules().size());
-    }
-
-    private static void deactivate(WeftLoader loader, int count) {
-        List<Class<?>> modules = loader.registry().modules();
-        Throwable failure = null;
-        for (int index = count - 1; index >= 0; index--) {
-            ModuleLifecycle module = lifecycle(loader, modules.get(index));
-            if (module == null) continue;
-            try {
-                module.deactivate();
-            } catch (RuntimeException | Error ex) {
-                if (failure == null) failure = ex;
-                else if (failure != ex) failure.addSuppressed(ex);
-            }
-        }
-        if (failure instanceof Error error) throw error;
-        if (failure != null) throw (RuntimeException) failure;
+        loader.deactivateModules();
     }
 
     /**
@@ -94,9 +56,5 @@ public final class Modules {
                 .distinct()
                 .sorted(Comparator.comparing(Class::getName))
                 .toList();
-    }
-
-    private static ModuleLifecycle lifecycle(WeftLoader loader, Class<?> type) {
-        return loader.get(type) instanceof ModuleLifecycle module ? module : null;
     }
 }

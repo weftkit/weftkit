@@ -54,6 +54,7 @@ class CleanupFailuresTest {
                         }))
                 .module(Third.class));
         assertTrue(loader.load());
+        assertTrue(Modules.activate(loader));
         assertSame(shared, assertThrows(IllegalStateException.class, () -> Modules.deactivate(loader)));
         assertEquals(List.of("first"), events);
         assertEquals(0, shared.getSuppressed().length);

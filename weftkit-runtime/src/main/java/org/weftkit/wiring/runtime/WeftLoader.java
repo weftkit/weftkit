@@ -60,6 +60,8 @@ public final class WeftLoader {
 
     private final LazyScope lazy;
 
+    private final ModuleActivation modules;
+
     private final FlagGate gate;
 
     /**
@@ -73,9 +75,10 @@ public final class WeftLoader {
         this.ambient = new AmbientValues(registry, ambient);
         this.components = new Components(registry);
         this.lazy = new LazyScope(components);
+        this.modules = new ModuleActivation(registry, components);
         for (Class<?> type : registry.lazySingletons()) components.scope(type, lazy);
         Products products = new Products(registry);
-        components.observe(products, lazy, new Requirements(registry, components));
+        components.observe(products, lazy, modules, new Requirements(registry, components));
         this.gate = new FlagGate(
                 registry,
                 components::wiredTypes,
@@ -132,14 +135,46 @@ public final class WeftLoader {
                 throw new IllegalStateException(
                         "Cannot unload while the graph is " + state.name().toLowerCase(java.util.Locale.ROOT));
             components.requireNoSingletonLoad();
+            modules.requireIdle();
             unloader = Thread.currentThread();
             state = State.UNLOADING;
             try {
-                components.unloadAll();
+                Throwable failure = null;
+                try {
+                    modules.deactivate();
+                } catch (RuntimeException | Error ex) {
+                    failure = ex;
+                }
+                try {
+                    components.unloadAll();
+                } catch (RuntimeException | Error teardown) {
+                    if (failure == null) throw teardown;
+                    if (failure != teardown) failure.addSuppressed(teardown);
+                }
+                if (failure instanceof Error error) throw error;
+                if (failure != null) throw (RuntimeException) failure;
             } finally {
                 unloader = null;
                 state = State.UNLOADED;
             }
+            return null;
+        });
+    }
+
+    boolean activateModules() {
+        requireLoadedOrOwner();
+        return components.locked(() -> {
+            requireLoadedOrOwner();
+            if (state != State.LOADED) throw new IllegalStateException("Load the graph before activating modules");
+            return modules.activate();
+        });
+    }
+
+    void deactivateModules() {
+        requireLoadedOrOwner();
+        components.locked(() -> {
+            requireLoadedOrOwner();
+            modules.deactivate();
             return null;
         });
     }
