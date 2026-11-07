@@ -12,6 +12,7 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
+import javax.tools.Diagnostic;
 import org.weftkit.wiring.Initializes;
 import org.weftkit.wiring.Provides;
 import org.weftkit.wiring.Qualified;
@@ -61,6 +62,21 @@ public class WiredProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnvironment) {
+        if (generated) {
+            Stream.concat(
+                            roundEnvironment.getElementsAnnotatedWith(Wired.class).stream(),
+                            roundEnvironment.getElementsAnnotatedWith(Registry.class).stream())
+                    .forEach(element -> processingEnv
+                            .getMessager()
+                            .printMessage(
+                                    Diagnostic.Kind.ERROR,
+                                    "weftkit cannot include " + element
+                                            + " because it was generated after the wiring registry. "
+                                            + "Late-generated @Wired and @Registry types are unsupported; generate them before "
+                                            + "this compilation and compile them as ordinary sources",
+                                    element));
+            return true;
+        }
         validator.addSources(roundEnvironment);
         for (Element element : roundEnvironment.getElementsAnnotatedWith(Registry.class))
             validator.validateRegistry((TypeElement) element);
