@@ -3,6 +3,7 @@ description = "The weftkit component loader that drives generated registries at 
 dependencies {
     api(project(":weftkit-api"))
 
+    testImplementation(testFixtures(project(":weftkit-api")))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
     testAnnotationProcessor(project(":weftkit-processor"))

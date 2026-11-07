@@ -5,17 +5,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.weftkit.wiring.registry.TestRegistry.on;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 import org.weftkit.wiring.FeatureFlags;
 import org.weftkit.wiring.registry.ComponentRegistry;
-import org.weftkit.wiring.registry.Dependency;
 import org.weftkit.wiring.registry.Flag;
+import org.weftkit.wiring.registry.TestRegistry;
 import org.weftkit.wiring.runtime.exception.ComponentLoadException;
 import org.weftkit.wiring.runtime.exception.ResolutionException;
 
@@ -93,50 +91,12 @@ class FlagResolutionTest {
         }
     }
 
-    private abstract static class TestRegistry implements ComponentRegistry {
-
-        @Override
-        public List<Class<?>> loadOrder() {
-            return List.of();
-        }
-
-        @Override
-        public Set<Class<?>> lazySingletons() {
-            return Set.of();
-        }
-
-        @Override
-        public Map<Class<?>, Map<String, Class<?>>> productOwners() {
-            return Map.of();
-        }
-
-        @Override
-        public Map<Class<?>, Map<String, Function<Object, Object>>> productGetters() {
-            return Map.of();
-        }
-
-        @Override
-        public Map<Class<?>, Map<String, Class<?>>> bindings() {
-            return Map.of();
-        }
-    }
-
     // A hand-built registry declares no ambient types, so it keeps the permissive matching: a
     // value is injected by its runtime type, and neither an unmatched value nor a null is rejected
     @Test
     void handBuiltRegistryInjectsAmbientValuesByRuntimeType() {
-        ComponentRegistry registry = new TestRegistry() {
-
-            @Override
-            public Map<Class<?>, List<Dependency>> parameters() {
-                return Map.of(TokenUser.class, List.of(new Dependency(Token.class, "", false)));
-            }
-
-            @Override
-            public Map<Class<?>, Function<Object[], Object>> factories() {
-                return Map.of(TokenUser.class, arguments -> new TokenUser((Token) arguments[0]));
-            }
-        };
+        ComponentRegistry registry = new TestRegistry()
+                .plain(TokenUser.class, arguments -> new TokenUser((Token) arguments[0]), on(Token.class));
         Token token = new Token();
         WeftLoader loader = new WeftLoader(registry, token, null);
         assertSame(token, loader.create(TokenUser.class).token());
@@ -144,27 +104,10 @@ class FlagResolutionTest {
 
     @Test
     void requiredDependencyOnAGatedOffComponentFailsResolution() {
-        ComponentRegistry registry = new TestRegistry() {
-
-            @Override
-            public Map<Class<?>, List<Dependency>> parameters() {
-                return Map.of(
-                        Gated.class, List.of(),
-                        RequiredUser.class, List.of(new Dependency(Gated.class, "", false)));
-            }
-
-            @Override
-            public Map<Class<?>, Function<Object[], Object>> factories() {
-                return Map.of(
-                        Gated.class, arguments -> new Gated(),
-                        RequiredUser.class, arguments -> new RequiredUser((Gated) arguments[0]));
-            }
-
-            @Override
-            public Map<Class<?>, Flag> featureFlags() {
-                return Map.of(Gated.class, new Flag("gated", false));
-            }
-        };
+        ComponentRegistry registry = new TestRegistry()
+                .plain(Gated.class, arguments -> new Gated())
+                .plain(RequiredUser.class, arguments -> new RequiredUser((Gated) arguments[0]), on(Gated.class))
+                .flag(Gated.class, new Flag("gated", false));
         WeftLoader loader = new WeftLoader(registry);
         ResolutionException ex = assertThrows(ResolutionException.class, () -> loader.create(RequiredUser.class));
         assertTrue(ex.getMessage().contains("gated off by its feature flag"));
@@ -173,42 +116,11 @@ class FlagResolutionTest {
     @Test
     void requiredProductOfAGatedOffLazyOwnerIsNotAvailable() {
         Events events = new Events();
-        ComponentRegistry registry = new TestRegistry() {
-
-            @Override
-            public Set<Class<?>> lazySingletons() {
-                return Set.of(GatedProvider.class);
-            }
-
-            @Override
-            public Map<Class<?>, List<Dependency>> parameters() {
-                return Map.of(
-                        GatedProvider.class, List.of(),
-                        TokenUser.class, List.of(new Dependency(Token.class, "", false)));
-            }
-
-            @Override
-            public Map<Class<?>, Function<Object[], Object>> factories() {
-                return Map.of(
-                        GatedProvider.class, arguments -> new GatedProvider(events),
-                        TokenUser.class, arguments -> new TokenUser((Token) arguments[0]));
-            }
-
-            @Override
-            public Map<Class<?>, Map<String, Class<?>>> productOwners() {
-                return Map.of(Token.class, Map.of("", GatedProvider.class));
-            }
-
-            @Override
-            public Map<Class<?>, Map<String, Function<Object, Object>>> productGetters() {
-                return Map.of(Token.class, Map.of("", owner -> ((GatedProvider) owner).token()));
-            }
-
-            @Override
-            public Map<Class<?>, Flag> featureFlags() {
-                return Map.of(GatedProvider.class, new Flag("provider", false));
-            }
-        };
+        ComponentRegistry registry = new TestRegistry()
+                .lazy(GatedProvider.class, arguments -> new GatedProvider(events))
+                .plain(TokenUser.class, arguments -> new TokenUser((Token) arguments[0]), on(Token.class))
+                .product(Token.class, GatedProvider.class, owner -> ((GatedProvider) owner).token())
+                .flag(GatedProvider.class, new Flag("provider", false));
         WeftLoader loader = new WeftLoader(registry);
         ResolutionException ex = assertThrows(ResolutionException.class, () -> loader.create(TokenUser.class));
         assertTrue(ex.getMessage().contains("not available yet"));
@@ -217,30 +129,10 @@ class FlagResolutionTest {
     }
 
     private static ComponentRegistry switchboardRegistry(Events events, boolean enabledByDefault) {
-        return new TestRegistry() {
-
-            @Override
-            public Set<Class<?>> lazySingletons() {
-                return Set.of(Switchboard.class);
-            }
-
-            @Override
-            public Map<Class<?>, List<Dependency>> parameters() {
-                return Map.of(Gated.class, List.of(), Switchboard.class, List.of());
-            }
-
-            @Override
-            public Map<Class<?>, Function<Object[], Object>> factories() {
-                return Map.of(
-                        Gated.class, arguments -> new Gated(),
-                        Switchboard.class, arguments -> new Switchboard(events));
-            }
-
-            @Override
-            public Map<Class<?>, Flag> featureFlags() {
-                return Map.of(Gated.class, new Flag("gated", enabledByDefault));
-            }
-        };
+        return new TestRegistry()
+                .plain(Gated.class, arguments -> new Gated())
+                .lazy(Switchboard.class, arguments -> new Switchboard(events))
+                .flag(Gated.class, new Flag("gated", enabledByDefault));
     }
 
     @Test
@@ -270,26 +162,11 @@ class FlagResolutionTest {
     @Test
     void ambiguousFeatureFlagsImplementationsFailResolution() {
         Events events = new Events();
-        ComponentRegistry registry = new TestRegistry() {
-
-            @Override
-            public Map<Class<?>, List<Dependency>> parameters() {
-                return Map.of(Gated.class, List.of(), Switchboard.class, List.of(), RivalSwitchboard.class, List.of());
-            }
-
-            @Override
-            public Map<Class<?>, Function<Object[], Object>> factories() {
-                return Map.of(
-                        Gated.class, arguments -> new Gated(),
-                        Switchboard.class, arguments -> new Switchboard(events),
-                        RivalSwitchboard.class, arguments -> new RivalSwitchboard());
-            }
-
-            @Override
-            public Map<Class<?>, Flag> featureFlags() {
-                return Map.of(Gated.class, new Flag("gated", false));
-            }
-        };
+        ComponentRegistry registry = new TestRegistry()
+                .plain(Gated.class, arguments -> new Gated())
+                .plain(Switchboard.class, arguments -> new Switchboard(events))
+                .plain(RivalSwitchboard.class, arguments -> new RivalSwitchboard())
+                .flag(Gated.class, new Flag("gated", false));
         WeftLoader loader = new WeftLoader(registry);
         ResolutionException ex = assertThrows(ResolutionException.class, () -> loader.create(Gated.class));
         assertTrue(ex.getMessage().contains("Ambiguous FeatureFlags implementations"));

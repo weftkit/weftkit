@@ -7,16 +7,14 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.weftkit.wiring.registry.TestRegistry.on;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 import org.weftkit.wiring.Loader;
 import org.weftkit.wiring.registry.ComponentRegistry;
-import org.weftkit.wiring.registry.Dependency;
+import org.weftkit.wiring.registry.TestRegistry;
 import org.weftkit.wiring.runtime.exception.ComponentLoadException;
 
 // Hand-built registries keep the eager to lazy edges out of the shared generated sample fixture
@@ -143,140 +141,27 @@ class LazyLifecycleTest {
     }
 
     private static ComponentRegistry graphRegistry(Events events) {
-        return new ComponentRegistry() {
-
-            @Override
-            public List<Class<?>> loadOrder() {
-                return List.of(Alpha.class, EagerUser.class);
-            }
-
-            @Override
-            public Set<Class<?>> lazySingletons() {
-                return Set.of(LazyCore.class);
-            }
-
-            @Override
-            public Map<Class<?>, List<Dependency>> parameters() {
-                return Map.of(
-                        Alpha.class, List.of(),
-                        LazyCore.class, List.of(),
-                        EagerUser.class, List.of(new Dependency(LazyCore.class, "", false)));
-            }
-
-            @Override
-            public Map<Class<?>, Function<Object[], Object>> factories() {
-                return Map.of(
-                        Alpha.class, arguments -> new Alpha(events),
-                        LazyCore.class, arguments -> new LazyCore(events),
-                        EagerUser.class, arguments -> new EagerUser(events, (LazyCore) arguments[0]));
-            }
-
-            @Override
-            public Map<Class<?>, Map<String, Class<?>>> productOwners() {
-                return Map.of();
-            }
-
-            @Override
-            public Map<Class<?>, Map<String, Function<Object, Object>>> productGetters() {
-                return Map.of();
-            }
-
-            @Override
-            public Map<Class<?>, Map<String, Class<?>>> bindings() {
-                return Map.of();
-            }
-        };
+        return new TestRegistry()
+                .eager(Alpha.class, arguments -> new Alpha(events))
+                .lazy(LazyCore.class, arguments -> new LazyCore(events))
+                .eager(
+                        EagerUser.class,
+                        arguments -> new EagerUser(events, (LazyCore) arguments[0]),
+                        on(LazyCore.class));
     }
 
     private static ComponentRegistry productRegistry(Events events) {
-        return new ComponentRegistry() {
-
-            @Override
-            public List<Class<?>> loadOrder() {
-                return List.of(ProductUser.class);
-            }
-
-            @Override
-            public Set<Class<?>> lazySingletons() {
-                return Set.of(LazyCore.class);
-            }
-
-            @Override
-            public Map<Class<?>, List<Dependency>> parameters() {
-                return Map.of(
-                        LazyCore.class, List.of(),
-                        ProductUser.class, List.of(new Dependency(Token.class, "", false)));
-            }
-
-            @Override
-            public Map<Class<?>, Function<Object[], Object>> factories() {
-                return Map.of(
-                        LazyCore.class, arguments -> new LazyCore(events),
-                        ProductUser.class, arguments -> new ProductUser(events, (Token) arguments[0]));
-            }
-
-            @Override
-            public Map<Class<?>, Map<String, Class<?>>> productOwners() {
-                return Map.of(Token.class, Map.of("", LazyCore.class));
-            }
-
-            @Override
-            public Map<Class<?>, Map<String, Function<Object, Object>>> productGetters() {
-                return Map.of(Token.class, Map.of("", owner -> ((LazyCore) owner).token()));
-            }
-
-            @Override
-            public Map<Class<?>, Map<String, Class<?>>> bindings() {
-                return Map.of();
-            }
-        };
+        return new TestRegistry()
+                .lazy(LazyCore.class, arguments -> new LazyCore(events))
+                .eager(ProductUser.class, arguments -> new ProductUser(events, (Token) arguments[0]), on(Token.class))
+                .product(Token.class, LazyCore.class, owner -> ((LazyCore) owner).token());
     }
 
     private static ComponentRegistry requirementRegistry(Events events) {
-        return new ComponentRegistry() {
-
-            @Override
-            public List<Class<?>> loadOrder() {
-                return List.of();
-            }
-
-            @Override
-            public Set<Class<?>> lazySingletons() {
-                return Set.of(LazyIniter.class);
-            }
-
-            @Override
-            public Map<Class<?>, List<Class<?>>> requirements() {
-                return Map.of(Reader.class, List.of(LazyIniter.class));
-            }
-
-            @Override
-            public Map<Class<?>, List<Dependency>> parameters() {
-                return Map.of(LazyIniter.class, List.of(), Reader.class, List.of());
-            }
-
-            @Override
-            public Map<Class<?>, Function<Object[], Object>> factories() {
-                return Map.of(
-                        LazyIniter.class, arguments -> new LazyIniter(events),
-                        Reader.class, arguments -> new Reader(events));
-            }
-
-            @Override
-            public Map<Class<?>, Map<String, Class<?>>> productOwners() {
-                return Map.of();
-            }
-
-            @Override
-            public Map<Class<?>, Map<String, Function<Object, Object>>> productGetters() {
-                return Map.of();
-            }
-
-            @Override
-            public Map<Class<?>, Map<String, Class<?>>> bindings() {
-                return Map.of();
-            }
-        };
+        return new TestRegistry()
+                .lazy(LazyIniter.class, arguments -> new LazyIniter(events))
+                .plain(Reader.class, arguments -> new Reader(events))
+                .requires(Reader.class, LazyIniter.class);
     }
 
     @Test
