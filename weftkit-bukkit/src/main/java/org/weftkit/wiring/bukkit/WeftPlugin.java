@@ -1,6 +1,7 @@
 package org.weftkit.wiring.bukkit;
 
 import org.bukkit.plugin.java.JavaPlugin;
+import org.weftkit.wiring.bukkit.scheduler.Scheduler;
 import org.weftkit.wiring.registry.ComponentRegistry;
 import org.weftkit.wiring.runtime.WeftLoader;
 
@@ -19,11 +20,17 @@ public abstract class WeftPlugin extends JavaPlugin {
     protected abstract ComponentRegistry registry();
 
     /**
-     * Extra ambient values offered to every component, in addition to the plugin itself. Each
-     * value must match a declared ambient type, e.g. from {@code @Registry(ambient)}.
+     * Extra ambient values offered to every component, in addition to the plugin itself and its
+     * {@link Scheduler}. Each value must match a declared ambient type, e.g. from
+     * {@code @Registry(ambient)}.
      */
     protected Object[] ambientValues() {
         return new Object[0];
+    }
+
+    /** The {@link Scheduler} offered to every component. Null uses a {@code @Provides} product, else Bukkit's. */
+    protected Scheduler scheduler() {
+        return null;
     }
 
     /** Runs after the graph loaded successfully, with listeners already registered. */
@@ -39,7 +46,7 @@ public abstract class WeftPlugin extends JavaPlugin {
 
     @Override
     public final void onEnable() {
-        loader = BukkitWeft.enable(this, registry(), ambientValues());
+        loader = BukkitWeft.enableWith(this, registry(), this::scheduler, ambientValues());
         if (loader == null) return;
         onWeftEnable(loader);
     }

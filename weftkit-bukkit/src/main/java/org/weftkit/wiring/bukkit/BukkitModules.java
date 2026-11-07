@@ -3,6 +3,7 @@ package org.weftkit.wiring.bukkit;
 import org.weftkit.wiring.bukkit.commands.CommandModule;
 import org.weftkit.wiring.bukkit.listeners.ListenerModule;
 import org.weftkit.wiring.bukkit.metrics.MetricsModule;
+import org.weftkit.wiring.bukkit.scheduler.SchedulerModule;
 
 /**
  * The ids of the modules bundled with the Bukkit adapter. Use the constants in
@@ -19,6 +20,9 @@ public final class BukkitModules {
 
     /** weftkit's own anonymous bStats reporting, {@link MetricsModule}. */
     public static final String METRICS = "bukkit:metrics";
+
+    /** The task cancellation on unload of {@link SchedulerModule}. */
+    public static final String SCHEDULER = "bukkit:scheduler";
 
     private BukkitModules() {}
 }

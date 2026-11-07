@@ -8,6 +8,7 @@ dependencies {
 
     testImplementation(libs.bukkit)
     testImplementation(libs.bstats)
+    testImplementation(testFixtures(project(":weftkit-api")))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
 }

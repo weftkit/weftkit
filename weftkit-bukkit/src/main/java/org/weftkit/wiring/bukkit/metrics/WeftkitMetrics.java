@@ -17,6 +17,7 @@ import org.bukkit.event.server.ServiceUnregisterEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.weftkit.wiring.Loader;
+import org.weftkit.wiring.bukkit.scheduler.Scheduler;
 
 /**
  * Anonymous usage metrics for weftkit itself, reported to bStats under one shared service id by
@@ -33,6 +34,8 @@ final class WeftkitMetrics implements Loader, Listener {
 
     private final JavaPlugin plugin;
 
+    private final Scheduler scheduler;
+
     private final MetricsDescriptor descriptor;
 
     private Metrics metrics;
@@ -41,8 +44,9 @@ final class WeftkitMetrics implements Loader, Listener {
 
     private long snapshotAt;
 
-    WeftkitMetrics(JavaPlugin plugin, boolean reportName) {
+    WeftkitMetrics(JavaPlugin plugin, Scheduler scheduler, boolean reportName) {
         this.plugin = plugin;
+        this.scheduler = scheduler;
         this.descriptor = new MetricsDescriptor(plugin, reportName);
     }
 
@@ -67,7 +71,7 @@ final class WeftkitMetrics implements Loader, Listener {
         if (!descriptor.handover(event.getProvider().getProvider())) return;
         // Next tick, not inline: a stopping server no longer ticks, so the role does not churn
         // through copies that are about to disable with it
-        plugin.getServer().getScheduler().runTask(plugin, this::claimAndStart);
+        scheduler.global().run(this::claimAndStart);
     }
 
     private void claimAndStart() {

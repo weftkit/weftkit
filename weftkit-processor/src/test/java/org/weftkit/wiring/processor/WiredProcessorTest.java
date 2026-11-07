@@ -663,6 +663,43 @@ class WiredProcessorTest {
                 .containsMatch("LOAD_ORDER = List.of\\(\\s*test.ZFlags.class,\\s*test.Gated.class\\)");
     }
 
+    @Test
+    void ordersModulesBeforeOtherComponents() {
+        Compilation compilation = compile(
+                JavaFileObjects.forSourceLines(
+                        "test.Reg",
+                        "package test;",
+                        "import org.weftkit.wiring.Registry;",
+                        "@Registry(modules = Tracker.class)",
+                        "public final class Reg { public Reg() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Tracker",
+                        "package test;",
+                        "import org.weftkit.wiring.WeftModule;",
+                        "@WeftModule(id = \"test:tracker\")",
+                        "public final class Tracker { public Tracker(Source source) {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Source",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton",
+                        "public final class Source { public Source() {} }"),
+                JavaFileObjects.forSourceLines(
+                        "test.Early",
+                        "package test;",
+                        "import org.weftkit.wiring.Wired;",
+                        "import org.weftkit.wiring.Singleton;",
+                        "@Wired @Singleton",
+                        "public final class Early { public Early() {} }"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .containsMatch(
+                        "LOAD_ORDER = List.of\\(\\s*test.Source.class,\\s*test.Tracker.class,\\s*test.Early.class\\)");
+    }
+
     private static JavaFileObject flagsImplementation(String name) {
         return JavaFileObjects.forSourceLines(
                 "test." + name,

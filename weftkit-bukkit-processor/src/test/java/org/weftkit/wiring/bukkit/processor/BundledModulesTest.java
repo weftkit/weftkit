@@ -27,6 +27,113 @@ class BundledModulesTest {
                 .generatedSourceFile("test.WeftWiring")
                 .contentsAsUtf8String()
                 .contains("new org.weftkit.wiring.bukkit.metrics.MetricsModule(");
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("new org.weftkit.wiring.bukkit.scheduler.SchedulerModule(");
+    }
+
+    @Test
+    void loadsCancellationBeforeDeclaredModulesAndTheirDependencies() {
+        Compilation compilation = javac().withProcessors(new WiredProcessor())
+                .compile(
+                        JavaFileObjects.forSourceLines(
+                                "test.Reg",
+                                "package test;",
+                                "import org.weftkit.wiring.Registry;",
+                                "@Registry(modules = WorkerModule.class) public final class Reg {}"),
+                        JavaFileObjects.forSourceLines(
+                                "test.WorkerModule",
+                                "package test;",
+                                "import org.weftkit.wiring.WeftModule;",
+                                "@WeftModule(id = \"test:worker\") public final class WorkerModule {",
+                                "public WorkerModule(Worker worker) {} }"),
+                        JavaFileObjects.forSourceLines(
+                                "test.Worker",
+                                "package test;",
+                                "import org.weftkit.wiring.Wired;",
+                                "import org.weftkit.wiring.Singleton;",
+                                "import org.weftkit.wiring.bukkit.scheduler.Scheduler;",
+                                "@Wired @Singleton public final class Worker { public Worker(Scheduler scheduler) {} }"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .containsMatch("LOAD_ORDER = List.of\\(\\s*org.weftkit.wiring.bukkit.scheduler.SchedulerModule.class,"
+                        + "\\s*test.Worker.class,\\s*test.WorkerModule.class");
+    }
+
+    @Test
+    void disablingTheFirstModuleDoesNotReintroduceIt() {
+        Compilation compilation =
+                compile("@Registry(disable = BukkitModules.SCHEDULER) public final class Reg { public Reg() {} }");
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .doesNotContain("org.weftkit.wiring.bukkit.scheduler.SchedulerModule");
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("org.weftkit.wiring.bukkit.metrics.MetricsModule.class");
+    }
+
+    @Test
+    void aReplacementRetainsTheFirstModulesLoadOrder() {
+        Compilation compilation = compileSchedulerReplacement(false);
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .containsMatch("LOAD_ORDER = List.of\\(\\s*test.MyScheduler.class,\\s*test.WorkerModule.class");
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .doesNotContain("org.weftkit.wiring.bukkit.scheduler.SchedulerModule");
+    }
+
+    @Test
+    void disablingTheFirstModuleAlsoDropsItsReplacement() {
+        Compilation compilation = compileSchedulerReplacement(true);
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .doesNotContain("MyScheduler");
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .doesNotContain("org.weftkit.wiring.bukkit.scheduler.SchedulerModule");
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .containsMatch("LOAD_ORDER = List.of\\(\\s*test.WorkerModule.class");
+    }
+
+    private static Compilation compileSchedulerReplacement(boolean disabled) {
+        return javac().withProcessors(new WiredProcessor())
+                .compile(
+                        JavaFileObjects.forSourceLines(
+                                "test.Reg",
+                                "package test;",
+                                "import org.weftkit.wiring.Registry;",
+                                "import org.weftkit.wiring.bukkit.BukkitModules;",
+                                "@Registry(modules = {WorkerModule.class, MyScheduler.class}"
+                                        + (disabled ? ", disable = BukkitModules.SCHEDULER" : "")
+                                        + ") public final class Reg {}"),
+                        JavaFileObjects.forSourceLines(
+                                "test.WorkerModule",
+                                "package test;",
+                                "import org.weftkit.wiring.WeftModule;",
+                                "@WeftModule(id = \"test:worker\") public final class WorkerModule {",
+                                "public WorkerModule() {} }"),
+                        JavaFileObjects.forSourceLines(
+                                "test.MyScheduler",
+                                "package test;",
+                                "import org.weftkit.wiring.WeftModule;",
+                                "import org.weftkit.wiring.bukkit.BukkitModules;",
+                                "@WeftModule(id = BukkitModules.SCHEDULER) public final class MyScheduler {",
+                                "public MyScheduler() {} }"));
     }
 
     @Test
@@ -67,6 +174,29 @@ class BundledModulesTest {
                 .generatedSourceFile("test.settings.WeftWiring")
                 .contentsAsUtf8String()
                 .contains("MySettings");
+    }
+
+    @Test
+    void declaresTheSchedulerAsAnAmbientType() {
+        Compilation compilation = javac().withProcessors(new WiredProcessor())
+                .compile(
+                        JavaFileObjects.forSourceLines(
+                                "test.Reg",
+                                "package test;",
+                                "import org.weftkit.wiring.Registry;",
+                                "@Registry public final class Reg { public Reg() {} }"),
+                        JavaFileObjects.forSourceLines(
+                                "test.Ticker",
+                                "package test;",
+                                "import org.weftkit.wiring.Wired;",
+                                "import org.weftkit.wiring.Singleton;",
+                                "import org.weftkit.wiring.bukkit.scheduler.Scheduler;",
+                                "@Wired @Singleton public final class Ticker { public Ticker(Scheduler scheduler) {} }"));
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("org.weftkit.wiring.bukkit.scheduler.Scheduler.class");
     }
 
     @Test

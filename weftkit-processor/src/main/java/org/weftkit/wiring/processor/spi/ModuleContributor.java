@@ -18,6 +18,14 @@ public interface ModuleContributor {
     List<String> modules();
 
     /**
+     * Contributed modules that must load before other modules (and unload after them).
+     * Dependencies still load first; disabled modules are skipped and replacements retain this order.
+     */
+    default List<String> loadFirst() {
+        return List.of();
+    }
+
+    /**
      * Qualified names of ambient types the adapter runtime supplies to every loader, e.g. the
      * plugin instance. Woven into the declared ambient types. A name absent from the compile
      * classpath is skipped like a missing module.

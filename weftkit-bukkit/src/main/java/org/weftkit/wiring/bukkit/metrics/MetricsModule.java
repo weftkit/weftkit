@@ -9,6 +9,7 @@ import org.weftkit.wiring.Loader;
 import org.weftkit.wiring.ModuleLifecycle;
 import org.weftkit.wiring.WeftModule;
 import org.weftkit.wiring.bukkit.BukkitModules;
+import org.weftkit.wiring.bukkit.scheduler.Scheduler;
 import org.weftkit.wiring.runtime.Weft;
 
 /**
@@ -23,14 +24,17 @@ public final class MetricsModule implements ModuleLifecycle {
 
     private final JavaPlugin plugin;
 
+    private final Scheduler scheduler;
+
     private final MetricsSettings settings;
 
     private final Weft weft;
 
     private final List<Loader> loaded;
 
-    public MetricsModule(JavaPlugin plugin, MetricsSettings settings, Weft weft) {
+    public MetricsModule(JavaPlugin plugin, Scheduler scheduler, MetricsSettings settings, Weft weft) {
         this.plugin = plugin;
+        this.scheduler = scheduler;
         this.settings = settings;
         this.weft = weft;
         this.loaded = new ArrayList<>();
@@ -65,7 +69,7 @@ public final class MetricsModule implements ModuleLifecycle {
     }
 
     private void startWeftkit() {
-        WeftkitMetrics started = new WeftkitMetrics(plugin, settings.reportName());
+        WeftkitMetrics started = new WeftkitMetrics(plugin, scheduler, settings.reportName());
         started.load();
         loaded.add(started);
     }

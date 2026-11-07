@@ -87,11 +87,15 @@ public final class ModuleRule {
      * and its components, and an unknown disabled id is an error.
      */
     public void resolve() {
-        for (String name : contributedAmbient()) {
+        List<ModuleContributor> contributors =
+                ServiceLoader.load(ModuleContributor.class, ModuleContributor.class.getClassLoader()).stream()
+                        .map(ServiceLoader.Provider::get)
+                        .toList();
+        for (String name : contributedAmbient(contributors)) {
             TypeElement element = mirrors.typeElement(name);
             if (element != null) collector.addAmbientType(element.asType());
         }
-        List<String> contributed = contributions();
+        List<String> contributed = contributions(contributors);
         Map<String, TypeElement> selected = new LinkedHashMap<>();
         Map<String, String> moduleIds = new LinkedHashMap<>();
         Map<String, String> byId = new HashMap<>();
@@ -140,7 +144,19 @@ public final class ModuleRule {
         for (String name : selected.keySet())
             if (disabled.contains(moduleIds.get(name))) disabledModules.put(name, moduleIds.get(name));
         selected.keySet().removeIf(disabledModules::containsKey);
-        for (TypeElement module : selected.values()) collectModule(module);
+        // Lifecycle infrastructure must survive the teardown of declared modules too.
+        Map<String, TypeElement> ordered = new LinkedHashMap<>();
+        for (ModuleContributor contributor : contributors) {
+            for (String name : contributor.loadFirst()) {
+                TypeElement element = mirrors.typeElement(name);
+                if (element == null) continue;
+                String moduleId = id(element, name);
+                String replacement = byId.get(moduleId);
+                if (selected.containsKey(replacement)) ordered.put(replacement, selected.get(replacement));
+            }
+        }
+        ordered.putAll(selected);
+        for (TypeElement module : ordered.values()) collectModule(module);
     }
 
     /** The disabled modules by class name, each mapped to its id. Filled by {@link #resolve}. */
@@ -148,20 +164,16 @@ public final class ModuleRule {
         return disabledModules;
     }
 
-    private static List<String> contributions() {
+    private static List<String> contributions(List<ModuleContributor> contributors) {
         List<String> contributed = new ArrayList<>();
-        for (ModuleContributor contributor : contributors()) contributed.addAll(contributor.modules());
+        for (ModuleContributor contributor : contributors) contributed.addAll(contributor.modules());
         return contributed;
     }
 
-    private static List<String> contributedAmbient() {
+    private static List<String> contributedAmbient(List<ModuleContributor> contributors) {
         List<String> types = new ArrayList<>();
-        for (ModuleContributor contributor : contributors()) types.addAll(contributor.ambientTypes());
+        for (ModuleContributor contributor : contributors) types.addAll(contributor.ambientTypes());
         return types;
-    }
-
-    private static ServiceLoader<ModuleContributor> contributors() {
-        return ServiceLoader.load(ModuleContributor.class, ModuleContributor.class.getClassLoader());
     }
 
     private String id(TypeElement element, String name) {

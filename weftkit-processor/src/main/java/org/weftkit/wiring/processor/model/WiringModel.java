@@ -252,9 +252,11 @@ public class WiringModel {
         return dependencies;
     }
 
+    /** The eager singletons in dependency order, modules first. */
     public List<String> loadOrder() {
         List<String> order = new ArrayList<>();
         Set<String> visited = new HashSet<>();
+        for (String module : modules) visit(module, visited, order);
         components.forEach((component, definition) -> {
             if (eager(definition)) visit(component, visited, order);
         });

@@ -13,13 +13,19 @@ public final class BukkitModuleContributor implements ModuleContributor {
         return List.of(
                 "org.weftkit.wiring.bukkit.listeners.ListenerModule",
                 "org.weftkit.wiring.bukkit.commands.CommandModule",
-                "org.weftkit.wiring.bukkit.metrics.MetricsModule");
+                "org.weftkit.wiring.bukkit.metrics.MetricsModule",
+                "org.weftkit.wiring.bukkit.scheduler.SchedulerModule");
+    }
+
+    @Override
+    public List<String> loadFirst() {
+        return List.of("org.weftkit.wiring.bukkit.scheduler.SchedulerModule");
     }
 
     // Named as a string. The Bukkit API is not on the consumer's processor path, so a class
     // literal would fail to load
     @Override
     public List<String> ambientTypes() {
-        return List.of("org.bukkit.plugin.java.JavaPlugin");
+        return List.of("org.bukkit.plugin.java.JavaPlugin", "org.weftkit.wiring.bukkit.scheduler.Scheduler");
     }
 }
