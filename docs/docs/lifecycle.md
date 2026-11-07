@@ -76,7 +76,8 @@ component is torn down before the ones it depended on, and every captured `@Prov
 dropped. The scheduler module unloads last and cancels every task scheduled through the
 [`Scheduler`](scheduler.md). Teardown keeps going even if one
 component's `unload` throws, and the failures are reported together at the end. Teardown is safe
-when startup aborted or never ran.
+when startup aborted or never ran. Calling `unload()` from a singleton constructor, a load
+hook, or another unload hook is rejected; teardown must run outside those callbacks.
 
 ```java
 @Override

@@ -33,6 +33,9 @@ final class Components implements Instantiator {
 
     private final ReentrantLock graph = new ReentrantLock();
 
+    // Graph lock only, includes constructors and lifecycle observers.
+    private int singletonLoads;
+
     // Scope per registered type, eager built in. A type with no entry is a per-call prototype
     private final Map<Class<?>, Scope> scopes = new HashMap<>();
 
@@ -191,7 +194,20 @@ final class Components implements Instantiator {
      * eager loop and the lazy scope.
      */
     boolean loadSingleton(Class<?> type, Object... arguments) {
-        return locked(() -> load(type, arguments));
+        return locked(() -> {
+            singletonLoads++;
+            try {
+                return load(type, arguments);
+            } finally {
+                singletonLoads--;
+            }
+        });
+    }
+
+    /** Caller holds the graph lock; another thread's creation has already finished by now. */
+    void requireNoSingletonLoad() {
+        if (singletonLoads != 0)
+            throw new IllegalStateException("Cannot unload from a singleton constructor or load hook");
     }
 
     private boolean load(Class<?> type, Object[] arguments) {

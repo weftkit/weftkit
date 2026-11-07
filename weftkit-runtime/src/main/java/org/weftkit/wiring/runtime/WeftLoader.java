@@ -117,12 +117,17 @@ public final class WeftLoader {
      * the owner thread, any other thread may call it only while the graph is loaded. A
      * component materialized by an unload hook during teardown is dropped without its own hook.
      * Waits for a lazy materialization in progress. The hooks run on the calling thread, which
-     * keeps graph access for their duration.
+     * keeps graph access for their duration. Reentrant unload during loading, singleton creation,
+     * or teardown is rejected.
      */
     public void unload() {
         requireLoadedOrOwner();
         components.locked(() -> {
             requireLoadedOrOwner();
+            if (state == State.LOADING || state == State.UNLOADING)
+                throw new IllegalStateException(
+                        "Cannot unload while the graph is " + state.name().toLowerCase(java.util.Locale.ROOT));
+            components.requireNoSingletonLoad();
             unloader = Thread.currentThread();
             state = State.UNLOADING;
             try {
