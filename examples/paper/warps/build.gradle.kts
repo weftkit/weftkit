@@ -11,7 +11,7 @@ java {
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
+    compileOnly("io.papermc.paper:paper-api:26.2.build.111-stable")
 
     implementation("org.weftkit:weftkit-paper:0.6.0")
     implementation("org.weftkit:weftkit-folia:0.6.0")
