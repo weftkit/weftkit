@@ -214,36 +214,44 @@ final class Components implements Instantiator {
         long start = System.nanoTime();
         Object singleton = build(type, arguments);
         loading.put(type, singleton);
-        boolean recorded = false;
+        boolean accepted = false;
         int notified = 0;
+        RuntimeException failure = null;
         try {
             if (singleton instanceof Loader loader && !loader.load()) return false;
             creationOrder.add(type);
-            recorded = true;
             for (CreationListener listener : listeners) {
                 listener.onLoaded(type, singleton);
                 notified++;
             }
             // Publish only after every lifecycle observer has accepted the instance.
             singletons.put(type, singleton);
+            accepted = true;
         } catch (RuntimeException ex) {
-            // Roll back only this singleton, the caller decides whether the wider graph comes down
-            if (recorded) {
-                if (singleton instanceof Loader loader) {
-                    try {
-                        loader.unload();
-                    } catch (RuntimeException teardown) {
-                        ex.addSuppressed(teardown);
-                    }
-                }
-                creationOrder.remove(type);
-                singletons.remove(type);
-                // The thrower left no partial state behind, so it needs no drop
-                for (int i = 0; i < notified; i++) listeners.get(i).onDropped(type);
-            }
+            failure = ex;
             throw ex;
         } finally {
-            loading.remove(type);
+            try {
+                if (!accepted) {
+                    // A failed load may have acquired resources before declining or throwing.
+                    if (singleton instanceof Loader loader) {
+                        try {
+                            loader.unload();
+                        } catch (RuntimeException teardown) {
+                            if (failure == null) throw teardown;
+                            if (failure != teardown) failure.addSuppressed(teardown);
+                        }
+                    }
+                }
+            } finally {
+                if (!accepted) {
+                    creationOrder.remove(type);
+                    singletons.remove(type);
+                    // The observer that threw commits no partial state.
+                    for (int i = 0; i < notified; i++) listeners.get(i).onDropped(type);
+                }
+                loading.remove(type);
+            }
         }
         timings.add(new Timing(type, Duration.ofNanos(System.nanoTime() - start)));
         return true;

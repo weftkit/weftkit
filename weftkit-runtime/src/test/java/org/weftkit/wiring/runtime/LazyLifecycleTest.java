@@ -183,7 +183,7 @@ class LazyLifecycleTest {
         WeftLoader loader = new WeftLoader(graphRegistry(events));
         assertFalse(loader.load());
         assertTrue(events.log.contains("lazy unload"));
-        assertFalse(events.log.contains("eager unload"));
+        assertTrue(events.log.contains("eager unload"));
         assertNull(loader.get(LazyCore.class));
     }
 
@@ -207,8 +207,8 @@ class LazyLifecycleTest {
         WeftLoader loader = new WeftLoader(graphRegistry(events));
         ComponentLoadException ex = assertThrows(ComponentLoadException.class, loader::load);
         assertTrue(ex.getMessage().contains("aborted"));
-        // The lazy hook never completed, so only alpha is torn down
-        assertEquals(List.of("alpha load", "lazy load", "alpha unload"), events.log);
+        // The declined lazy load is rolled back before its eager dependencies
+        assertEquals(List.of("alpha load", "lazy load", "lazy unload", "alpha unload"), events.log);
         assertNull(loader.get(LazyCore.class));
         assertNull(loader.get(Alpha.class));
     }

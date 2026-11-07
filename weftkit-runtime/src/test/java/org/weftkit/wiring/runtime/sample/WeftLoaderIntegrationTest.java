@@ -94,7 +94,7 @@ class WeftLoaderIntegrationTest {
         WeftLoader loader = newLoader();
         assertFalse(loader.load());
         assertTrue(probe.unloads.indexOf("Beta") < probe.unloads.indexOf("Alpha"));
-        assertFalse(probe.unloads.contains("Gate"));
+        assertTrue(probe.unloads.indexOf("Gate") < probe.unloads.indexOf("Beta"));
     }
 
     @Test
@@ -118,11 +118,11 @@ class WeftLoaderIntegrationTest {
     }
 
     @Test
-    void loadHookThrowTearsDownWithoutUnloadingTheThrower() {
+    void loadHookThrowTearsDownTheThrowerBeforeItsDependencies() {
         probe.throwOnLoad = true;
         WeftLoader loader = newLoader();
         assertThrows(IllegalStateException.class, loader::load);
-        assertFalse(probe.unloads.contains("Gate"));
+        assertTrue(probe.unloads.indexOf("Gate") < probe.unloads.indexOf("Beta"));
         assertTrue(probe.unloads.indexOf("Beta") < probe.unloads.indexOf("Alpha"));
         assertNull(loader.get(Sample.Beta.class));
     }
@@ -353,7 +353,7 @@ class WeftLoaderIntegrationTest {
         assertTrue(ex.getMessage().contains("aborted"));
         assertNull(loader.get(Sample.Frost.class));
         assertSame(loader.get(Sample.Alpha.class), loader.get(Sample.Alpha.class));
-        assertTrue(probe.unloads.isEmpty());
+        assertEquals(List.of("Frost"), probe.unloads);
         probe.lazyProceed = true;
         // The failure sticks: no rebuild, the cheap rethrow chains the first failure
         ComponentLoadException again =
@@ -368,12 +368,12 @@ class WeftLoaderIntegrationTest {
     }
 
     @Test
-    void lazyHookThrowDropsTheSingletonWithoutItsUnloadHook() {
+    void lazyHookThrowUnloadsTheFailedSingleton() {
         WeftLoader loader = newLoader();
         loader.load();
         probe.lazyThrowOnLoad = true;
         assertThrows(IllegalStateException.class, () -> loader.create(Sample.FrostUser.class));
-        assertFalse(probe.unloads.contains("Frost"));
+        assertTrue(probe.unloads.contains("Frost"));
         assertNull(loader.get(Sample.Frost.class));
         probe.lazyThrowOnLoad = false;
         loader.resetFailure(Sample.Frost.class);

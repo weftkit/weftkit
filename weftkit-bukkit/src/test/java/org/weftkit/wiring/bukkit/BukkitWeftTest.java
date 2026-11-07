@@ -56,7 +56,7 @@ class BukkitWeftTest {
     @Test
     void anAbortedEnableCancelsTasksAndDisablesThePlugin() {
         assertNull(BukkitWeft.enable(plugin, managed(false), scheduler));
-        assertEquals(List.of("cancelAll"), events);
+        assertEquals(List.of("unload", "cancelAll"), events);
         assertEquals(List.of("Test"), disabled);
     }
 
@@ -160,7 +160,7 @@ class BukkitWeftTest {
     @Test
     void theSchedulerModuleCancelsAProvidedSchedulerWhenTheLoadAborts() {
         assertNull(BukkitWeft.enable(plugin, providedRegistry(false)));
-        assertEquals(List.of("cancelAll"), events);
+        assertEquals(List.of("unload", "cancelAll"), events);
         assertEquals(List.of("Test"), disabled);
     }
 

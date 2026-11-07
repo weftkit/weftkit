@@ -15,7 +15,10 @@ plugins that want manual control.
 dependency order. As each singleton is created, if it implements `Loader` its `load` method
 runs. Returning `false`
 from `load` aborts startup: weftkit tears down everything it has already loaded, in reverse
-order, and disables the plugin, so you never run in a half initialized state. Once every
+order, and disables the plugin, so you never run in a half initialized state. The component
+whose `load()` returned false or threw receives `unload()` immediately, before its dependencies
+are torn down. Cleanup must tolerate a partially completed load. A constructor that throws
+must release its own resources, since no instance exists for weftkit to clean up. Once every
 singleton has loaded, the [modules](modules.md) activate in load order; the bundled listener
 module registers each `@Wired` [listener](listeners-and-commands.md) with the server. A module
 that aborts activation triggers the same full teardown as a failed `load`. Its `deactivate`
