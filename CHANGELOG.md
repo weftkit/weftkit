@@ -81,18 +81,6 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
 - A plain component whose parameter only explicit `create` arguments can fill is rejected as a
   dependency of other components at compile time.
 
-### Fixed
-
-- Cleanup continues when hooks throw the same exception instance, without attempting exception
-  self-suppression.
-- Unchecked errors during component construction, load, module activation, and teardown trigger
-  best-effort cleanup. Original startup errors propagate with rollback failures suppressed.
-- Built-in Bukkit and Folia schedulers close permanently during graph teardown, reject new work,
-  skip pending callbacks, and cancel handles returned by in-flight scheduling calls. `cancelAll`
-  stays reusable; custom schedulers can override the new `Scheduler.close` lifecycle hook.
-- The owner thread cannot start new graph operations while another thread unloads the graph.
-  Already-admitted cache reads and prototype creation may finish without delaying teardown.
-
 ### Changed
 
 - `WeftLoader.load` throws when the graph is already loaded instead of running the eager loop
@@ -123,6 +111,15 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
 
 ### Fixed
 
+- Cleanup continues when hooks throw the same exception instance, without attempting exception
+  self-suppression.
+- Unchecked errors during component construction, load, module activation, and teardown trigger
+  best-effort cleanup. Original startup errors propagate with rollback failures suppressed.
+- Built-in Bukkit and Folia schedulers close permanently during graph teardown, reject new work,
+  skip pending callbacks, and cancel handles returned by in-flight scheduling calls. `cancelAll`
+  stays reusable; custom schedulers can override the new `Scheduler.close` lifecycle hook.
+- The owner thread cannot start new graph operations while another thread unloads the graph.
+  Already-admitted cache reads and prototype creation may finish without delaying teardown.
 - Plugin hook failures always tear down the graph; registry and ambient hook failures disable
   the plugin through the same startup failure handling.
 - Failed module activation rolls back the module's partial registrations as well as earlier modules.

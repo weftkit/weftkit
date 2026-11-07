@@ -58,6 +58,10 @@ disabling.
 An async materialization that arrives after the unload throws instead of reviving the graph,
 and `get` never hands out a singleton whose `load` hook has not completed.
 
+Unload does not wait for cache reads or prototype creation already in progress. They may finish
+with dependencies whose unload hooks have run; coordinate your own work if those resources must
+stay alive. During teardown, only the unloading thread may start new graph calls.
+
 ## Load order
 
 Load order follows the dependency graph. A component loads after every component it depends on,
@@ -78,7 +82,9 @@ singleton in reverse creation order, lazy singletons interleaved where they mate
 component is torn down before the ones it depended on, and every captured `@Provides` value is
 dropped. The scheduler module unloads last and cancels every task scheduled through the
 [`Scheduler`](scheduler.md). Teardown keeps going even if one
-component's `unload` throws, and the failures are reported together at the end. Teardown is safe
+component's `unload` throws, and the failures are reported together at the end. This includes
+unchecked errors: startup keeps the original failure and suppresses rollback failures; shutdown
+rethrows the first failure after attempting the remaining hooks. Teardown is safe
 when startup aborted or never ran. Calling `unload()` from a singleton constructor, a load
 hook, or another unload hook is rejected; teardown must run outside those callbacks.
 
@@ -204,31 +210,3 @@ homes from disk in `load`, aborts startup on a corrupt file, and saves in `unloa
 - [Scheduler](scheduler.md): tasks cancelled by the lifecycle instead of by hand
 - [Troubleshooting](troubleshooting.md): the errors the processor raises for broken graphs
 - [player-homes](examples/player-homes.md): the lifecycle end to end in a runnable plugin
-
-## Graph access during shutdown
-
-Unload waits for singleton materialization, but does not wait for cache reads or prototype
-creation already in progress. An admitted read can return an instance or observe the cleared
-cache. An admitted prototype constructor may finish after its dependencies have been unloaded;
-it does not reinsert those dependencies into the graph. A call that needs further graph access
-may fail once teardown starts. Holding a reference does not keep a singleton's resources alive.
-Components must stop or coordinate their own work when they need resources to stay available.
-
-New graph calls are rejected once teardown begins, including calls from the owner thread when
-another thread is unloading. The thread running teardown hooks retains graph access. The owner thread keeps its existing access to the unloaded graph.
-Built-in schedulers close at the end of graph teardown. Closing rejects new work and cancels
-pending tasks without waiting for callbacks already running, so teardown cannot deadlock by
-waiting for a callback that itself needs the owner thread.
-
-## Failures during cleanup
-
-Unchecked exceptions and errors (including `AssertionError` and `LinkageError`) trigger
-best-effort rollback during startup. A failing singleton's unload hook runs before earlier
-singletons are unloaded in reverse order. A constructor that throws has no instance to unload;
-its constructor must release any resources it acquired itself.
-
-Teardown attempts every remaining hook even when a hook throws. The first failure propagates,
-with later distinct failures suppressed. A startup failure remains the primary failure if its
-rollback also fails. Lazy singleton failures remain cached until reset or unload; their first
-failure propagates directly, and subsequent attempts report it as the cause of a
-`ComponentLoadException`. Cleanup cannot be guaranteed if the JVM cannot continue executing.

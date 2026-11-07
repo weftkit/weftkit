@@ -85,13 +85,20 @@ A module that starts a repeating task in `activate` cancels it in `deactivate`.
 The [announcer example](examples/announcer.md) does this.
 
 When startup aborts because a `load` hook failed, the same unload runs for the components that
-did load, whichever `Scheduler` the graph runs with, so an aborted enable closes admission and cancels pending tasks. Already-running callbacks may finish.
+did load, whichever `Scheduler` the graph runs with.
 An `unload` hook may still see its own tasks queued, the module cancels them right after. Disable
 the module with `@Registry(disable = BukkitModules.SCHEDULER)` to cancel by hand.
 
 `cancelAll` belongs to the adapter and only touches tasks scheduled through the `Scheduler`.
 Cancel your own tasks through their `Task` handles. A task scheduled directly with the platform
 scheduler stays the plugin's to cancel.
+
+Teardown calls `Scheduler.close()`. Built-in schedulers permanently reject new work with
+`IllegalStateException`, including calls through retained `Region` and `Async` handles; use a
+fresh scheduler for a new enable. Pending tasks are cancelled, late platform handles are
+cancelled on arrival, and callbacks already running may finish. `cancelAll()` remains reusable.
+Custom schedulers should override `close()` to close admission; its compatibility default only
+calls `cancelAll()`.
 
 ## Folia
 
@@ -144,20 +151,3 @@ The bundled [metrics](metrics.md) module also schedules through the `Scheduler`.
 - [player-homes](examples/player-homes.md): an autosave task left to weftkit to cancel
 - [announcer](examples/announcer.md): a `plugin.yml` plugin that also runs on Folia
 - [warps](examples/warps.md): a `paper-plugin.yml` plugin that does the same
-
-## Closing at teardown
-
-The scheduler module calls `Scheduler.close()` after the other component unload hooks. Built-in
-Bukkit and Folia schedulers permanently reject further scheduling with `IllegalStateException`,
-including calls through a previously obtained `Region` or `Async`. A new enable must use a new
-scheduler instance. `cancelAll()` remains a reusable cancellation operation; it does not close
-admission.
-
-Close cancels tracked tasks and skips callbacks that have not started. Callbacks already running
-may finish; close does not join them. A platform scheduling call already in progress may return
-its handle after close, in which case that handle is cancelled immediately on arrival. Closing
-remains permanent even if platform cancellation throws, and every tracked cancellation is
-attempted.
-
-Custom schedulers should override `close()` to reject new work as well as cancel tracked tasks.
-Its compatibility default calls `cancelAll()` only.
