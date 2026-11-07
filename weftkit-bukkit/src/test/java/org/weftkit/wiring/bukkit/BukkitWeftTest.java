@@ -187,6 +187,39 @@ class BukkitWeftTest {
         assertEquals(List.of("unload"), events);
     }
 
+    @Test
+    void aThrowingEnableHookTearsDownTheGraphAndDisablesThePlugin() {
+        PluginLifecycle lifecycle = new PluginLifecycle(plugin);
+        lifecycle.enable(managed(true), () -> scheduler, new Object[0], loader -> {
+            assertSame(loader, lifecycle.loader());
+            throw new IllegalStateException("enable failed");
+        });
+        assertNull(lifecycle.loader());
+        assertEquals(List.of("unload", "cancelAll"), events);
+        assertEquals(List.of("Test"), disabled);
+        lifecycle.disable(loader -> events.add("unexpected hook"));
+        assertEquals(List.of("unload", "cancelAll"), events);
+    }
+
+    @Test
+    void aThrowingDisableHookStillTearsDownAndClearsTheGraph() {
+        PluginLifecycle lifecycle = new PluginLifecycle(plugin);
+        lifecycle.enable(managed(true), () -> scheduler, new Object[0], loader -> {});
+        IllegalStateException failure = new IllegalStateException("disable failed");
+        assertSame(
+                failure,
+                assertThrows(
+                        IllegalStateException.class,
+                        () -> lifecycle.disable(loader -> {
+                            assertNotNull(loader.get(Recorder.class));
+                            throw failure;
+                        })));
+        assertNull(lifecycle.loader());
+        assertEquals(List.of("unload", "cancelAll"), events);
+        lifecycle.disable(loader -> events.add("unexpected hook"));
+        assertEquals(List.of("unload", "cancelAll"), events);
+    }
+
     private TestRegistry registry(boolean loads) {
         return new TestRegistry().eager(Recorder.class, args -> new Recorder(loads));
     }

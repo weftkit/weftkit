@@ -14,7 +14,7 @@ import org.weftkit.wiring.runtime.WeftLoader;
  */
 public abstract class WeftPlugin extends JavaPlugin {
 
-    private WeftLoader loader;
+    private final PluginLifecycle lifecycle = new PluginLifecycle(this);
 
     /** Returns the generated registry, {@code WeftWiring.INSTANCE} in the plugin main package. */
     protected abstract ComponentRegistry registry();
@@ -41,20 +41,16 @@ public abstract class WeftPlugin extends JavaPlugin {
 
     /** Returns the loader while the plugin is enabled, or null outside that window. */
     protected final WeftLoader loader() {
-        return loader;
+        return lifecycle.loader();
     }
 
     @Override
     public final void onEnable() {
-        loader = BukkitWeft.enableWith(this, registry(), this::scheduler, ambientValues());
-        if (loader == null) return;
-        onWeftEnable(loader);
+        lifecycle.enable(registry(), this::scheduler, ambientValues(), this::onWeftEnable);
     }
 
     @Override
     public final void onDisable() {
-        if (loader != null) onWeftDisable(loader);
-        BukkitWeft.disable(this, loader);
-        loader = null;
+        lifecycle.disable(this::onWeftDisable);
     }
 }
