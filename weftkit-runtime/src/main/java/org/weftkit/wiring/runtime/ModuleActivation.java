@@ -25,6 +25,10 @@ final class ModuleActivation implements CreationListener {
         this.components = components;
     }
 
+    WeftDiagnostics.ModuleState diagnosticState() {
+        return WeftDiagnostics.ModuleState.valueOf(state.name());
+    }
+
     boolean activate() {
         if (state == State.ACTIVE) return true;
         requireIdle();

@@ -31,6 +31,8 @@ final class DependencyRule extends GraphRule {
 
     private static final String WEFT_VIEW = "org.weftkit.wiring.runtime.WeftView";
 
+    private static final String WEFT_DIAGNOSTICS = "org.weftkit.wiring.runtime.WeftDiagnostics";
+
     private static final String FEATURE_FLAGS = FeatureFlags.class.getCanonicalName();
 
     DependencyRule(WiringModel model, Mirrors mirrors, Diagnostics diagnostics) {
@@ -56,7 +58,9 @@ final class DependencyRule extends GraphRule {
             return;
         }
         // The facades resolve through their own layer
-        if (parameter.erasedClass().equals(WEFT) || parameter.erasedClass().equals(WEFT_VIEW)) return;
+        if (parameter.erasedClass().equals(WEFT)
+                || parameter.erasedClass().equals(WEFT_VIEW)
+                || parameter.erasedClass().equals(WEFT_DIAGNOSTICS)) return;
         // The ambient layer outranks components and products, so ambiguous declarations are
         // rejected for every parameter, whichever layer resolves it
         List<String> covering = ambientCoverage(parameter);

@@ -23,6 +23,7 @@ import org.weftkit.wiring.StaticHolder;
 import org.weftkit.wiring.WeftModule;
 import org.weftkit.wiring.Wired;
 import org.weftkit.wiring.runtime.Weft;
+import org.weftkit.wiring.runtime.WeftDiagnostics;
 import org.weftkit.wiring.runtime.WeftLoader;
 import org.weftkit.wiring.runtime.WeftView;
 
@@ -742,10 +743,16 @@ public final class Sample {
     public static final class WeftUser {
         private final Weft weft;
         private final WeftView view;
+        private final WeftDiagnostics diagnostics;
 
-        public WeftUser(Weft weft, WeftView view) {
+        public WeftUser(Weft weft, WeftView view, WeftDiagnostics diagnostics) {
             this.weft = weft;
             this.view = view;
+            this.diagnostics = diagnostics;
+        }
+
+        public WeftDiagnostics diagnostics() {
+            return diagnostics;
         }
 
         public Weft weft() {

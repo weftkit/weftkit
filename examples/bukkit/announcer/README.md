@@ -19,3 +19,10 @@ From this directory, using the repository's Gradle wrapper:
 
 The jar lands in `build/libs/announcer-1.0.0.jar`. To use this example as a template for your
 own plugin, see the [examples README](../../README.md).
+
+## Diagnostics
+
+Operators can run `/announcerdebug` for a graph summary, or use `components`, `modules`, `flags`,
+`failures`, and `timings` with an optional class-name filter. `AnnouncerDiagnostics` demonstrates
+injecting `WeftDiagnostics` into the opt-in command. Other components can inject the same facade
+and consume `diagnostics.snapshot()` directly.

@@ -6,6 +6,11 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
 
 ### Added
 
+- Injectable `WeftDiagnostics` with immutable snapshots of graph and module phases, component
+  scopes and states, observed feature flags, singleton timings, and sticky lazy failures.
+  Inspection never constructs components or evaluates flags. Optional `DiagnosticsCommand`
+  exposes filtered, permission-checked Bukkit command output for a plugin's own graph.
+
 - Modules: `@WeftModule` classes woven into the consuming graph at compile time as eager
   singletons loading before every other component, with `ModuleLifecycle` hooks running after
   load and in reverse before unload.
@@ -83,6 +88,8 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
 
 ### Changed
 
+- `WeftView` focuses on graph queries; use `WeftDiagnostics` for timings. The loader's
+  `loadTimings()` and `totalLoadTime()` methods remain available for manual integrations.
 - Generated registry collections specify their type arguments explicitly to avoid expensive
   javac inference on large graphs. Product capture indexes products by owner instead of scanning
   every provider for each component.

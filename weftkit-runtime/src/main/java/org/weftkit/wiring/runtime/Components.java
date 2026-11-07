@@ -104,6 +104,15 @@ final class Components implements Instantiator {
         }
     }
 
+    // Caller holds the graph lock. Never materializes a component.
+    WeftDiagnostics.ComponentState diagnosticState(Class<?> type) {
+        if (loading.containsKey(type)) return WeftDiagnostics.ComponentState.LOADING;
+        if (singletons.containsKey(type)) return WeftDiagnostics.ComponentState.LOADED;
+        return scopes.containsKey(type)
+                ? WeftDiagnostics.ComponentState.NOT_CREATED
+                : WeftDiagnostics.ComponentState.PROTOTYPE;
+    }
+
     boolean loadEager() {
         for (Class<?> type : registry.loadOrder()) {
             // A singleton gated off by its feature flag is never constructed

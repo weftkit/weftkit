@@ -22,6 +22,8 @@ final class Resolution implements DependencyResolver {
 
     private final WeftView view;
 
+    private final WeftDiagnostics diagnostics;
+
     private final Instantiator components;
 
     private final FlagGate gate;
@@ -37,6 +39,7 @@ final class Resolution implements DependencyResolver {
             AmbientValues ambient,
             Weft weft,
             WeftView view,
+            WeftDiagnostics diagnostics,
             Instantiator components,
             FlagGate gate,
             Products products) {
@@ -44,6 +47,7 @@ final class Resolution implements DependencyResolver {
         this.ambient = ambient;
         this.weft = weft;
         this.view = view;
+        this.diagnostics = diagnostics;
         this.components = components;
         this.gate = gate;
         this.products = products;
@@ -81,6 +85,7 @@ final class Resolution implements DependencyResolver {
         if (!dependency.qualifier().isEmpty()) return UNRESOLVED;
         if (dependency.type() == Weft.class) return weft;
         if (dependency.type() == WeftView.class) return view;
+        if (dependency.type() == WeftDiagnostics.class) return diagnostics;
         return UNRESOLVED;
     }
 

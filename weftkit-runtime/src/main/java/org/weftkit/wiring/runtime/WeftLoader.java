@@ -56,6 +56,8 @@ public final class WeftLoader {
 
     private final WeftView view = new WeftView(this);
 
+    private final WeftDiagnostics diagnostics = new WeftDiagnostics(this);
+
     private final Components components;
 
     private final LazyScope lazy;
@@ -86,7 +88,7 @@ public final class WeftLoader {
                 components::instance,
                 components::locked);
         components.connect(
-                new Resolution(registry, this.ambient, weft, view, components, gate, products),
+                new Resolution(registry, this.ambient, weft, view, diagnostics, components, gate, products),
                 gate,
                 this::requireLoadedOrOwner);
     }
@@ -158,6 +160,25 @@ public final class WeftLoader {
                 state = State.UNLOADED;
             }
             return null;
+        });
+    }
+
+    /** The same diagnostics facade supplied by constructor injection. */
+    public WeftDiagnostics diagnostics() {
+        return diagnostics;
+    }
+
+    WeftDiagnostics.Snapshot diagnosticSnapshot() {
+        requireLoadedOrOwner();
+        return components.locked(() -> {
+            requireLoadedOrOwner();
+            return diagnostics.capture(
+                    registry,
+                    components,
+                    lazy,
+                    gate,
+                    WeftDiagnostics.GraphState.valueOf(state.name()),
+                    modules.diagnosticState());
         });
     }
 

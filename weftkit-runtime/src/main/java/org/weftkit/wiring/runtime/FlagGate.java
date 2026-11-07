@@ -1,7 +1,9 @@
 package org.weftkit.wiring.runtime;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import org.weftkit.wiring.FeatureFlags;
@@ -31,6 +33,8 @@ final class FlagGate {
 
     private volatile Resolved resolved;
 
+    private volatile Map<Class<?>, Boolean> observed = new ConcurrentHashMap<>();
+
     FlagGate(
             FlagRegistry registry,
             Supplier<Set<Class<?>>> wiredTypes,
@@ -47,12 +51,22 @@ final class FlagGate {
     // Flags come from the registry, no annotation lookup at runtime
     boolean enabled(Class<?> type) {
         Flag flag = registry.featureFlags().get(type);
-        return flag == null || FeatureGate.enabled(flag, flags());
+        if (flag == null) return true;
+        // An admitted read may finish after unload. Keep its observation in its own generation.
+        Map<Class<?>, Boolean> decisions = observed;
+        boolean enabled = FeatureGate.enabled(flag, flags());
+        decisions.put(type, enabled);
+        return enabled;
+    }
+
+    Boolean observed(Class<?> type) {
+        return registry.featureFlags().containsKey(type) ? observed.get(type) : Boolean.TRUE;
     }
 
     // The provider may have come from the graph that unload just tore down
     void reset() {
         resolved = null;
+        observed = new ConcurrentHashMap<>();
     }
 
     private FeatureFlags flags() {

@@ -46,6 +46,11 @@ final class LazyScope implements Scope, CreationListener {
         return core.created(type);
     }
 
+    // Caller holds the graph lock.
+    Throwable failure(Class<?> type) {
+        return failures.get(type);
+    }
+
     boolean resetFailure(Class<?> type) {
         return core.locked(() -> failures.remove(type) != null);
     }

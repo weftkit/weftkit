@@ -1,13 +1,11 @@
 package org.weftkit.wiring.runtime;
 
-import java.time.Duration;
 import java.util.List;
-import java.util.Map;
 import org.weftkit.wiring.runtime.exception.ResolutionException;
 
 /**
- * A read-only view of a loaded graph, injectable alongside {@link Weft}. Shares the loader's
- * threading contract: {@link #contains}, {@link #loadOrder}, and {@link #modules} work from any
+ * Live graph queries, injectable alongside {@link Weft}. Use {@link WeftDiagnostics} for
+ * timings and state snapshots without evaluating flags. Shares the loader's threading contract: {@link #contains}, {@link #loadOrder}, and {@link #modules} work from any
  * thread at any time, the rest once the graph is loaded.
  */
 public final class WeftView {
@@ -42,16 +40,6 @@ public final class WeftView {
     /** The eager singleton load order. */
     public List<Class<?>> loadOrder() {
         return loader.loadOrder();
-    }
-
-    /** How long each singleton took to create and load, in creation order. A snapshot at call time. */
-    public Map<Class<?>, Duration> loadTimings() {
-        return loader.loadTimings();
-    }
-
-    /** The combined create and load time of every singleton built so far. */
-    public Duration totalLoadTime() {
-        return loader.totalLoadTime();
     }
 
     /** The {@code @WeftModule} classes woven into the graph, in load order. */

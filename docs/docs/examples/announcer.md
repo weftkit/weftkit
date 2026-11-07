@@ -104,3 +104,12 @@ announcements.
 Flip `flags.seasonal-broadcast` in `plugins/Announcer/config.yml` and restart to watch the
 flagged component appear and disappear from the rotation, and the headline switch between reusing
 the seasonal text and its fallback as its `Optional` dependency fills and empties.
+
+## Diagnostics
+
+Operators can run `/announcerdebug` or `/announcerdebug flags` to inspect this graph.
+The wired command injects `WeftDiagnostics`; see [Diagnostics](../diagnostics.md) for API and command usage.
+
+```java
+--8<-- "examples/bukkit/announcer/src/main/java/org/weftkit/examples/announcer/AnnouncerDiagnostics.java"
+```

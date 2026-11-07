@@ -133,7 +133,8 @@ A reload command is then one line: `loader.get(Config.class).reload()`. Componen
 
 ## Diagnostics
 
-The loader exposes what happened during startup. `loadOrder` returns the singleton load
+Inject [`WeftDiagnostics`](diagnostics.md) for timings and component state. Manual integrations
+can also query the loader directly. `loadOrder` returns the singleton load
 sequence, `totalLoadTime` returns the combined startup cost for a one-line enable log, and
 `loadTimings` returns how long each singleton took to construct and load, in load
 order, as a snapshot that is safe to hand to another thread.
@@ -205,6 +206,7 @@ homes from disk in `load`, aborts startup on a corrupt file, and saves in `unloa
 
 ## Related
 
+- [Diagnostics](diagnostics.md): injectable graph snapshots and an optional command
 - [Components](components.md): what gets loaded, and how the order is decided
 - [Modules and feature flags](modules.md): module activation inside the lifecycle
 - [Scheduler](scheduler.md): tasks cancelled by the lifecycle instead of by hand

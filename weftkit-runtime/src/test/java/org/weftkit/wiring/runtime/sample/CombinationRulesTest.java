@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.weftkit.wiring.runtime.WeftDiagnostics;
 import org.weftkit.wiring.runtime.WeftLoader;
 import org.weftkit.wiring.runtime.WeftView;
 
@@ -33,6 +34,17 @@ class CombinationRulesTest {
         WeftLoader loader = new WeftLoader(WeftWiring.INSTANCE, ambient);
         probe.loader = loader;
         return loader;
+    }
+
+    @Test
+    void diagnosticsAreInjectedThroughTheGeneratedRegistry() {
+        WeftLoader loader = newLoader();
+        assertTrue(loader.load());
+        assertSame(loader.diagnostics(), loader.create(Sample.WeftUser.class).diagnostics());
+        assertEquals(
+                WeftDiagnostics.GraphState.LOADED,
+                loader.create(Sample.WeftUser.class).diagnostics().snapshot().state());
+        loader.unload();
     }
 
     @Test

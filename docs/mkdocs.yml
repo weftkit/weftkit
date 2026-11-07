@@ -105,6 +105,7 @@ nav:
       - Migrating to 0.6: migration-0.6.md
       - Distribution: distribution.md
       - Testing: testing.md
+      - Diagnostics: diagnostics.md
       - Metrics: metrics.md
   - Reference:
       - Annotations: annotations.md

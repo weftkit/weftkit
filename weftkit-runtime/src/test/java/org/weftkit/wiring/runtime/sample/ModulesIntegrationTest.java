@@ -188,12 +188,10 @@ class ModulesIntegrationTest {
     }
 
     @Test
-    void weftViewReportsLoadOrderTimingsAndModules() {
+    void weftViewReportsLoadOrderAndModules() {
         WeftLoader loader = loadedLoader();
         WeftView view = loader.create(Sample.WeftUser.class).view();
         assertEquals(loader.loadOrder(), view.loadOrder());
         assertEquals(List.of(Sample.ZuluModule.class, Sample.AlphaModule.class), view.modules());
-        assertTrue(view.loadTimings().containsKey(Sample.ZuluModule.class));
-        assertEquals(loader.totalLoadTime(), view.totalLoadTime());
     }
 }
