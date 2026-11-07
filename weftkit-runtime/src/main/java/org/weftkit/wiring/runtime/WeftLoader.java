@@ -86,8 +86,8 @@ public final class WeftLoader {
 
     /**
      * Creates every eager singleton in dependency order, running their {@link Loader} hooks.
-     * Returns false after tearing the loaded singletons back down when a hook aborts. A
-     * RuntimeException thrown while creating or loading a singleton triggers the same teardown
+     * Returns false after tearing the loaded singletons back down when a hook aborts. An
+     * unchecked exception or error thrown while creating or loading a singleton triggers the same teardown
      * before it propagates, with any teardown failure attached as suppressed. Throws when the
      * graph is already loaded, {@link #unload} first. Owner thread only.
      */

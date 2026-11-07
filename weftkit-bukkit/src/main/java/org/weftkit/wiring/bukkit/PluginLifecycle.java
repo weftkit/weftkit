@@ -33,10 +33,16 @@ final class PluginLifecycle {
             loader = BukkitWeft.enableWith(plugin, registry.get(), scheduler, ambient.get());
             if (loader == null) return;
             hook.accept(loader);
-        } catch (RuntimeException ex) {
+        } catch (RuntimeException | Error ex) {
             plugin.getLogger().log(Level.SEVERE, "Error during plugin startup", ex);
-            disable(ignored -> {});
-            plugin.getServer().getPluginManager().disablePlugin(plugin);
+            try {
+                disable(ignored -> {});
+            } catch (RuntimeException | Error teardown) {
+                if (ex != teardown) ex.addSuppressed(teardown);
+            } finally {
+                plugin.getServer().getPluginManager().disablePlugin(plugin);
+            }
+            if (ex instanceof Error error) throw error;
         }
     }
 
@@ -44,11 +50,18 @@ final class PluginLifecycle {
         WeftLoader current = loader;
         if (current == null || disabling) return;
         disabling = true;
+        Throwable failure = null;
         try {
             hook.accept(current);
+        } catch (RuntimeException | Error ex) {
+            failure = ex;
+            throw ex;
         } finally {
             try {
                 BukkitWeft.disable(plugin, current);
+            } catch (RuntimeException | Error teardown) {
+                if (failure == null) throw teardown;
+                if (failure != teardown) failure.addSuppressed(teardown);
             } finally {
                 loader = null;
                 disabling = false;

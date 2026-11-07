@@ -45,6 +45,39 @@ class BukkitWeftTest {
     private final RecordingScheduler scheduler = new RecordingScheduler();
 
     @Test
+    void startupErrorCleansUpDisablesAndPropagatesOriginal() {
+        AssertionError original = new AssertionError("startup");
+        TestRegistry registry = managed(true).eager(String.class, args -> {
+            throw original;
+        });
+        assertSame(original, assertThrows(AssertionError.class, () -> BukkitWeft.enable(plugin, registry, scheduler)));
+        assertEquals(List.of("unload", "cancelAll"), events);
+        assertEquals(List.of("Test"), disabled);
+    }
+
+    @Test
+    void moduleDeactivationErrorStillUnloadsTheGraph() {
+        AssertionError original = new AssertionError("module cleanup");
+        TestRegistry registry = managed(true)
+                .eager(ModuleLifecycle.class, args -> new ModuleLifecycle() {
+                    @Override
+                    public boolean activate() {
+                        return true;
+                    }
+
+                    @Override
+                    public void deactivate() {
+                        throw original;
+                    }
+                })
+                .module(ModuleLifecycle.class);
+        WeftLoader loader = BukkitWeft.enable(plugin, registry, scheduler);
+        assertNotNull(loader);
+        assertSame(original, assertThrows(AssertionError.class, () -> BukkitWeft.disable(plugin, loader)));
+        assertEquals(List.of("unload", "cancelAll"), events);
+    }
+
+    @Test
     void disableCancelsThroughTheSchedulerModuleAfterTheOtherUnloadHooks() {
         WeftLoader loader = BukkitWeft.enable(plugin, managed(true), scheduler);
         assertNotNull(loader);

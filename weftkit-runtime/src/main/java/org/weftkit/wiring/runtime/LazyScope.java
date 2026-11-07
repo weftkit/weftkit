@@ -16,7 +16,7 @@ final class LazyScope implements Scope, CreationListener {
     private final Components core;
 
     // Graph lock only
-    private final Map<Class<?>, RuntimeException> failures = new HashMap<>();
+    private final Map<Class<?>, Throwable> failures = new HashMap<>();
 
     LazyScope(Components core) {
         this.core = core;
@@ -33,13 +33,13 @@ final class LazyScope implements Scope, CreationListener {
         core.admit();
         Object existing = core.created(type);
         if (existing != null) return existing;
-        RuntimeException earlier = failures.get(type);
+        Throwable earlier = failures.get(type);
         if (earlier != null)
             throw new ComponentLoadException(type.getName() + " (failed earlier, stays failed until reset)", earlier);
         try {
             // A declined load hook is an error for a lazy singleton, unlike the eager graph
             if (!core.loadSingleton(type)) throw new ComponentLoadException(type.getName());
-        } catch (RuntimeException ex) {
+        } catch (RuntimeException | Error ex) {
             failures.put(type, ex);
             throw ex;
         }

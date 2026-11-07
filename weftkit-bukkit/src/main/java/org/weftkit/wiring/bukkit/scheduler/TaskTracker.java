@@ -65,16 +65,17 @@ public final class TaskTracker<T> {
             handles = new ArrayList<>(running);
             running.clear();
         }
-        RuntimeException failure = null;
+        Throwable failure = null;
         for (Handle handle : handles) {
             try {
                 handle.cancelDelegate();
-            } catch (RuntimeException ex) {
+            } catch (RuntimeException | Error ex) {
                 if (failure == null) failure = ex;
                 else if (failure != ex) failure.addSuppressed(ex);
             }
         }
-        if (failure != null) throw failure;
+        if (failure instanceof Error error) throw error;
+        if (failure != null) throw (RuntimeException) failure;
     }
 
     private Task track(Handle handle, BiFunction<Runnable, Runnable, T> schedule, Runnable body) {
@@ -85,7 +86,7 @@ public final class TaskTracker<T> {
         T scheduled;
         try {
             scheduled = schedule.apply(body, handle::retire);
-        } catch (RuntimeException ex) {
+        } catch (RuntimeException | Error ex) {
             forget(handle);
             throw ex;
         }

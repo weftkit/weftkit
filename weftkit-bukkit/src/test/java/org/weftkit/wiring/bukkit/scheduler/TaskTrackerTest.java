@@ -14,6 +14,23 @@ import org.junit.jupiter.api.Test;
 class TaskTrackerTest {
 
     @Test
+    void cancellationErrorDoesNotPreventOtherHandlesBeingCancelled() {
+        AssertionError original = new AssertionError("cancel");
+        List<Integer> attempted = new ArrayList<>();
+        TaskTracker<Integer> tracker = new TaskTracker<>(
+                task -> {
+                    attempted.add(task);
+                    throw original;
+                },
+                task -> false);
+        tracker.once(() -> {}, (body, retired) -> 1);
+        tracker.once(() -> {}, (body, retired) -> 2);
+        assertSame(original, assertThrows(AssertionError.class, tracker::cancelAll));
+        assertEquals(2, attempted.size());
+        tracker.cancelAll();
+    }
+
+    @Test
     void cancellationAttemptsEveryHandleAndAggregatesFailures() {
         Set<Integer> attempted = new HashSet<>();
         TaskTracker<Integer> tracker = new TaskTracker<>(

@@ -204,3 +204,16 @@ homes from disk in `load`, aborts startup on a corrupt file, and saves in `unloa
 - [Scheduler](scheduler.md): tasks cancelled by the lifecycle instead of by hand
 - [Troubleshooting](troubleshooting.md): the errors the processor raises for broken graphs
 - [player-homes](examples/player-homes.md): the lifecycle end to end in a runnable plugin
+
+## Failures during cleanup
+
+Unchecked exceptions and errors (including `AssertionError` and `LinkageError`) trigger
+best-effort rollback during startup. A failing singleton's unload hook runs before earlier
+singletons are unloaded in reverse order. A constructor that throws has no instance to unload;
+its constructor must release any resources it acquired itself.
+
+Teardown attempts every remaining hook even when a hook throws. The first failure propagates,
+with later distinct failures suppressed. A startup failure remains the primary failure if its
+rollback also fails. Lazy singleton failures remain cached until reset or unload; their first
+failure propagates directly, and subsequent attempts report it as the cause of a
+`ComponentLoadException`. Cleanup cannot be guaranteed if the JVM cannot continue executing.

@@ -107,17 +107,17 @@ final class Components implements Instantiator {
     boolean loadEager() {
         for (Class<?> type : registry.loadOrder()) {
             // A singleton gated off by its feature flag is never constructed
-            if (!gate.enabled(type)) continue;
             try {
+                if (!gate.enabled(type)) continue;
                 // A cleanly declined load hook aborts the whole graph rather than failing one type
                 if (!loadSingleton(type)) {
                     unloadAll();
                     return false;
                 }
-            } catch (RuntimeException ex) {
+            } catch (RuntimeException | Error ex) {
                 try {
                     unloadAll();
-                } catch (RuntimeException teardown) {
+                } catch (RuntimeException | Error teardown) {
                     if (ex != teardown) ex.addSuppressed(teardown);
                 }
                 throw ex;
@@ -127,18 +127,19 @@ final class Components implements Instantiator {
     }
 
     void unloadAll() {
-        RuntimeException failure = locked(this::teardown);
-        if (failure != null) throw failure;
+        Throwable failure = locked(this::teardown);
+        if (failure instanceof Error error) throw error;
+        if (failure != null) throw (RuntimeException) failure;
     }
 
-    private RuntimeException teardown() {
+    private Throwable teardown() {
         List<Class<?>> order = List.copyOf(creationOrder);
-        RuntimeException failure = null;
+        Throwable failure = null;
         for (int index = order.size() - 1; index >= 0; index--) {
             if (!(singletons.remove(order.get(index)) instanceof Loader loader)) continue;
             try {
                 loader.unload();
-            } catch (RuntimeException ex) {
+            } catch (RuntimeException | Error ex) {
                 if (failure == null) failure = ex;
                 else if (failure != ex) failure.addSuppressed(ex);
             }
@@ -216,7 +217,7 @@ final class Components implements Instantiator {
         loading.put(type, singleton);
         boolean accepted = false;
         int notified = 0;
-        RuntimeException failure = null;
+        Throwable failure = null;
         try {
             if (singleton instanceof Loader loader && !loader.load()) return false;
             creationOrder.add(type);
@@ -227,7 +228,7 @@ final class Components implements Instantiator {
             // Publish only after every lifecycle observer has accepted the instance.
             singletons.put(type, singleton);
             accepted = true;
-        } catch (RuntimeException ex) {
+        } catch (RuntimeException | Error ex) {
             failure = ex;
             throw ex;
         } finally {
@@ -237,7 +238,7 @@ final class Components implements Instantiator {
                     if (singleton instanceof Loader loader) {
                         try {
                             loader.unload();
-                        } catch (RuntimeException teardown) {
+                        } catch (RuntimeException | Error teardown) {
                             if (failure == null) throw teardown;
                             if (failure != teardown) failure.addSuppressed(teardown);
                         }

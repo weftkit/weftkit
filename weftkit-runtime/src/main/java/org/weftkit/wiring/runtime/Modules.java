@@ -34,10 +34,10 @@ public final class Modules {
             boolean activated;
             try {
                 activated = module.activate();
-            } catch (RuntimeException ex) {
+            } catch (RuntimeException | Error ex) {
                 try {
                     deactivate(loader, index + 1);
-                } catch (RuntimeException teardown) {
+                } catch (RuntimeException | Error teardown) {
                     if (ex != teardown) ex.addSuppressed(teardown);
                 }
                 throw ex;
@@ -60,18 +60,19 @@ public final class Modules {
 
     private static void deactivate(WeftLoader loader, int count) {
         List<Class<?>> modules = loader.registry().modules();
-        RuntimeException failure = null;
+        Throwable failure = null;
         for (int index = count - 1; index >= 0; index--) {
             ModuleLifecycle module = lifecycle(loader, modules.get(index));
             if (module == null) continue;
             try {
                 module.deactivate();
-            } catch (RuntimeException ex) {
+            } catch (RuntimeException | Error ex) {
                 if (failure == null) failure = ex;
                 else if (failure != ex) failure.addSuppressed(ex);
             }
         }
-        if (failure != null) throw failure;
+        if (failure instanceof Error error) throw error;
+        if (failure != null) throw (RuntimeException) failure;
     }
 
     /**

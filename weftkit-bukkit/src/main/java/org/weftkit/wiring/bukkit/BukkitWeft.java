@@ -50,10 +50,16 @@ public final class BukkitWeft {
             if (!loader.load()) return abort(plugin, loader);
             warnMissingModules(plugin, loader);
             if (!Modules.activate(loader)) return abort(plugin, loader);
-        } catch (RuntimeException ex) {
+        } catch (RuntimeException | Error ex) {
             plugin.getLogger().log(Level.SEVERE, "Error during weftkit startup", ex);
             // A load failure already unloaded, an activation failure has not; unload is idempotent
-            return abort(plugin, loader);
+            try {
+                abort(plugin, loader);
+            } catch (RuntimeException | Error teardown) {
+                if (ex != teardown) ex.addSuppressed(teardown);
+            }
+            if (ex instanceof Error error) throw error;
+            return null;
         }
         return loader;
     }
@@ -123,14 +129,14 @@ public final class BukkitWeft {
     }
 
     private static WeftLoader abort(JavaPlugin plugin, WeftLoader loader) {
-        if (loader != null) {
-            try {
-                loader.unload();
-            } catch (RuntimeException ex) {
-                plugin.getLogger().log(Level.SEVERE, "Error during weftkit teardown", ex);
-            }
+        try {
+            if (loader != null) loader.unload();
+        } catch (RuntimeException | Error ex) {
+            plugin.getLogger().log(Level.SEVERE, "Error during weftkit teardown", ex);
+            if (ex instanceof Error error) throw error;
+        } finally {
+            plugin.getServer().getPluginManager().disablePlugin(plugin);
         }
-        plugin.getServer().getPluginManager().disablePlugin(plugin);
         return null;
     }
 
@@ -144,12 +150,12 @@ public final class BukkitWeft {
 
     private static final class Teardown {
 
-        private RuntimeException failure;
+        private Throwable failure;
 
         void run(Runnable step) {
             try {
                 step.run();
-            } catch (RuntimeException ex) {
+            } catch (RuntimeException | Error ex) {
                 if (failure == null) failure = ex;
                 else if (failure != ex) failure.addSuppressed(ex);
             }
@@ -157,6 +163,7 @@ public final class BukkitWeft {
 
         void report(JavaPlugin plugin, String message) {
             if (failure != null) plugin.getLogger().log(Level.SEVERE, message, failure);
+            if (failure instanceof Error error) throw error;
         }
     }
 }
