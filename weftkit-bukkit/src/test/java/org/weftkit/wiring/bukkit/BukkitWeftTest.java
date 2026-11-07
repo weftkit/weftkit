@@ -190,7 +190,7 @@ class BukkitWeftTest {
     @Test
     void aThrowingEnableHookTearsDownTheGraphAndDisablesThePlugin() {
         PluginLifecycle lifecycle = new PluginLifecycle(plugin);
-        lifecycle.enable(managed(true), () -> scheduler, new Object[0], loader -> {
+        lifecycle.enable(() -> managed(true), () -> scheduler, () -> new Object[0], loader -> {
             assertSame(loader, lifecycle.loader());
             throw new IllegalStateException("enable failed");
         });
@@ -204,7 +204,7 @@ class BukkitWeftTest {
     @Test
     void aThrowingDisableHookStillTearsDownAndClearsTheGraph() {
         PluginLifecycle lifecycle = new PluginLifecycle(plugin);
-        lifecycle.enable(managed(true), () -> scheduler, new Object[0], loader -> {});
+        lifecycle.enable(() -> managed(true), () -> scheduler, () -> new Object[0], loader -> {});
         IllegalStateException failure = new IllegalStateException("disable failed");
         assertSame(
                 failure,
@@ -218,6 +218,36 @@ class BukkitWeftTest {
         assertEquals(List.of("unload", "cancelAll"), events);
         lifecycle.disable(loader -> events.add("unexpected hook"));
         assertEquals(List.of("unload", "cancelAll"), events);
+    }
+
+    @Test
+    void aThrowingRegistryHookDisablesThePluginBeforeLoading() {
+        PluginLifecycle lifecycle = new PluginLifecycle(plugin);
+        lifecycle.enable(
+                () -> {
+                    throw new IllegalStateException("registry failed");
+                },
+                () -> scheduler,
+                () -> new Object[0],
+                loader -> events.add("unexpected hook"));
+        assertNull(lifecycle.loader());
+        assertTrue(events.isEmpty());
+        assertEquals(List.of("Test"), disabled);
+    }
+
+    @Test
+    void aThrowingAmbientHookDisablesThePluginBeforeLoading() {
+        PluginLifecycle lifecycle = new PluginLifecycle(plugin);
+        lifecycle.enable(
+                () -> managed(true),
+                () -> scheduler,
+                () -> {
+                    throw new IllegalStateException("ambient failed");
+                },
+                loader -> events.add("unexpected hook"));
+        assertNull(lifecycle.loader());
+        assertTrue(events.isEmpty());
+        assertEquals(List.of("Test"), disabled);
     }
 
     private TestRegistry registry(boolean loads) {

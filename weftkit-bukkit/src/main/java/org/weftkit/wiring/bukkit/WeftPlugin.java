@@ -46,7 +46,7 @@ public abstract class WeftPlugin extends JavaPlugin {
 
     @Override
     public final void onEnable() {
-        lifecycle.enable(registry(), this::scheduler, ambientValues(), this::onWeftEnable);
+        lifecycle.enable(this::registry, this::scheduler, this::ambientValues, this::onWeftEnable);
     }
 
     @Override

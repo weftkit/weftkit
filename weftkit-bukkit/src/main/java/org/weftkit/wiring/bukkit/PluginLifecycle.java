@@ -25,13 +25,16 @@ final class PluginLifecycle {
     }
 
     void enable(
-            ComponentRegistry registry, Supplier<Scheduler> scheduler, Object[] ambient, Consumer<WeftLoader> hook) {
-        loader = BukkitWeft.enableWith(plugin, registry, scheduler, ambient);
-        if (loader == null) return;
+            Supplier<ComponentRegistry> registry,
+            Supplier<Scheduler> scheduler,
+            Supplier<Object[]> ambient,
+            Consumer<WeftLoader> hook) {
         try {
+            loader = BukkitWeft.enableWith(plugin, registry.get(), scheduler, ambient.get());
+            if (loader == null) return;
             hook.accept(loader);
         } catch (RuntimeException ex) {
-            plugin.getLogger().log(Level.SEVERE, "Error during plugin enable hook", ex);
+            plugin.getLogger().log(Level.SEVERE, "Error during plugin startup", ex);
             disable(ignored -> {});
             plugin.getServer().getPluginManager().disablePlugin(plugin);
         }
