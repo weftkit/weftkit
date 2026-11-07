@@ -58,14 +58,23 @@ public final class TaskTracker<T> {
         return track(new Handle(), schedule, task);
     }
 
-    /** Cancels every tracked task. */
+    /** Attempts every cancellation, rethrowing the first failure with the rest suppressed. */
     public void cancelAll() {
         List<Handle> handles;
         synchronized (running) {
             handles = new ArrayList<>(running);
             running.clear();
         }
-        for (Handle handle : handles) handle.cancelDelegate();
+        RuntimeException failure = null;
+        for (Handle handle : handles) {
+            try {
+                handle.cancelDelegate();
+            } catch (RuntimeException ex) {
+                if (failure == null) failure = ex;
+                else if (failure != ex) failure.addSuppressed(ex);
+            }
+        }
+        if (failure != null) throw failure;
     }
 
     private Task track(Handle handle, BiFunction<Runnable, Runnable, T> schedule, Runnable body) {
