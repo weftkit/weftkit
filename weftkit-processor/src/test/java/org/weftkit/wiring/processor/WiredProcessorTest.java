@@ -460,7 +460,7 @@ class WiredProcessorTest {
         assertThat(compilation)
                 .generatedSourceFile("test.WeftWiring")
                 .contentsAsUtf8String()
-                .containsMatch("MODULES = List.of\\(\\s*test.First.class,\\s*test.Second.class\\)");
+                .containsMatch("MODULES = List\\.<Class<\\?>>of\\(\\s*test.First.class,\\s*test.Second.class\\)");
     }
 
     @Test
@@ -660,7 +660,7 @@ class WiredProcessorTest {
         assertThat(compilation)
                 .generatedSourceFile("test.WeftWiring")
                 .contentsAsUtf8String()
-                .containsMatch("LOAD_ORDER = List.of\\(\\s*test.ZFlags.class,\\s*test.Gated.class\\)");
+                .containsMatch("LOAD_ORDER = List\\.<Class<\\?>>of\\(\\s*test.ZFlags.class,\\s*test.Gated.class\\)");
     }
 
     @Test
@@ -697,7 +697,7 @@ class WiredProcessorTest {
                 .generatedSourceFile("test.WeftWiring")
                 .contentsAsUtf8String()
                 .containsMatch(
-                        "LOAD_ORDER = List.of\\(\\s*test.Source.class,\\s*test.Tracker.class,\\s*test.Early.class\\)");
+                        "LOAD_ORDER = List\\.<Class<\\?>>of\\(\\s*test.Source.class,\\s*test.Tracker.class,\\s*test.Early.class\\)");
     }
 
     private static JavaFileObject flagsImplementation(String name) {
@@ -1734,7 +1734,7 @@ class WiredProcessorTest {
         assertThat(compilation)
                 .generatedSourceFile("test.WeftWiring")
                 .contentsAsUtf8String()
-                .contains("Registries.merge(Map.ofEntries(");
+                .contains("Registries.merge(Map.<Class<?>,");
         assertThat(compilation)
                 .generatedSourceFile("test.WeftWiring")
                 .contentsAsUtf8String()

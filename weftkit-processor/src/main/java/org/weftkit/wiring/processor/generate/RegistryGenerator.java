@@ -225,7 +225,7 @@ public class RegistryGenerator {
         }
         if (!model.modules().isEmpty()) {
             type.addField(FieldSpec.builder(CLASS_LIST, "MODULES", Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
-                    .initializer("$T.of(\n$L)", List.class, moduleEntries())
+                    .initializer("$T.<$T>of(\n$L)", List.class, ANY_CLASS, moduleEntries())
                     .build());
         }
         if (!model.handlers().isEmpty()) {
@@ -234,7 +234,7 @@ public class RegistryGenerator {
                     .build());
         }
         type.addField(FieldSpec.builder(CLASS_LIST, "AMBIENT_TYPES", Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
-                .initializer("$T.of(\n$L)", List.class, ambientEntries())
+                .initializer("$T.<$T>of(\n$L)", List.class, ANY_CLASS, ambientEntries())
                 .build());
         type.addMethod(
                 MethodSpec.constructorBuilder().addModifiers(Modifier.PRIVATE).build());
@@ -289,13 +289,20 @@ public class RegistryGenerator {
     }
 
     private static CodeBlock container(Section section, CodeBlock entries) {
+        // Explicit bounds prevent javac from solving a large set of Class<T> inference variables.
+        CodeBlock arguments = ((ParameterizedTypeName) section.type())
+                .typeArguments().stream().map(type -> CodeBlock.of("$T", type)).collect(CodeBlock.joining(", "));
         return CodeBlock.of(
-                "$T.$L(\n$L)", section.container().type(), section.container().factory(), entries);
+                "$T.<$L>$L(\n$L)",
+                section.container().type(),
+                arguments,
+                section.container().factory(),
+                entries);
     }
 
     private FieldSpec loadOrderField() {
         return FieldSpec.builder(CLASS_LIST, "LOAD_ORDER", Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
-                .initializer("$T.of(\n$L)", List.class, loadOrderEntries())
+                .initializer("$T.<$T>of(\n$L)", List.class, ANY_CLASS, loadOrderEntries())
                 .build();
     }
 
@@ -303,7 +310,7 @@ public class RegistryGenerator {
     // which no single fragment could reference, so hidden names resolve through the factories map
     private FieldSpec requirementsField() {
         return FieldSpec.builder(mapOf(CLASS_LIST), "REQUIREMENTS", Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
-                .initializer("$T.ofEntries(\n$L)", Map.class, requirementEntries())
+                .initializer("$T.<$T, $T>ofEntries(\n$L)", Map.class, ANY_CLASS, CLASS_LIST, requirementEntries())
                 .build();
     }
 

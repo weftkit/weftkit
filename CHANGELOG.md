@@ -83,6 +83,9 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
 
 ### Changed
 
+- Generated registry collections specify their type arguments explicitly to avoid expensive
+  javac inference on large graphs. Product capture indexes products by owner instead of scanning
+  every provider for each component.
 - `WeftLoader.load` throws when the graph is already loaded instead of running the eager loop
   over it again, and `unload` clears the load timings.
 - Listener registration and weftkit's bStats reporting run as the bundled modules

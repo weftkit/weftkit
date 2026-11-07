@@ -63,9 +63,10 @@ class BundledModulesTest {
         assertThat(compilation)
                 .generatedSourceFile("test.WeftWiring")
                 .contentsAsUtf8String()
-                .containsMatch("LOAD_ORDER = List.of\\(\\s*org.weftkit.wiring.folia.SchedulerDetection.class,"
-                        + "\\s*org.weftkit.wiring.bukkit.scheduler.SchedulerModule.class,"
-                        + "\\s*test.Worker.class,\\s*test.WorkerModule.class");
+                .containsMatch(
+                        "LOAD_ORDER = List\\.<Class<\\?>>of\\(\\s*org.weftkit.wiring.folia.SchedulerDetection.class,"
+                                + "\\s*org.weftkit.wiring.bukkit.scheduler.SchedulerModule.class,"
+                                + "\\s*test.Worker.class,\\s*test.WorkerModule.class");
     }
 
     @Test
@@ -90,7 +91,8 @@ class BundledModulesTest {
         assertThat(compilation)
                 .generatedSourceFile("test.WeftWiring")
                 .contentsAsUtf8String()
-                .containsMatch("LOAD_ORDER = List.of\\(\\s*test.MyScheduler.class,\\s*test.WorkerModule.class");
+                .containsMatch(
+                        "LOAD_ORDER = List\\.<Class<\\?>>of\\(\\s*test.MyScheduler.class,\\s*test.WorkerModule.class");
         assertThat(compilation)
                 .generatedSourceFile("test.WeftWiring")
                 .contentsAsUtf8String()
@@ -112,7 +114,7 @@ class BundledModulesTest {
         assertThat(compilation)
                 .generatedSourceFile("test.WeftWiring")
                 .contentsAsUtf8String()
-                .containsMatch("LOAD_ORDER = List.of\\(\\s*test.WorkerModule.class");
+                .containsMatch("LOAD_ORDER = List\\.<Class<\\?>>of\\(\\s*test.WorkerModule.class");
     }
 
     private static Compilation compileSchedulerReplacement(boolean disabled) {

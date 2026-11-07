@@ -1,6 +1,8 @@
 package org.weftkit.wiring.runtime;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
@@ -16,11 +18,17 @@ final class Products implements CreationListener {
 
     private final ProductRegistry registry;
 
+    private final Map<Class<?>, List<ProductKey>> byOwner = new HashMap<>();
+
     // Captured product values, nested product type then qualifier, mirroring the registry maps
     private final Map<Class<?>, Map<String, Object>> store = new ConcurrentHashMap<>();
 
     Products(ProductRegistry registry) {
         this.registry = registry;
+        registry.productOwners()
+                .forEach((product, qualified) ->
+                        qualified.forEach((qualifier, owner) -> byOwner.computeIfAbsent(owner, key -> new ArrayList<>())
+                                .add(new ProductKey(product, qualifier))));
     }
 
     // Captures aside and commits only once every product checks out, keeping onLoaded atomic
@@ -69,9 +77,9 @@ final class Products implements CreationListener {
     }
 
     private void forEachProductOf(Class<?> owner, BiConsumer<Class<?>, String> action) {
-        registry.productOwners()
-                .forEach((product, qualified) -> qualified.forEach((qualifier, type) -> {
-                    if (type.equals(owner)) action.accept(product, qualifier);
-                }));
+        for (ProductKey product : byOwner.getOrDefault(owner, List.of()))
+            action.accept(product.type(), product.qualifier());
     }
+
+    private record ProductKey(Class<?> type, String qualifier) {}
 }
