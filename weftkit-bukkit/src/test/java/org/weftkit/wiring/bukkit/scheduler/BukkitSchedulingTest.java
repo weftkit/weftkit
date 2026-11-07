@@ -23,6 +23,19 @@ class BukkitSchedulingTest {
     private final Runnable task = () -> {};
 
     @Test
+    void teardownClosesAllSchedulingRoutesIncludingRetainedRegions() {
+        org.weftkit.wiring.bukkit.scheduler.Region retained = scheduler.at(location);
+        Task scheduled = scheduler.global().run(task);
+        scheduler.close();
+        assertTrue(scheduled.isCancelled());
+        assertThrows(IllegalStateException.class, () -> retained.run(task));
+        assertThrows(IllegalStateException.class, () -> scheduler.global().runRepeating(task, 1, 1));
+        assertThrows(IllegalStateException.class, () -> scheduler.on(null).run(task));
+        assertThrows(IllegalStateException.class, () -> scheduler.async().run(task));
+        scheduler.close();
+    }
+
+    @Test
     void theGlobalRegionLandsOnTheSyncScheduler() {
         Region global = scheduler.global();
         global.run(task);

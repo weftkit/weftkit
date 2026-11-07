@@ -5,7 +5,7 @@ import org.weftkit.wiring.WeftModule;
 import org.weftkit.wiring.bukkit.BukkitModules;
 
 /**
- * Cancels every task scheduled through the {@link Scheduler} as the graph unloads, after every
+ * Closes the scheduler and cancels every task scheduled through the {@link Scheduler} as the graph unloads, after every
  * other unload hook. Opt out with {@code @Registry(disable = BukkitModules.SCHEDULER)}.
  */
 @WeftModule(id = BukkitModules.SCHEDULER)
@@ -29,6 +29,6 @@ public final class SchedulerModule implements Loader {
 
     @Override
     public void unload() {
-        scheduler.cancelAll();
+        scheduler.close();
     }
 }

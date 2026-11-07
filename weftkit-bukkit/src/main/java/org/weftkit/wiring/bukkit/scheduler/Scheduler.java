@@ -23,4 +23,14 @@ public interface Scheduler {
 
     /** Cancels every task scheduled through this scheduler. For the adapter: components cancel through {@link Task}. */
     void cancelAll();
+
+    /**
+     * Ends this scheduler's lifecycle. Built-in schedulers permanently reject new work and cancel
+     * tracked tasks without waiting for running callbacks. A new enable needs a fresh scheduler.
+     * Custom implementations should override this to close admission too; the default preserves
+     * compatibility by cancelling existing tasks only.
+     */
+    default void close() {
+        cancelAll();
+    }
 }

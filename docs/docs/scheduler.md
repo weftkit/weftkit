@@ -78,14 +78,14 @@ On disable, weftkit tears down in this order:
 
 1. The [modules](modules.md) deactivate.
 2. The singletons unload, in reverse creation order.
-3. The bundled `bukkit:scheduler` [module](modules.md), loaded first and so unloaded last, cancels
-   every task scheduled through the `Scheduler`.
+3. The bundled `bukkit:scheduler` [module](modules.md), loaded first and so unloaded last, closes
+   the `Scheduler` and cancels every task scheduled through it.
 
 A module that starts a repeating task in `activate` cancels it in `deactivate`.
 The [announcer example](examples/announcer.md) does this.
 
 When startup aborts because a `load` hook failed, the same unload runs for the components that
-did load, whichever `Scheduler` the graph runs with, so an aborted enable leaves no task running.
+did load, whichever `Scheduler` the graph runs with, so an aborted enable closes admission and cancels pending tasks. Already-running callbacks may finish.
 An `unload` hook may still see its own tasks queued, the module cancels them right after. Disable
 the module with `@Registry(disable = BukkitModules.SCHEDULER)` to cancel by hand.
 
@@ -144,3 +144,20 @@ The bundled [metrics](metrics.md) module also schedules through the `Scheduler`.
 - [player-homes](examples/player-homes.md): an autosave task left to weftkit to cancel
 - [announcer](examples/announcer.md): a `plugin.yml` plugin that also runs on Folia
 - [warps](examples/warps.md): a `paper-plugin.yml` plugin that does the same
+
+## Closing at teardown
+
+The scheduler module calls `Scheduler.close()` after the other component unload hooks. Built-in
+Bukkit and Folia schedulers permanently reject further scheduling with `IllegalStateException`,
+including calls through a previously obtained `Region` or `Async`. A new enable must use a new
+scheduler instance. `cancelAll()` remains a reusable cancellation operation; it does not close
+admission.
+
+Close cancels tracked tasks and skips callbacks that have not started. Callbacks already running
+may finish; close does not join them. A platform scheduling call already in progress may return
+its handle after close, in which case that handle is cancelled immediately on arrival. Closing
+remains permanent even if platform cancellation throws, and every tracked cancellation is
+attempted.
+
+Custom schedulers should override `close()` to reject new work as well as cancel tracked tasks.
+Its compatibility default calls `cancelAll()` only.

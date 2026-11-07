@@ -57,6 +57,11 @@ final class BukkitScheduling implements Scheduler {
     }
 
     @Override
+    public void close() {
+        tasks.close();
+    }
+
+    @Override
     public void cancelAll() {
         tasks.cancelAll();
     }

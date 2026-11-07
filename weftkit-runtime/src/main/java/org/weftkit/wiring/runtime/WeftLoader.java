@@ -22,11 +22,15 @@ import org.weftkit.wiring.runtime.exception.ResolutionException;
  *
  * <p>Threading. {@link #load}: creating thread only, on Bukkit the server main thread. Every
  * other call: creating thread only until {@code load()} returned true, then any thread. Reads
- * are lock-free, creation, lazy materialization, and teardown serialize on an internal lock, so
- * a lazy load hook runs once, on the thread that demanded it first, and a loaded lazy singleton
+ * are lock-free; singleton creation and teardown serialize on an internal lock, so a lazy load
+ * hook runs once, on the thread that demanded it first, and a loaded lazy singleton
  * resolves lock-free. Unloading waits for a lazy materialization in progress and for nothing
- * else, a materialization that arrives after it throws instead of reviving the graph. Never
- * block on the owner thread inside a lazy load hook, unload waits for the hook there. Not
+ * else. Already-admitted cache reads and prototype creation may finish after unload; they can
+ * observe removed dependencies or retain instances whose unload hooks have run. Callers must
+ * quiesce their own work if it needs those resources alive. During teardown, only the unloading
+ * thread may start new graph calls. A late materialization on another thread throws instead of
+ * reviving the graph. Never block on the owner thread inside a lazy load hook, unload waits for
+ * the hook there. Not
  * injectable, components reach the graph through {@link Weft} and {@link WeftView}.
  */
 public final class WeftLoader {
@@ -288,9 +292,11 @@ public final class WeftLoader {
 
     private void requireLoadedOrOwner() {
         Thread current = Thread.currentThread();
-        if (state == State.LOADED || current == owner || current == unloader) return;
+        State observed = state;
+        if (observed == State.LOADED || current == unloader || (current == owner && observed != State.UNLOADING))
+            return;
         throw confinement(
-                switch (state) {
+                switch (observed) {
                     case LOADING -> "The graph is still loading, schedule graph access back on the owner thread";
                     case UNLOADING -> "The graph is unloading, only the unloading thread may touch it";
                     default -> "The graph is not loaded, only the owner thread may touch it";

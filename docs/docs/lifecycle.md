@@ -205,6 +205,21 @@ homes from disk in `load`, aborts startup on a corrupt file, and saves in `unloa
 - [Troubleshooting](troubleshooting.md): the errors the processor raises for broken graphs
 - [player-homes](examples/player-homes.md): the lifecycle end to end in a runnable plugin
 
+## Graph access during shutdown
+
+Unload waits for singleton materialization, but does not wait for cache reads or prototype
+creation already in progress. An admitted read can return an instance or observe the cleared
+cache. An admitted prototype constructor may finish after its dependencies have been unloaded;
+it does not reinsert those dependencies into the graph. A call that needs further graph access
+may fail once teardown starts. Holding a reference does not keep a singleton's resources alive.
+Components must stop or coordinate their own work when they need resources to stay available.
+
+New graph calls are rejected once teardown begins, including calls from the owner thread when
+another thread is unloading. The thread running teardown hooks retains graph access. The owner thread keeps its existing access to the unloaded graph.
+Built-in schedulers close at the end of graph teardown. Closing rejects new work and cancels
+pending tasks without waiting for callbacks already running, so teardown cannot deadlock by
+waiting for a callback that itself needs the owner thread.
+
 ## Failures during cleanup
 
 Unchecked exceptions and errors (including `AssertionError` and `LinkageError`) trigger

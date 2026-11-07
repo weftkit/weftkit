@@ -272,11 +272,18 @@ class ThreadConfinementTest {
         AtomicReference<Throwable> thrown = new AtomicReference<>();
         Thread first = start("first", loader::unload, thrown);
         assertTrue(events.cacheEntered.await(5, TimeUnit.SECONDS));
-        Throwable turnedAway = onOtherThread(() -> loader.get(Core.class));
-        assertInstanceOf(IllegalStateException.class, turnedAway);
-        assertTrue(turnedAway.getMessage().contains("unloading"));
-        events.cacheRelease.countDown();
-        first.join();
+        try {
+            Throwable turnedAway = onOtherThread(() -> loader.get(Core.class));
+            assertInstanceOf(IllegalStateException.class, turnedAway);
+            assertTrue(turnedAway.getMessage().contains("unloading"));
+            // The creating thread must not bypass shutdown admission while another thread unloads.
+            assertThrows(IllegalStateException.class, () -> loader.get(Core.class));
+            assertThrows(IllegalStateException.class, () -> loader.create(Worker.class));
+        } finally {
+            events.cacheRelease.countDown();
+            first.join(5000);
+        }
+        assertTrue(!first.isAlive());
         assertNull(thrown.get());
         assertNull(loader.get(Core.class));
     }

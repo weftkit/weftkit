@@ -36,6 +36,8 @@ public final class TaskTracker<T> {
 
     private int sweepAt = SWEEP_FLOOR;
 
+    private volatile boolean closed;
+
     public TaskTracker(Consumer<T> cancel, Predicate<T> cancelled) {
         this.cancel = cancel;
         this.cancelled = cancelled;
@@ -46,7 +48,7 @@ public final class TaskTracker<T> {
         Handle handle = new Handle();
         return track(handle, schedule, () -> {
             try {
-                task.run();
+                if (!closed && !handle.cancelled) task.run();
             } finally {
                 handle.complete();
             }
@@ -55,7 +57,10 @@ public final class TaskTracker<T> {
 
     /** Schedules a repeating task, tracked until cancelled. */
     public Task repeating(Runnable task, BiFunction<Runnable, Runnable, T> schedule) {
-        return track(new Handle(), schedule, task);
+        Handle handle = new Handle();
+        return track(handle, schedule, () -> {
+            if (!closed && !handle.cancelled) task.run();
+        });
     }
 
     /** Attempts every cancellation, rethrowing the first failure with the rest suppressed. */
@@ -78,8 +83,21 @@ public final class TaskTracker<T> {
         if (failure != null) throw (RuntimeException) failure;
     }
 
+    /**
+     * Permanently rejects new scheduling and cancels the tracked tasks. Does not wait for running
+     * callbacks or platform scheduling calls; a late platform handle is cancelled when it arrives.
+     * Callbacks that have not started are skipped after close, even if platform cancellation fails.
+     */
+    public void close() {
+        synchronized (running) {
+            closed = true;
+        }
+        cancelAll();
+    }
+
     private Task track(Handle handle, BiFunction<Runnable, Runnable, T> schedule, Runnable body) {
         synchronized (running) {
+            if (closed) throw new IllegalStateException("Scheduler is closed");
             if (running.size() >= sweepAt) sweep();
             running.add(handle);
         }

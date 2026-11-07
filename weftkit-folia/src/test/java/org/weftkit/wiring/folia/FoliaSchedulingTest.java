@@ -3,6 +3,7 @@ package org.weftkit.wiring.folia;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.papermc.paper.threadedregions.scheduler.AsyncScheduler;
@@ -40,6 +41,19 @@ class FoliaSchedulingTest {
             async.as(AsyncScheduler.class));
 
     private final Runnable task = () -> {};
+
+    @Test
+    void teardownClosesAllSchedulingRoutesIncludingRetainedRegions() {
+        org.weftkit.wiring.bukkit.scheduler.Region retained = scheduler.at(location);
+        Task scheduled = scheduler.global().run(task);
+        scheduler.close();
+        assertTrue(scheduled.isCancelled());
+        assertThrows(IllegalStateException.class, () -> retained.run(task));
+        assertThrows(IllegalStateException.class, () -> scheduler.global().runRepeating(task, 1, 1));
+        assertThrows(IllegalStateException.class, () -> scheduler.on(entity).run(task));
+        assertThrows(IllegalStateException.class, () -> scheduler.async().run(task));
+        scheduler.close();
+    }
 
     @Test
     void aZeroDelayRunsOnTheNextTick() {

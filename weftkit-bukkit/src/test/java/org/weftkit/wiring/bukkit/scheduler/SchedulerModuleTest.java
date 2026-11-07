@@ -11,6 +11,8 @@ class SchedulerModuleTest {
 
     private int cancels;
 
+    private int closes;
+
     private final Scheduler scheduler = new Scheduler() {
 
         @Override
@@ -34,6 +36,12 @@ class SchedulerModuleTest {
         }
 
         @Override
+        public void close() {
+            closes++;
+            cancelAll();
+        }
+
+        @Override
         public void cancelAll() {
             cancels++;
         }
@@ -46,5 +54,6 @@ class SchedulerModuleTest {
         assertEquals(0, cancels);
         module.unload();
         assertEquals(1, cancels);
+        assertEquals(1, closes);
     }
 }
