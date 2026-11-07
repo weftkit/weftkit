@@ -63,9 +63,10 @@ plugin main.
 Modules run inside the normal [lifecycle](lifecycle.md). `activate` fires after every eager
 singleton has loaded and `deactivate` runs in reverse order before the graph tears down, on the
 same instances, so a module keeps state between the two hooks in plain fields. Returning `false`
-from `activate` aborts startup like a failed `load`: already activated modules deactivate in
-reverse, the graph unloads, and the plugin is disabled. A module may also implement `Loader` for
-work at its own load position.
+from `activate` aborts startup like a failed `load`: attempted modules, including the failing
+one, deactivate in reverse. Cleanup must tolerate partial activation. Then the graph unloads,
+and the plugin is disabled. A module may also implement `Loader` for work at its own load
+position.
 
 Activation order follows the dependency graph. A module that must run after another injects it,
 and the deactivation order is the exact reverse. There is no separate ordering mechanism. Modules

@@ -157,7 +157,8 @@ which compiler ran. `@Requires` drives the graph, the scan only catches forgotte
 Implement `Loader` to hook the lifecycle. `load` runs when the singleton is created, and
 returning `false` aborts startup. On a lazy singleton `load` runs at first materialization, and
 a false return or exception fails only that injection, with the rest of the graph staying
-loaded. `unload` runs on shutdown in reverse creation order. Only singletons may implement
+loaded. A failed or declined load receives `unload` immediately to undo partial initialization.
+After a successful load, `unload` runs on shutdown in reverse creation order. Only singletons may implement
 `Loader`, since a per-injection component would never have its `load` called.
 
 ## Related

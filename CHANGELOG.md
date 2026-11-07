@@ -109,6 +109,16 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
   arguments the first given wins, replacing the runtime ambiguity exception. `create` with
   arguments on a singleton throws immediately instead of silently ignoring them.
 
+### Fixed
+
+- Plugin hook failures always tear down the graph; registry and ambient hook failures disable
+  the plugin through the same startup failure handling.
+- Failed module activation rolls back the module's partial registrations as well as earlier modules.
+- Task cancellation attempts every handle even when a platform cancellation throws.
+- Reentrant unload during loading, singleton creation, or teardown is rejected.
+- A constructed singleton whose load hook throws or returns false receives its unload hook.
+- Wiring types generated after registry generation fail compilation with an actionable diagnostic.
+
 ### Removed
 
 - `@WeftMetrics` and `@NoMetrics`, replaced by `MetricsSettings` and

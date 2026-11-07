@@ -27,7 +27,8 @@ behind it is resolved at compile time. An annotation processor validates the who
 graph during `javac`, so a missing dependency, a cycle, or a misused annotation fails the build
 instead of crashing on startup, and the generated registry keeps the hot path free of reflection.
 
-Full documentation lives at [weftkit.org](https://weftkit.org).
+Full documentation lives at [weftkit.org](https://weftkit.org). Upgrading from 0.5? Read the
+[0.6 migration guide](docs/docs/migration-0.6.md).
 
 ## Quick start
 
