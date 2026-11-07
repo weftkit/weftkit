@@ -46,6 +46,7 @@ public final class Sample {
         public final List<String> deactivations = new ArrayList<>();
         public boolean alphaModuleProceed = true;
         public boolean alphaModuleThrow = false;
+        public boolean alphaDeactivationThrow = false;
         // Handed over by the tests, standing in for a plugin main passing the loader on
         public WeftLoader loader;
     }
@@ -613,6 +614,7 @@ public final class Sample {
         @Override
         public void deactivate() {
             probe.deactivations.add("Alpha");
+            if (probe.alphaDeactivationThrow) throw new IllegalStateException("module deactivation failed");
         }
     }
 

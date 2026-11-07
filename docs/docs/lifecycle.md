@@ -18,7 +18,8 @@ from `load` aborts startup: weftkit tears down everything it has already loaded,
 order, and disables the plugin, so you never run in a half initialized state. Once every
 singleton has loaded, the [modules](modules.md) activate in load order; the bundled listener
 module registers each `@Wired` [listener](listeners-and-commands.md) with the server. A module
-that aborts activation triggers the same full teardown as a failed `load`.
+that aborts activation triggers the same full teardown as a failed `load`. Its `deactivate`
+hook runs too, so modules must tolerate and undo partially completed activation.
 
 ```java
 @Override

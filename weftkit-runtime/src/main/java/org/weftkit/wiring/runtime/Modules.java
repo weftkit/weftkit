@@ -22,7 +22,7 @@ public final class Modules {
     private Modules() {}
 
     /**
-     * Activates every module. When one returns false or throws, the already activated modules are
+     * Activates every module. When one returns false or throws, the attempted modules are
      * deactivated in reverse before returning false or rethrowing (teardown failures suppressed).
      * The graph stays loaded either way.
      */
@@ -36,14 +36,14 @@ public final class Modules {
                 activated = module.activate();
             } catch (RuntimeException ex) {
                 try {
-                    deactivate(loader, index);
+                    deactivate(loader, index + 1);
                 } catch (RuntimeException teardown) {
                     ex.addSuppressed(teardown);
                 }
                 throw ex;
             }
             if (!activated) {
-                deactivate(loader, index);
+                deactivate(loader, index + 1);
                 return false;
             }
         }

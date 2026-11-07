@@ -57,11 +57,11 @@ class ModulesIntegrationTest {
     }
 
     @Test
-    void moduleAbortDeactivatesTheActivatedPrefix() {
+    void moduleAbortDeactivatesTheAttemptedPrefix() {
         probe.alphaModuleProceed = false;
         WeftLoader loader = loadedLoader();
         assertFalse(Modules.activate(loader));
-        assertEquals(List.of("Zulu"), probe.deactivations);
+        assertEquals(List.of("Alpha", "Zulu"), probe.deactivations);
     }
 
     @Test
@@ -69,7 +69,19 @@ class ModulesIntegrationTest {
         probe.alphaModuleThrow = true;
         WeftLoader loader = loadedLoader();
         assertThrows(IllegalStateException.class, () -> Modules.activate(loader));
-        assertEquals(List.of("Zulu"), probe.deactivations);
+        assertEquals(List.of("Alpha", "Zulu"), probe.deactivations);
+    }
+
+    @Test
+    void failedActivationPreservesTheOriginalFailureWhenRollbackAlsoThrows() {
+        probe.alphaModuleThrow = true;
+        probe.alphaDeactivationThrow = true;
+        WeftLoader loader = loadedLoader();
+        IllegalStateException failure = assertThrows(IllegalStateException.class, () -> Modules.activate(loader));
+        assertEquals("module activation failed", failure.getMessage());
+        assertEquals(1, failure.getSuppressed().length);
+        assertEquals("module deactivation failed", failure.getSuppressed()[0].getMessage());
+        assertEquals(List.of("Alpha", "Zulu"), probe.deactivations);
     }
 
     @Test

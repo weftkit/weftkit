@@ -12,6 +12,9 @@ public interface ModuleLifecycle {
         return true;
     }
 
-    /** Undoes {@link #activate()}. Runs before the graph tears down. */
+    /**
+     * Undoes {@link #activate()}, including a partial activation that threw or returned false.
+     * Runs before the graph tears down. Must tolerate incomplete activation.
+     */
     default void deactivate() {}
 }
