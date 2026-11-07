@@ -23,6 +23,7 @@ import org.weftkit.wiring.WeftModule;
 import org.weftkit.wiring.Wired;
 import org.weftkit.wiring.processor.compiler.Diagnostics;
 import org.weftkit.wiring.processor.compiler.Mirrors;
+import org.weftkit.wiring.processor.compiler.ValidationEnvironment;
 import org.weftkit.wiring.processor.model.ModelCollector;
 import org.weftkit.wiring.processor.spi.ComponentRule;
 import org.weftkit.wiring.processor.spi.ModuleContributor;
@@ -64,7 +65,7 @@ public final class ModuleRule {
             ModelCollector collector,
             ProvidesRule providesRule,
             List<ComponentRule> componentRules) {
-        this.processingEnv = processingEnv;
+        this.processingEnv = new ValidationEnvironment(processingEnv, diagnostics);
         this.mirrors = mirrors;
         this.diagnostics = diagnostics;
         this.collector = collector;

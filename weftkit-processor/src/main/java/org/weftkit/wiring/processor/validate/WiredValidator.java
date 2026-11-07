@@ -62,6 +62,10 @@ public class WiredValidator {
                 new GraphValidator(model, mirrors, diagnostics, collector::registryPackage, collector::registryClass);
     }
 
+    public boolean hasErrors() {
+        return diagnostics.hasErrors();
+    }
+
     public void addSources(RoundEnvironment roundEnvironment) {
         collector.addSources(roundEnvironment);
     }

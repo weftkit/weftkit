@@ -111,6 +111,8 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
 
 ### Fixed
 
+- Invalid wiring stops registry and graph generation, including errors from adapter rules and
+  static-holder checks. Warnings still allow generation.
 - Module activation runs once per loaded graph; repeated activation while active and repeated
   deactivation do not repeat hooks. Unload deactivates still-active modules, and retry after a
   failed attempt requires unload/load.

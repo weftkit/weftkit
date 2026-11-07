@@ -15,6 +15,7 @@ import org.weftkit.wiring.Loader;
 import org.weftkit.wiring.Requires;
 import org.weftkit.wiring.processor.compiler.Diagnostics;
 import org.weftkit.wiring.processor.compiler.Mirrors;
+import org.weftkit.wiring.processor.compiler.ValidationEnvironment;
 import org.weftkit.wiring.processor.model.ModelCollector;
 import org.weftkit.wiring.processor.spi.ComponentRule;
 
@@ -33,8 +34,8 @@ public final class WiredRule extends ElementRule<TypeElement> {
     public WiredRule(
             ProcessingEnvironment processingEnv, Mirrors mirrors, Diagnostics diagnostics, ModelCollector collector) {
         super(mirrors, diagnostics, collector);
-        this.processingEnv = processingEnv;
-        this.holderCheck = new StaticHolderCheck(processingEnv);
+        this.processingEnv = new ValidationEnvironment(processingEnv, diagnostics);
+        this.holderCheck = new StaticHolderCheck(processingEnv, diagnostics);
     }
 
     @Override

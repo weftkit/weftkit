@@ -35,6 +35,8 @@ public class WiredProcessor extends AbstractProcessor {
 
     private boolean generated;
 
+    private boolean failed;
+
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
@@ -62,6 +64,7 @@ public class WiredProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnvironment) {
+        if (failed || roundEnvironment.errorRaised()) return true;
         if (generated) {
             Stream.concat(
                             roundEnvironment.getElementsAnnotatedWith(Wired.class).stream(),
@@ -95,8 +98,12 @@ public class WiredProcessor extends AbstractProcessor {
         if (!generated
                 && !roundEnvironment.processingOver()
                 && (!model.isEmpty() || validator.registryPackage() != null)) {
-            validator.resolveModules();
-            validator.validateGraph();
+            if (!validator.hasErrors()) validator.resolveModules();
+            if (!validator.hasErrors()) validator.validateGraph();
+            if (validator.hasErrors()) {
+                failed = true;
+                return true;
+            }
             if (validator.registryPackage() != null) {
                 Element[] originating = originatingElements();
                 new RegistryGenerator(model, validator.registryPackage(), processingEnv)

@@ -17,6 +17,7 @@ import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.ElementFilter;
 import javax.tools.Diagnostic;
 import org.weftkit.wiring.StaticHolder;
+import org.weftkit.wiring.processor.compiler.Diagnostics;
 
 // The scan needs javac's Tree API, so it degrades to a no-op under other compilers and only sees
 // direct accesses in this compilation; helper methods, reflection, and foreign jars stay invisible
@@ -24,7 +25,10 @@ class StaticHolderCheck {
 
     private final Trees trees;
 
-    StaticHolderCheck(ProcessingEnvironment processingEnv) {
+    private final Diagnostics diagnostics;
+
+    StaticHolderCheck(ProcessingEnvironment processingEnv, Diagnostics diagnostics) {
+        this.diagnostics = diagnostics;
         this.trees = resolveTrees(processingEnv);
     }
 
@@ -100,6 +104,7 @@ class StaticHolderCheck {
             if (!(element.getEnclosingElement() instanceof TypeElement holder)
                     || holder.getAnnotation(StaticHolder.class) == null) return;
             if (declared.contains(holder.getQualifiedName().toString())) return;
+            diagnostics.markError();
             trees.printMessage(
                     Diagnostic.Kind.ERROR,
                     "Static holder is accessed during load without @Requires: " + holder.getQualifiedName(),
