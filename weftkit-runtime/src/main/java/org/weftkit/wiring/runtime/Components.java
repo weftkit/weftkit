@@ -118,7 +118,7 @@ final class Components implements Instantiator {
                 try {
                     unloadAll();
                 } catch (RuntimeException teardown) {
-                    ex.addSuppressed(teardown);
+                    if (ex != teardown) ex.addSuppressed(teardown);
                 }
                 throw ex;
             }
@@ -140,7 +140,7 @@ final class Components implements Instantiator {
                 loader.unload();
             } catch (RuntimeException ex) {
                 if (failure == null) failure = ex;
-                else failure.addSuppressed(ex);
+                else if (failure != ex) failure.addSuppressed(ex);
             }
         }
         singletons.clear();

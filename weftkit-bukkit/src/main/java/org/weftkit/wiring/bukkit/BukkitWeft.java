@@ -151,7 +151,7 @@ public final class BukkitWeft {
                 step.run();
             } catch (RuntimeException ex) {
                 if (failure == null) failure = ex;
-                else failure.addSuppressed(ex);
+                else if (failure != ex) failure.addSuppressed(ex);
             }
         }
 

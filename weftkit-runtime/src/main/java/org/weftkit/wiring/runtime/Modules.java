@@ -38,7 +38,7 @@ public final class Modules {
                 try {
                     deactivate(loader, index + 1);
                 } catch (RuntimeException teardown) {
-                    ex.addSuppressed(teardown);
+                    if (ex != teardown) ex.addSuppressed(teardown);
                 }
                 throw ex;
             }
@@ -68,7 +68,7 @@ public final class Modules {
                 module.deactivate();
             } catch (RuntimeException ex) {
                 if (failure == null) failure = ex;
-                else failure.addSuppressed(ex);
+                else if (failure != ex) failure.addSuppressed(ex);
             }
         }
         if (failure != null) throw failure;
