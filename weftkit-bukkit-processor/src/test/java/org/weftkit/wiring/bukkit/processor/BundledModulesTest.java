@@ -4,7 +4,11 @@ import static com.google.testing.compile.CompilationSubject.assertThat;
 import static com.google.testing.compile.Compiler.javac;
 
 import com.google.testing.compile.Compilation;
+import com.google.testing.compile.Compiler;
 import com.google.testing.compile.JavaFileObjects;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import javax.tools.StandardLocation;
 import org.junit.jupiter.api.Test;
 import org.weftkit.wiring.processor.WiredProcessor;
@@ -59,7 +63,8 @@ class BundledModulesTest {
         assertThat(compilation)
                 .generatedSourceFile("test.WeftWiring")
                 .contentsAsUtf8String()
-                .containsMatch("LOAD_ORDER = List.of\\(\\s*org.weftkit.wiring.bukkit.scheduler.SchedulerModule.class,"
+                .containsMatch("LOAD_ORDER = List.of\\(\\s*org.weftkit.wiring.folia.SchedulerDetection.class,"
+                        + "\\s*org.weftkit.wiring.bukkit.scheduler.SchedulerModule.class,"
                         + "\\s*test.Worker.class,\\s*test.WorkerModule.class");
     }
 
@@ -197,6 +202,50 @@ class BundledModulesTest {
                 .generatedSourceFile("test.WeftWiring")
                 .contentsAsUtf8String()
                 .contains("org.weftkit.wiring.bukkit.scheduler.Scheduler.class");
+    }
+
+    @Test
+    void weavesTheFoliaModuleWhenWeftkitFoliaIsOnTheClasspath() {
+        Compilation compilation = compileTicker(javac());
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("org.weftkit.wiring.folia.FoliaModule.class");
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .contains("org.weftkit.wiring.folia.SchedulerDetection");
+    }
+
+    @Test
+    void skipsTheFoliaModuleWithoutWeftkitFolia() {
+        List<File> classpath = new ArrayList<>();
+        for (String entry : System.getProperty("java.class.path").split(File.pathSeparator))
+            if (!entry.contains("weftkit-folia")) classpath.add(new File(entry));
+        Compilation compilation = compileTicker(javac().withClasspath(classpath));
+        assertThat(compilation).succeeded();
+        assertThat(compilation)
+                .generatedSourceFile("test.WeftWiring")
+                .contentsAsUtf8String()
+                .doesNotContain("FoliaModule");
+    }
+
+    private static Compilation compileTicker(Compiler compiler) {
+        return compiler.withProcessors(new WiredProcessor())
+                .compile(
+                        JavaFileObjects.forSourceLines(
+                                "test.Reg",
+                                "package test;",
+                                "import org.weftkit.wiring.Registry;",
+                                "@Registry public final class Reg { public Reg() {} }"),
+                        JavaFileObjects.forSourceLines(
+                                "test.Ticker",
+                                "package test;",
+                                "import org.weftkit.wiring.Wired;",
+                                "import org.weftkit.wiring.Singleton;",
+                                "import org.weftkit.wiring.bukkit.scheduler.Scheduler;",
+                                "@Wired @Singleton public final class Ticker { public Ticker(Scheduler scheduler) {} }"));
     }
 
     @Test

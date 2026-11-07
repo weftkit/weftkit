@@ -4,7 +4,11 @@ import com.google.auto.service.AutoService;
 import java.util.List;
 import org.weftkit.wiring.processor.spi.ModuleContributor;
 
-/** Contributes the bundled Bukkit modules to every generated registry, see {@code BukkitModules}. */
+/**
+ * Contributes the bundled Bukkit modules to every generated registry, see {@code BukkitModules},
+ * and the weftkit-folia module where that artifact is on the compile classpath, see
+ * {@code FoliaModules}.
+ */
 @AutoService(ModuleContributor.class)
 public final class BukkitModuleContributor implements ModuleContributor {
 
@@ -14,7 +18,8 @@ public final class BukkitModuleContributor implements ModuleContributor {
                 "org.weftkit.wiring.bukkit.listeners.ListenerModule",
                 "org.weftkit.wiring.bukkit.commands.CommandModule",
                 "org.weftkit.wiring.bukkit.metrics.MetricsModule",
-                "org.weftkit.wiring.bukkit.scheduler.SchedulerModule");
+                "org.weftkit.wiring.bukkit.scheduler.SchedulerModule",
+                "org.weftkit.wiring.folia.FoliaModule");
     }
 
     @Override

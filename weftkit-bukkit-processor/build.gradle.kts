@@ -11,4 +11,5 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation(libs.compile.testing)
     testImplementation(project(":weftkit-bukkit"))
+    testImplementation(project(":weftkit-folia"))
 }

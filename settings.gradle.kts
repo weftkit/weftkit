@@ -14,6 +14,7 @@ include(
     "weftkit-processor",
     "weftkit-bukkit",
     "weftkit-bukkit-processor",
+    "weftkit-folia",
     "weftkit-paper",
     "weftkit-paper-processor",
 )
