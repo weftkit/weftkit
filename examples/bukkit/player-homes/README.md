@@ -2,7 +2,8 @@
 
 Per-player homes: `/sethome` remembers where you stand, `/home` teleports you back. Shows the
 lifecycle end to end: a `Loader` that reads homes from disk at startup, aborts on corrupt
-data, `@Provides` the loaded value, and saves on shutdown, plus manual command wiring.
+data, `@Provides` the loaded value, autosaves through the injected `Scheduler`, and saves on
+shutdown, plus manual command wiring.
 
 Documented class by class at
 [weftkit.org/examples/player-homes](https://weftkit.org/examples/player-homes/).

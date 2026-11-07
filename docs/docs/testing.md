@@ -44,13 +44,15 @@ assertSame(storage, loader.get(SpawnerService.class).storage());
 loader.unload();
 ```
 
-Two boundaries to know:
+Boundaries to know:
 
 - Eager singletons still load when an ambient fake shadows their injections, so their `load`
   hooks run. Fake the dependencies those hooks use, or keep hooks free of outside effects.
 - Components that inject the plugin cannot run headless, since a `JavaPlugin` only exists on a
   server (or under a server mock like MockBukkit). Keeping direct plugin dependencies rare keeps
   most of the graph testable without one.
+- `Scheduler` is an interface. A recording fake passed as an ambient value stands in for the
+  real [`Scheduler`](scheduler.md), including the one `weftkit-folia` provides.
 - `load()` does not activate [modules](modules.md). A test that needs their hooks drives them
   with `Modules.activate(loader)` and `Modules.deactivate(loader)` from
   `org.weftkit.wiring.runtime`.

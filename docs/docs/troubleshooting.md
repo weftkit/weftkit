@@ -169,11 +169,11 @@ rebuild.
 
 ### WeftLoader is confined to its creating thread
 
-An `IllegalStateException` naming both threads. `load`, `unload`, and `resetFailure` run only on
-the thread that created the loader, on Bukkit the main thread. Every other call is confined too
-while `load` runs ("still loading") and before `load` or after `unload` ("not loaded"). A `load`
-hook that hands the loader to an async task has to wait until startup finished. Once the graph is
-loaded, every thread may read and create, see [Threading](lifecycle.md#threading).
+An `IllegalStateException` naming both threads. `load` runs only on the thread that created the
+loader, on Bukkit the main thread. Every other call is confined too while `load` runs ("still
+loading") and before `load` or after `unload` ("not loaded"). A `load` hook that hands the loader
+to an async task has to wait until startup finished. Once the graph is loaded, every thread may
+read, create, and unload, see [Threading](lifecycle.md#threading).
 
 ## IDE shows WeftWiring as unresolved
 

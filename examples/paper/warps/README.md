@@ -3,7 +3,8 @@
 Named warps: `/warp set <name>` saves where you stand, `/warp <name>` teleports you there, and
 `/warps` lists them. Shows Paper's Brigadier commands wired by weftkit: a `CommandTree` with
 subcommands, argument suggestions, and requirements, next to a `BasicCommand`. Both are
-`@PaperCommand` components, so `paper-plugin.yml` declares no commands.
+`@PaperCommand` components, so `paper-plugin.yml` declares no commands. With `weftkit-folia` in
+the build and `folia-supported: true` declared, the jar runs on Paper and Folia.
 
 ## Build
 

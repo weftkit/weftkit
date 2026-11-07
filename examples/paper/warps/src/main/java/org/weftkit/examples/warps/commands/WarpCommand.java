@@ -63,7 +63,7 @@ public final class WarpCommand implements CommandTree {
             player.sendMessage(Component.text("No warp named " + name + ".", NamedTextColor.RED));
             return 0;
         }
-        player.teleport(warp);
+        player.teleportAsync(warp);
         return Command.SINGLE_SUCCESS;
     }
 }

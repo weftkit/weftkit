@@ -3,7 +3,8 @@
 Rotating server broadcasts, each line its own wired component. Shows modules end to end: a
 `@WeftModule` discovers the lines with `Weft.all`, `@ModuleSettings` sets the pace, one line is
 gated by a `@FeatureFlag` resolved from `config.yml`, and another depends on that flagged line as
-`Optional<T>`.
+`Optional<T>`. The broadcast timer runs on the injected `Scheduler`, and with `weftkit-folia` in
+the build the same jar runs on Spigot, Paper, and Folia.
 
 Documented class by class at
 [weftkit.org/examples/announcer](https://weftkit.org/examples/announcer/).

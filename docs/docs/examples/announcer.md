@@ -18,7 +18,10 @@ beyond the `Announcement` interface.
 ## The plugin main
 
 `AnnouncerPlugin` joins the module through `@Registry(modules = AnnouncerModule.class)`.
-Bundled adapter modules need no such declaration, plugin-local and third-party ones do.
+Bundled adapter modules need no such declaration, plugin-local and third-party ones do. The
+`folia:scheduler` module comes from `weftkit-folia` in the build. Together with
+`folia-supported: true` in `plugin.yml`, this Spigot API plugin runs unchanged on Spigot, Paper,
+and Folia, see [Folia](../scheduler.md#folia).
 
 ```java
 --8<-- "examples/bukkit/announcer/src/main/java/org/weftkit/examples/announcer/AnnouncerPlugin.java"
@@ -36,8 +39,8 @@ Bundled adapter modules need no such declaration, plugin-local and third-party o
 
 `AnnouncerModule` implements `ModuleLifecycle`. In `activate` it enumerates every
 `Announcement` with `weft.all`, the one capability constructor injection cannot express, and
-starts a repeating task; `deactivate` cancels it. Adding a broadcast line is adding a class,
-nothing else changes.
+starts a repeating task on the injected [`Scheduler`](../scheduler.md). `deactivate` cancels
+the task. Adding a broadcast line is adding a class, nothing else changes.
 
 ```java
 --8<-- "examples/bukkit/announcer/src/main/java/org/weftkit/examples/announcer/broadcast/AnnouncerModule.java"

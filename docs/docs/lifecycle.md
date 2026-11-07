@@ -30,31 +30,35 @@ protected void onWeftEnable(WeftLoader loader) {
 
 ## Threading
 
-Loading and unloading belong to the thread that created the loader, on Bukkit the server main
-thread:
+Loading belongs to the thread that created the loader, on Bukkit the server main thread:
 
-- `load`, `unload`, and `resetFailure` throw from any other thread.
-- While `load` runs, every other call throws from any other thread too.
+- `load` throws from any other thread.
+- While `load` runs, and before it or after `unload`, every other call throws from any other
+  thread too.
 - Views of the immutable registry, such as `loadOrder` or `contains`, work from anywhere at any
   time.
 
 Once `load` has returned true, any thread may call `get`, `create`, `Weft.all`, the view methods,
-and the load timings. Reads are lock-free, and plain components build without waiting on each
-other. Singleton creation is serialized inside the loader, so a lazy singleton materializes
-exactly once even when two threads demand it at the same moment: one builds, the other waits for
-the instance.
+the load timings, `resetFailure`, and `unload`. Reads are lock-free, and plain components and
+loaded lazy singletons resolve without waiting on a materialization in progress. Singleton
+creation is serialized inside the loader, so a lazy singleton materializes exactly once even when
+two threads demand it at the same moment: one builds, the other waits for the instance.
 
 A lazy `load` hook therefore runs on whichever thread asked first, in an async task or on a Folia
-region thread as easily as on the main thread. Inside it, never assume the main thread and never
-block waiting for another thread to touch the graph. A singleton that needs the main thread
-should be eager. `unload` does not wait for other threads, so stop async work before disabling.
+region thread as easily as on the main thread. Inside it, never assume the main thread, and never
+block on the main thread or on another thread's graph access, not even through
+`callSyncMethod`: `unload` runs on the main thread and waits for the materialization in
+progress, so both would wait forever. A singleton that needs the main thread should be eager.
+`unload` waits for that materialization and for nothing else, so stop async work before
+disabling.
 An async materialization that arrives after the unload throws instead of reviving the graph,
 and `get` never hands out a singleton whose `load` hook has not completed.
 
 ## Load order
 
 Load order follows the dependency graph. A component loads after every component it depends on,
-so a singleton can rely on its dependencies being fully loaded inside its own `load`. A value
+so a singleton can rely on its dependencies being fully loaded inside its own `load`. The
+[modules](modules.md) and their dependencies load before every other component. A value
 exposed with `@Provides` is captured right after its owner loads and is injectable from then on.
 A getter that still returns null at that point fails startup, so a forgotten field surfaces
 during load instead of at the first injection. For ordering that is not expressed through
@@ -68,7 +72,8 @@ On disable, the modules deactivate in reverse activation order, the listener mod
 unregistering exactly the listeners it registered. weftkit then runs `unload` on every loaded
 singleton in reverse creation order, lazy singletons interleaved where they materialized, so a
 component is torn down before the ones it depended on, and every captured `@Provides` value is
-dropped. Teardown keeps going even if one
+dropped. The scheduler module unloads last and cancels every task scheduled through the
+[`Scheduler`](scheduler.md). Teardown keeps going even if one
 component's `unload` throws, and the failures are reported together at the end. Teardown is safe
 when startup aborted or never ran.
 
@@ -141,7 +146,7 @@ the `HomeStore` singleton, which loads homes through the package-private `HomesF
 the bundled listener, command, and metrics modules. The command module picks up both commands:
 
 <figure class="wk-graph" markdown>
-![Dependency graph of the player-homes plugin. HomeCommand and SetHomeCommand, both amber singletons, point at the HomeStore singleton, which points at the dashed-bordered package-private HomesFile. The teal CommandModule points at both commands with dotted edges labelled @CommandHandler, the teal MetricsModule points at a plain WeftMetricsSettingsDefaults, and the teal ListenerModule stands alone.](assets/diagrams/weftkit-graph.svg)
+![Dependency graph of the player-homes plugin. HomeCommand and SetHomeCommand, both amber singletons, point at the HomeStore singleton, which points at the dashed-bordered package-private HomesFile. The teal CommandModule points at both commands with dotted edges labelled @CommandHandler, the teal MetricsModule points at a plain WeftMetricsSettingsDefaults, the teal SchedulerModule points at the ambient Scheduler, and the teal ListenerModule stands alone.](assets/diagrams/weftkit-graph.svg)
 <figcaption>The generated <code>weftkit-graph.dot</code> for the player-homes example, rendered with Graphviz.</figcaption>
 </figure>
 
@@ -191,5 +196,6 @@ homes from disk in `load`, aborts startup on a corrupt file, and saves in `unloa
 
 - [Components](components.md): what gets loaded, and how the order is decided
 - [Modules and feature flags](modules.md): module activation inside the lifecycle
+- [Scheduler](scheduler.md): tasks cancelled by the lifecycle instead of by hand
 - [Troubleshooting](troubleshooting.md): the errors the processor raises for broken graphs
 - [player-homes](examples/player-homes.md): the lifecycle end to end in a runnable plugin

@@ -123,6 +123,17 @@ final class JoinListener implements Listener {
 No manual registration and no service locator: `javac` fails the build if a dependency is
 missing, the graph has a cycle, or a listener declares a malformed handler.
 
+Scheduled work goes through the injected `Scheduler`, one API for Bukkit, Paper, and Folia.
+weftkit cancels every task scheduled through it as the graph unloads:
+
+```java
+@Override
+public boolean load() {
+    scheduler.global().runRepeating(this::save, 20L * 60 * 5, 20L * 60 * 5);
+    return true;
+}
+```
+
 Components do not have to be public. weftkit wires package-private classes too, so your
 internals stay internal while still being injected, tested, and lifecycle-managed - see
 [internal components](https://weftkit.org/internal-components/).
@@ -156,8 +167,9 @@ runs on it as its wiring and lifecycle framework.
 | `weftkit-api` | The wiring API. The vocabulary - `@Registry`, `@Wired`, `@Singleton`, `@Provides`, `@Qualified`, `@Initializes`, `@Requires`, `@StaticHolder` - the `Loader` and `ModuleLifecycle` lifecycle interfaces and the `FeatureFlags` hook, plus the `ComponentRegistry` contract the processor generates against. Depends on nothing. |
 | `weftkit-runtime` | The runtime. `WeftLoader` instantiates components in dependency order, injects by type, and drives the `Loader` lifecycle, working against the `ComponentRegistry` the processor generates. |
 | `weftkit-processor` | The platform-neutral annotation processor that validates the graph at compile time and generates the registry. Platform-specific checks are contributed through the `ComponentRule` service interface. |
-| `weftkit-bukkit` | The Bukkit adapter runtime. `WeftPlugin` runs the whole lifecycle from `onEnable` to `onDisable` (with `BukkitWeft` as the manual entry point), plus the bundled listener, command, and metrics modules. |
+| `weftkit-bukkit` | The Bukkit adapter runtime. `WeftPlugin` runs the whole lifecycle from `onEnable` to `onDisable` (with `BukkitWeft` as the manual entry point), the injected `Scheduler` cancelled at teardown, plus the bundled listener, command, and metrics modules. |
 | `weftkit-bukkit-processor` | The Bukkit adapter's compile-time side: contributes the bundled modules to every generated registry and validates `Listener` and `@CommandHandler` components. Goes on the `annotationProcessor` path, never in the jar. |
+| `weftkit-folia` | Folia support for any weftkit plugin, Bukkit or Paper. Adding it to the build weaves in the `folia:scheduler` module, whose `Scheduler` runs on Folia's threaded regions on Folia and on the Bukkit scheduler elsewhere. Folia 1.20.1 or newer. |
 | `weftkit-paper` | The Paper adapter runtime, on top of `weftkit-bukkit`: the bundled `paper:commands` module registers `@PaperCommand` components with Paper's Brigadier registrar, no `plugin.yml` entry needed. Paper 1.21.1 or newer. |
 | `weftkit-paper-processor` | The Paper adapter's compile-time side: brings in `weftkit-bukkit-processor`, contributes the Paper modules, and validates `@PaperCommand` components. Goes on the `annotationProcessor` path, never in the jar. |
 

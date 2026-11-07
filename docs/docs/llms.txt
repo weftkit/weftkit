@@ -8,6 +8,7 @@
 - [Components](https://weftkit.org/components/): declaring and injecting components with @Wired, @Singleton, and @Provides
 - [Lifecycle](https://weftkit.org/lifecycle/): load order, startup and teardown hooks, and diagnostics
 - [Listeners and commands](https://weftkit.org/listeners-and-commands/): automatic Bukkit listener and command registration
+- [Scheduler](https://weftkit.org/scheduler/): injected task scheduler with managed cancellation, Folia support
 - [Modules](https://weftkit.org/modules/): shipping features as modules with feature flags
 - [Annotations](https://weftkit.org/annotations/): reference for every weftkit annotation
 - [Troubleshooting](https://weftkit.org/troubleshooting/): every error the processor can raise and how to fix it

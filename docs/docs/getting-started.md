@@ -38,6 +38,7 @@ commands.
 
 On Paper, use `weftkit-paper` and `weftkit-paper-processor` instead to register Brigadier
 commands without `plugin.yml`, see [Paper commands](listeners-and-commands.md#paper-commands).
+To run on Folia as well, add `weftkit-folia` to the build, see [Folia](scheduler.md#folia).
 
 ## A minimal plugin
 
@@ -128,3 +129,4 @@ malformed listener stops the build.
 - [Components](components.md) covers injection, singletons, products, and reaching your objects.
 - [Lifecycle](lifecycle.md) covers startup, shutdown, and load order.
 - [Listeners and commands](listeners-and-commands.md) covers Bukkit event and command wiring.
+- [Scheduler](scheduler.md) covers scheduled tasks and running on Folia.

@@ -3,9 +3,10 @@ package org.weftkit.examples.announcer.broadcast;
 import java.util.List;
 import org.bukkit.ChatColor;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitTask;
 import org.weftkit.wiring.ModuleLifecycle;
 import org.weftkit.wiring.WeftModule;
+import org.weftkit.wiring.bukkit.scheduler.Scheduler;
+import org.weftkit.wiring.bukkit.scheduler.Task;
 import org.weftkit.wiring.runtime.Weft;
 
 /** Broadcasts the wired {@link Announcement} components in rotation while active. */
@@ -14,16 +15,19 @@ public final class AnnouncerModule implements ModuleLifecycle {
 
     private final JavaPlugin plugin;
 
+    private final Scheduler scheduler;
+
     private final Weft weft;
 
     private final AnnouncerSettings settings;
 
-    private BukkitTask task;
+    private Task task;
 
     private int next;
 
-    public AnnouncerModule(JavaPlugin plugin, Weft weft, AnnouncerSettings settings) {
+    public AnnouncerModule(JavaPlugin plugin, Scheduler scheduler, Weft weft, AnnouncerSettings settings) {
         this.plugin = plugin;
+        this.scheduler = scheduler;
         this.weft = weft;
         this.settings = settings;
     }
@@ -32,8 +36,7 @@ public final class AnnouncerModule implements ModuleLifecycle {
     public boolean activate() {
         List<Announcement> rotation = weft.all(Announcement.class);
         if (rotation.isEmpty()) return true;
-        task = plugin.getServer().getScheduler().runTaskTimer(plugin,
-                () -> broadcast(rotation), settings.intervalTicks(), settings.intervalTicks());
+        task = scheduler.global().runRepeating(() -> broadcast(rotation), settings.intervalTicks(), settings.intervalTicks());
         return true;
     }
 

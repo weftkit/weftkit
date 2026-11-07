@@ -14,6 +14,7 @@ dependencies {
     compileOnly("org.spigotmc:spigot-api:1.20.4-R0.1-SNAPSHOT")
 
     implementation("org.weftkit:weftkit-bukkit:0.6.0")
+    implementation("org.weftkit:weftkit-folia:0.6.0")
     annotationProcessor("org.weftkit:weftkit-processor:0.6.0")
     annotationProcessor("org.weftkit:weftkit-bukkit-processor:0.6.0")
 }

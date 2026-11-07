@@ -166,6 +166,9 @@ Paper has no way to unregister a command. When the plugin disables, its commands
 instead: they fail every permission check, so they drop out of completion and stay unusable
 until Paper rebuilds its commands.
 
+To run on Folia too, add `weftkit-folia` to the build and set `folia-supported: true` in
+`paper-plugin.yml`, see [Folia](scheduler.md#folia). The same jar then runs on Paper and Folia.
+
 ## Related
 
 - [join-leave-messages](examples/join-leave-messages.md): a runnable plugin around one wired listener

@@ -7,7 +7,8 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
 ### Added
 
 - Modules: `@WeftModule` classes woven into the consuming graph at compile time as eager
-  singletons, with `ModuleLifecycle` hooks running after load and in reverse before unload.
+  singletons loading before every other component, with `ModuleLifecycle` hooks running after
+  load and in reverse before unload.
   Declared with `@Registry(modules = ...)`, disabled by id with `@Registry(disable = ...)`.
 - `@ModuleSettings` interfaces for consumer configuration of a module, backed by a generated
   all-defaults implementation when no implementation is wired.
@@ -32,19 +33,33 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
   cannot unregister them.
 - Plugin metrics: `MetricsSettings.serviceId()` plus `MetricsContributor` and `PluginMetrics`
   publish your plugin's own bStats charts through the bundled `bukkit:metrics` module.
+- `Scheduler`, an ambient type injectable into every component, shaped after Folia's threaded
+  regions. `global()`, `at(Location)`, and `on(Entity)` return a `Region` with `run`,
+  `runLater`, `runRepeating`, and `isCurrentThread`. `async()` runs off the server threads.
+  Every scheduling call returns a `Task` handle. On Bukkit and Paper every region is the main
+  thread. The bundled `bukkit:scheduler` module cancels every task scheduled through it as the
+  graph unloads, after every other unload hook, so an aborted enable leaves none running. The
+  default Bukkit scheduler refuses to enable on Folia.
+  A `@Provides Scheduler` product replaces it, and `WeftPlugin.scheduler()` or the
+  `BukkitWeft.enable` overload forces one.
+- `weftkit-folia`: a `Scheduler` over Folia's region, entity, and async schedulers, for Bukkit
+  and Paper plugins alike, on Folia 1.20.1 or newer. With it on the compile classpath, the
+  Bukkit processor weaves the `folia:scheduler` module into the registry. Its
+  `SchedulerDetection` provides Folia's regions on Folia and the Bukkit scheduler elsewhere.
+  Disable with `FoliaModules.SCHEDULER`.
 - Runnable example plugins under `examples/`, built in CI.
 - The rendered dependency graph marks modules and feature-flagged components, and draws ambient
   roots as input nodes with the edges into them. Dotted edges link each module to the components
   it handles through a `@HandledBy` annotation, and a component whose module is missing is
   marked inert.
 - `WeftLoader.ambient(type)` and `WeftLoader.registry()` accessors.
-- `WeftLoader` threading contract: `load`, `unload`, and `resetFailure` stay on the loader's
-  creating thread, and every other call fails fast from another thread while the graph loads or
-  stands unloaded. Once loaded, any thread may call `get`, `create`, `Weft.all`, the view
-  methods, and the timings. Reads are lock-free, creation serializes on an internal lock, so a
-  lazy singleton materializes once, its `load` hook running on the thread that demanded it
-  first. Views of the immutable registry work from any thread, and `loadTimings` returns a
-  snapshot.
+- `WeftLoader` threading contract: `load` stays on the loader's creating thread, and every
+  other call fails fast from another thread while the graph loads or stands unloaded. Once
+  loaded, any thread may call `get`, `create`, `Weft.all`, the view methods, the timings,
+  `resetFailure`, and `unload`. Reads are lock-free, creation and teardown serialize on an
+  internal lock, so a lazy singleton materializes once, its `load` hook running on the thread
+  that demanded it first. Views of the immutable registry work from any thread, and
+  `loadTimings` returns a snapshot.
 - A lazy singleton whose materialization failed stays failed: further injections rethrow the
   first failure cheaply until `WeftLoader.resetFailure(type)` or an unload clears the marker.
 - `ComponentRegistry.featureFlags()` records each `@FeatureFlag` in the generated registry, so
@@ -74,6 +89,12 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
   `bukkit:listeners` and `bukkit:metrics`, disable them via `BukkitModules`.
 - Metrics configuration moved from annotations on the plugin main to a wired `MetricsSettings`
   component, so it can be decided at runtime.
+- `MetricsModule` takes the `Scheduler` as its second constructor argument and schedules its
+  claim through it.
+- `BukkitWeft.enable` gained an overload taking a `Scheduler`, and `BukkitWeft.scheduler`
+  returns the one a loader runs with. A null extra ambient array means no extra values. Startup
+  failures while constructing the loader are now logged and disable the plugin like any other
+  startup failure instead of escaping `onEnable`.
 - The Bukkit adapter's compile-time side ships as the new `weftkit-bukkit-processor` artifact:
   declare it on `annotationProcessor` instead of `weftkit-bukkit`. The listener validation rule
   moved there, and plugin jars stop shipping processor service files.

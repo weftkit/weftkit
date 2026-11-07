@@ -13,7 +13,9 @@ module. The full source lives in
 
 ## The plugin main
 
-`WarpsPlugin` is just the registry hook. Its `paper-plugin.yml` declares no commands.
+`WarpsPlugin` is just the registry hook. Its `paper-plugin.yml` declares no commands and sets
+`folia-supported: true`. `weftkit-folia` in the build provides the
+[`Scheduler`](../scheduler.md) for Paper and Folia alike.
 
 ```java
 --8<-- "examples/paper/warps/src/main/java/org/weftkit/examples/warps/WarpsPlugin.java"
@@ -34,7 +36,8 @@ module. The full source lives in
 ## The tree command
 
 `WarpCommand` is a `CommandTree`: a `set` subcommand behind a permission, and a name argument
-that suggests the existing warps. Brigadier prefers a literal over an argument at the same level,
+that suggests the existing warps. It teleports with `teleportAsync`, as Folia requires.
+Brigadier prefers a literal over an argument at the same level,
 so `/warp set` could never teleport to a warp named `set`, and the subcommand refuses that name. The root requires a player, so the console never sees it.
 
 ```java
@@ -52,5 +55,5 @@ so `/warp set` could never teleport to a warp named `set`, and the subcommand re
 ## Run it
 
 Build the example as described in the [overview](index.md), drop the jar into the `plugins/`
-folder of a Paper 1.21.1 or newer server, run `/warp set spawn`, wander off, and `/warp spawn`
-brings you back.
+folder of a Paper or Folia 1.21.1 or newer server, run `/warp set spawn`, wander off, and
+`/warp spawn` brings you back.

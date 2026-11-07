@@ -26,7 +26,9 @@ lives in
 
 `HomesFile` owns `homes.yml`. As a `Loader` it reads the file in `load`, returning false on a
 corrupt file so the plugin never runs with silently empty homes, and saves it back in
-`unload`. Its `@Provides` getter exposes the parsed `YamlConfiguration` as an injectable
+`unload`. In between it autosaves every five minutes on the injected
+[`Scheduler`](../scheduler.md) and never cancels that task itself: weftkit cancels it as the
+graph finishes unloading. Its `@Provides` getter exposes the parsed `YamlConfiguration` as an injectable
 value, captured right after load. The class stays package-private, only the provided value
 leaves the package.
 
@@ -56,8 +58,8 @@ are `CommandExecutor` components injecting the store, each `@CommandHandler`ed t
 --8<-- "examples/bukkit/player-homes/src/main/java/org/weftkit/examples/homes/commands/SetHomeCommand.java"
 ```
 
-Homes are held in memory while the server runs and written once on disable. A real plugin
-might save on every change instead; the lifecycle hooks stay the same.
+Homes are held in memory while the server runs and written on the autosave and on disable. A
+real plugin might save on every change instead; the lifecycle hooks stay the same.
 
 ## Run it
 

@@ -93,6 +93,7 @@ nav:
       - Internal components: internal-components.md
       - Lifecycle: lifecycle.md
       - Listeners and commands: listeners-and-commands.md
+      - Scheduler: scheduler.md
       - Modules: modules.md
   - Examples:
       - Overview: examples/index.md

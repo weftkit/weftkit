@@ -19,6 +19,13 @@
     Any Bukkit-based server, from CraftBukkit and Spigot to Paper and its forks, on Java 17 or
     newer. weftkit depends only on the Bukkit API, not on server internals or NMS.
 
+- q: Does weftkit run on Folia?
+  a: >-
+    Yes, on Folia 1.20.1 or newer. Add `weftkit-folia` to the build and declare
+    `folia-supported: true`. The plugin main stays unchanged, for `plugin.yml` and
+    `paper-plugin.yml` plugins alike. The injected `Scheduler` then runs on Folia's regions on
+    Folia and on the Bukkit scheduler elsewhere, see [Scheduler](scheduler.md).
+
 - q: Is weftkit production-ready?
   a: >-
     weftkit is pre-1.0, so the public API can still change between releases. The runtime itself

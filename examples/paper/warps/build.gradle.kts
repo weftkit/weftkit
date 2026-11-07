@@ -14,6 +14,7 @@ dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
 
     implementation("org.weftkit:weftkit-paper:0.6.0")
+    implementation("org.weftkit:weftkit-folia:0.6.0")
     annotationProcessor("org.weftkit:weftkit-processor:0.6.0")
     annotationProcessor("org.weftkit:weftkit-paper-processor:0.6.0")
 }

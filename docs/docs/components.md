@@ -224,8 +224,10 @@ public final class HelloPlugin extends WeftPlugin { ... }
 ```
 
 Values returned from `ambientValues` fill the declared types. (With manual control, they are
-the arguments to `BukkitWeft.enable` after the registry.) The plugin instance itself is always
-passed first, so `JavaPlugin` and your plugin main need no declaration.
+the arguments to `BukkitWeft.enable` after the registry.) The plugin instance is always passed
+first and the [`Scheduler`](scheduler.md) is always injectable, so `JavaPlugin`, your plugin
+main, and `Scheduler` need no declaration. `BukkitWeft.scheduler(loader)` returns the scheduler a
+loader runs with.
 
 ```java
 @Override

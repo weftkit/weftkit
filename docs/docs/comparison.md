@@ -19,6 +19,7 @@ weftkit is not the right answer.
 | Wiring mistakes surface | On the server, often as an NPE | As a `javac` error | As a `javac` error | When the injector starts, on the server |
 | Managed lifecycle: load order, startup and teardown hooks, reverse shutdown | You write and maintain it | Built in, the core of the framework | Not included | Not included |
 | Bukkit listener registration | `registerEvents` per listener | Automatic for `@Wired` listeners | By hand | By hand |
+| Scheduler lifecycle | Cancel each task in `onDisable` | Injected `Scheduler`, cancelled at teardown, one API for Bukkit, Paper, and Folia | By hand | By hand |
 | Runtime reflection | None | None | None | Throughout |
 | Weight added to the plugin jar | None | Small runtime, zero third party dependencies | Small runtime | Guice plus its dependencies, on the order of megabytes shaded |
 | Use outside Bukkit | Not applicable | No, weftkit is Bukkit only | Yes, general purpose | Yes, general purpose; Sponge and Velocity are built on it |
