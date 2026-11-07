@@ -83,6 +83,7 @@ final class Resolution implements DependencyResolver {
 
     private Object fromFacade(Dependency dependency, Object[] arguments, Class<?> component) {
         if (!dependency.qualifier().isEmpty()) return UNRESOLVED;
+        if (dependency.type() == WeftScope.class) return components.resources(component);
         if (dependency.type() == Weft.class) return weft;
         if (dependency.type() == WeftView.class) return view;
         if (dependency.type() == WeftDiagnostics.class) return diagnostics;
@@ -106,14 +107,26 @@ final class Resolution implements DependencyResolver {
     private Object fromProduct(Dependency dependency, Object[] arguments, Class<?> component) {
         Class<?> owner = products.owner(dependency.type(), dependency.qualifier());
         if (owner == null) return UNRESOLVED;
-        Object cached = products.captured(dependency.type(), dependency.qualifier());
-        if (cached != null) return cached;
+        boolean owned = products.owned(dependency.type(), dependency.qualifier());
+        if (!owned) {
+            Object cached = products.captured(dependency.type(), dependency.qualifier());
+            if (cached != null) return cached;
+        }
         // The owner may still be inside its own load hook, so fall back to the live getter
         Object provider = components.created(owner);
         // Deliberate for optional product dependencies too, they materialize instead of staying
         // empty, unless the owner is gated off by a feature flag
         if (provider == null && registry.lazySingletons().contains(owner) && gate.enabled(owner))
             provider = components.instance(owner);
+        if (provider != null && owned) {
+            Object source = provider;
+            return components
+                    .resources(component)
+                    .product(
+                            dependency.type(),
+                            dependency.qualifier(),
+                            () -> products.extract(dependency.type(), dependency.qualifier(), source));
+        }
         Object product =
                 provider == null ? null : products.extract(dependency.type(), dependency.qualifier(), provider);
         if (product == null && !dependency.optional())

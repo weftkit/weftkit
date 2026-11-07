@@ -33,6 +33,8 @@ final class DependencyRule extends GraphRule {
 
     private static final String WEFT_DIAGNOSTICS = "org.weftkit.wiring.runtime.WeftDiagnostics";
 
+    private static final String WEFT_SCOPE = "org.weftkit.wiring.runtime.WeftScope";
+
     private static final String FEATURE_FLAGS = FeatureFlags.class.getCanonicalName();
 
     DependencyRule(WiringModel model, Mirrors mirrors, Diagnostics diagnostics) {
@@ -55,6 +57,11 @@ final class DependencyRule extends GraphRule {
     private void validateParameter(String component, Component definition, Parameter parameter, Element anchor) {
         if (parameter.erasedClass().equals(WEFT_LOADER)) {
             diagnostics.error(anchor, "WeftLoader is not injectable, inject Weft to enumerate components by supertype");
+            return;
+        }
+        if (parameter.erasedClass().equals(WEFT_SCOPE)) {
+            if (!definition.singleton()) diagnostics.error(anchor, "WeftScope is only injectable into singletons");
+            if (!parameter.qualifier().isEmpty()) diagnostics.error(anchor, "WeftScope cannot be qualified");
             return;
         }
         // The facades resolve through their own layer
@@ -81,7 +88,15 @@ final class DependencyRule extends GraphRule {
             diagnostics.error(anchor, "Singleton dependency is not @Wired: " + parameter.erasedClass());
             return;
         }
-        if (model.isProduct(parameter.erasedClass(), parameter.qualifier())) return;
+        if (model.isProduct(parameter.erasedClass(), parameter.qualifier())) {
+            if (model.products()
+                            .get(parameter.erasedClass())
+                            .get(parameter.qualifier())
+                            .owned()
+                    && !definition.singleton())
+                diagnostics.error(anchor, "Owned products are only injectable into singletons");
+            return;
+        }
         if (parameter.internal()) bind(definition, parameter, anchor);
         else bindExternal(component, definition, parameter, covering, anchor);
     }

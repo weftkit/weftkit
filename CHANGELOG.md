@@ -6,6 +6,12 @@ Notable changes to weftkit. The format follows [Keep a Changelog](https://keepac
 
 ### Added
 
+- Directly injectable `TaskScope`: each consuming singleton gets its own tasks, cancelled before
+  unload or on failed construction or startup. Manual scopes use `scheduler.scope()`.
+- `@Provides(owned = true)` factories supply an `AutoCloseable` per consuming singleton,
+  automatically closed with that consumer. Shared `@Provides` behavior is unchanged.
+- Injectable `WeftScope` registers `AutoCloseable` resources for cleanup in reverse order.
+  Eager and lazy singletons are supported; prototypes and qualified scopes fail compilation.
 - Injectable `WeftDiagnostics` with immutable snapshots of graph and module phases, component
   scopes and states, observed feature flags, singleton timings, and sticky lazy failures.
   Inspection never constructs components or evaluates flags. Optional `DiagnosticsCommand`

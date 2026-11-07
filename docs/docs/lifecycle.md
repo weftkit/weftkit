@@ -131,6 +131,15 @@ public final class Config implements Loader {
 A reload command is then one line: `loader.get(Config.class).reload()`. Components that injected
 `Config` call `settings()` when they need values and always see the current state.
 
+## Owned resources
+
+Singletons can inject `WeftScope` and register an `AutoCloseable` with `scope.own(resource)`.
+Resources close in reverse registration order before the owner's unload hook, even if construction
+or loading fails. Cleanup continues after failures; the original failure is preserved.
+
+Inject `TaskScope` for [component-owned tasks](scheduler.md#component-owned-tasks); no explicit
+resource registration is needed. Each load or lazy retry gets fresh resources.
+
 ## Diagnostics
 
 Inject [`WeftDiagnostics`](diagnostics.md) for timings and component state. Manual integrations

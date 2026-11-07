@@ -25,6 +25,7 @@ import org.weftkit.wiring.Wired;
 import org.weftkit.wiring.runtime.Weft;
 import org.weftkit.wiring.runtime.WeftDiagnostics;
 import org.weftkit.wiring.runtime.WeftLoader;
+import org.weftkit.wiring.runtime.WeftScope;
 import org.weftkit.wiring.runtime.WeftView;
 
 public final class Sample {
@@ -102,9 +103,11 @@ public final class Sample {
     @Singleton
     public static final class Alpha implements Loader {
         private final Probe probe;
+        public final WeftScope scope;
 
-        public Alpha(Probe probe) {
+        public Alpha(Probe probe, WeftScope scope) {
             this.probe = probe;
+            this.scope = scope;
         }
 
         public boolean load() {

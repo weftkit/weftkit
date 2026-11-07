@@ -64,6 +64,10 @@ dependency once the owner has loaded. The value is captured right after `load`, 
 eager owner and at first materialization for a lazy one, and a getter that still returns null at
 that point fails the load. Injecting a lazy owner's product materializes the owner on demand.
 
+`@Provides(owned = true)` makes the getter a factory: return a fresh `AutoCloseable` for each
+consuming singleton. It is created on injection and closed before the consumer unloads, including
+failed startup. Prototypes cannot inject owned products. The scheduler module uses this for `TaskScope`.
+
 ## @Qualified
 
 Distinguishes multiple dependencies of the same type. On a `@Wired` class or a `@Provides`

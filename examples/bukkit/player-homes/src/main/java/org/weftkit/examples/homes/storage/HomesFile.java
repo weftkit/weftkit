@@ -10,7 +10,7 @@ import org.weftkit.wiring.Loader;
 import org.weftkit.wiring.Provides;
 import org.weftkit.wiring.Singleton;
 import org.weftkit.wiring.Wired;
-import org.weftkit.wiring.bukkit.scheduler.Scheduler;
+import org.weftkit.wiring.bukkit.scheduler.TaskScope;
 
 @Wired
 @Singleton
@@ -20,15 +20,15 @@ final class HomesFile implements Loader {
 
     private final JavaPlugin plugin;
 
-    private final Scheduler scheduler;
+    private final TaskScope tasks;
 
     private final File file;
 
     private YamlConfiguration homes;
 
-    HomesFile(JavaPlugin plugin, Scheduler scheduler) {
+    HomesFile(JavaPlugin plugin, TaskScope tasks) {
         this.plugin = plugin;
-        this.scheduler = scheduler;
+        this.tasks = tasks;
         this.file = new File(plugin.getDataFolder(), "homes.yml");
     }
 
@@ -42,7 +42,7 @@ final class HomesFile implements Loader {
             return false;
         }
         homes = loaded;
-        scheduler.global().runRepeating(this::save, AUTOSAVE_TICKS, AUTOSAVE_TICKS);
+        tasks.global().runRepeating(this::save, AUTOSAVE_TICKS, AUTOSAVE_TICKS);
         return true;
     }
 

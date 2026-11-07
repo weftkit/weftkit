@@ -26,9 +26,11 @@ final class Products implements CreationListener {
     Products(ProductRegistry registry) {
         this.registry = registry;
         registry.productOwners()
-                .forEach((product, qualified) ->
-                        qualified.forEach((qualifier, owner) -> byOwner.computeIfAbsent(owner, key -> new ArrayList<>())
-                                .add(new ProductKey(product, qualifier))));
+                .forEach((product, qualified) -> qualified.forEach((qualifier, owner) -> {
+                    if (!owned(product, qualifier))
+                        byOwner.computeIfAbsent(owner, key -> new ArrayList<>())
+                                .add(new ProductKey(product, qualifier));
+                }));
     }
 
     // Captures aside and commits only once every product checks out, keeping onLoaded atomic
@@ -73,7 +75,12 @@ final class Products implements CreationListener {
 
     /** Reads the product straight off a live provider, for an owner still inside its load hook. */
     Object extract(Class<?> product, String qualifier, Object provider) {
-        return registry.productGetters().get(product).get(qualifier).apply(provider);
+        var getters = owned(product, qualifier) ? registry.ownedProductGetters() : registry.productGetters();
+        return getters.get(product).get(qualifier).apply(provider);
+    }
+
+    boolean owned(Class<?> product, String qualifier) {
+        return registry.ownedProductGetters().getOrDefault(product, Map.of()).containsKey(qualifier);
     }
 
     private void forEachProductOf(Class<?> owner, BiConsumer<Class<?>, String> action) {

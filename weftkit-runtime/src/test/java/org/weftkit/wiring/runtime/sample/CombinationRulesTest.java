@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,16 @@ class CombinationRulesTest {
         WeftLoader loader = new WeftLoader(WeftWiring.INSTANCE, ambient);
         probe.loader = loader;
         return loader;
+    }
+
+    @Test
+    void generatedRegistryInjectsTheSingletonsOwnershipScope() {
+        WeftLoader loader = newLoader();
+        assertTrue(loader.load());
+        AtomicInteger closed = new AtomicInteger();
+        loader.get(Sample.Alpha.class).scope.own(closed::incrementAndGet);
+        loader.unload();
+        assertEquals(1, closed.get());
     }
 
     @Test

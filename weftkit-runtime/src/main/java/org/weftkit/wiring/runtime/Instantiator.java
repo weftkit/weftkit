@@ -16,6 +16,9 @@ interface Instantiator {
     /** Creates or fetches an instance of the type, applying its scope. */
     Object instance(Class<?> type, Object... arguments);
 
+    /** The ownership scope of the singleton being constructed. */
+    WeftScope resources(Class<?> type);
+
     /** The raw cached singleton for the type without binding resolution, or null. */
     Object created(Class<?> type);
 }

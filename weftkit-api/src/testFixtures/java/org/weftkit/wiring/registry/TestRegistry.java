@@ -25,6 +25,8 @@ public final class TestRegistry implements ComponentRegistry {
 
     private final Map<Class<?>, Map<String, Function<Object, Object>>> productGetters = new LinkedHashMap<>();
 
+    private final Map<Class<?>, Map<String, Function<Object, Object>>> ownedProductGetters = new LinkedHashMap<>();
+
     private final Map<Class<?>, Flag> featureFlags = new LinkedHashMap<>();
 
     private final Map<Class<?>, List<Class<?>>> requirements = new LinkedHashMap<>();
@@ -58,6 +60,14 @@ public final class TestRegistry implements ComponentRegistry {
     public TestRegistry product(Class<?> product, Class<?> owner, Function<Object, Object> getter) {
         productOwners.computeIfAbsent(product, key -> new LinkedHashMap<>()).put("", owner);
         productGetters.computeIfAbsent(product, key -> new LinkedHashMap<>()).put("", getter);
+        return this;
+    }
+
+    public TestRegistry ownedProduct(Class<?> product, Class<?> owner, Function<Object, Object> factory) {
+        productOwners.computeIfAbsent(product, key -> new LinkedHashMap<>()).put("", owner);
+        ownedProductGetters
+                .computeIfAbsent(product, key -> new LinkedHashMap<>())
+                .put("", factory);
         return this;
     }
 
@@ -125,6 +135,11 @@ public final class TestRegistry implements ComponentRegistry {
     @Override
     public Map<Class<?>, Map<String, Function<Object, Object>>> productGetters() {
         return Collections.unmodifiableMap(productGetters);
+    }
+
+    @Override
+    public Map<Class<?>, Map<String, Function<Object, Object>>> ownedProductGetters() {
+        return Collections.unmodifiableMap(ownedProductGetters);
     }
 
     @Override

@@ -17,9 +17,32 @@ import org.bukkit.entity.Entity;
 import org.junit.jupiter.api.Test;
 import org.weftkit.wiring.bukkit.scheduler.Async;
 import org.weftkit.wiring.bukkit.scheduler.Task;
+import org.weftkit.wiring.bukkit.scheduler.TaskScope;
 import org.weftkit.wiring.folia.FoliaStubs.Recording;
 
 class FoliaSchedulingTest {
+
+    @Test
+    void taskScopesPreserveFoliaRoutingAndEntityRetirement() {
+        TaskScope scope = scheduler.scope();
+        Task globalTask = scope.global().run(task);
+        Task regionTask = scope.at(location).runRepeating(task, 2, 3);
+        Task entityTask = scope.on(entity).runLater(task, 4);
+        Task asyncTask = scope.async().run(task);
+        Task parentTask = scheduler.global().run(task);
+        assertEquals("run", global.calls.get(0).method());
+        assertArrayEquals(new Object[] {location, 2L, 3L}, region.calls.get(0).args());
+        assertEquals("runDelayed", entityScheduler.calls.get(0).method());
+        assertEquals("runNow", async.calls.get(0).method());
+        entityScheduler.retireHooks.get(0).run();
+        assertTrue(entityTask.isCancelled());
+        scope.close();
+        assertTrue(globalTask.isCancelled());
+        assertTrue(regionTask.isCancelled());
+        assertTrue(asyncTask.isCancelled());
+        assertFalse(parentTask.isCancelled());
+        scheduler.close();
+    }
 
     private final Recording global = new Recording();
 

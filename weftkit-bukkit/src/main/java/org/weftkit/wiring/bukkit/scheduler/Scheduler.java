@@ -21,6 +21,11 @@ public interface Scheduler {
     /** Work off the server threads. */
     Async async();
 
+    /** A child scheduler for manual ownership; the caller must close it. */
+    default TaskScope scope() {
+        return new TaskScope(this);
+    }
+
     /** Cancels every task scheduled through this scheduler. For the adapter: components cancel through {@link Task}. */
     void cancelAll();
 

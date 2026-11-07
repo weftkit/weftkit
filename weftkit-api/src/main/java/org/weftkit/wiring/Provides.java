@@ -6,9 +6,13 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marks a getter on a wired loader whose return value becomes available as a dependency once
- * the loader has loaded. Class retention is required for incremental annotation processing.
+ * Exposes a singleton's getter as an injectable value. Shared products are captured after load;
+ * owned factories create a resource per consuming singleton. Class retention supports incremental processing.
  */
 @Retention(RetentionPolicy.CLASS)
 @Target(ElementType.METHOD)
-public @interface Provides {}
+public @interface Provides {
+
+    /** Creates an AutoCloseable once per consuming singleton, closed before that consumer unloads. */
+    boolean owned() default false;
+}

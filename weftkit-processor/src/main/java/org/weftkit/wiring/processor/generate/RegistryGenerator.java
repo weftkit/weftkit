@@ -184,8 +184,14 @@ public class RegistryGenerator {
                         "productGetters",
                         mapOf(qualifiedMap(GETTER)),
                         Container.NESTED_MAP,
-                        () -> productGetterEntries(fragments.centralProducts()),
-                        fragment -> productGetterEntries(fragment.products())),
+                        () -> productGetterEntries(fragments.centralProducts(), false),
+                        fragment -> productGetterEntries(fragment.products(), false)),
+                new Section(
+                        "ownedProductGetters",
+                        mapOf(qualifiedMap(GETTER)),
+                        Container.NESTED_MAP,
+                        () -> productGetterEntries(fragments.centralProducts(), true),
+                        fragment -> productGetterEntries(fragment.products(), true)),
                 new Section(
                         "bindings",
                         mapOf(qualifiedMap(ANY_CLASS)),
@@ -487,8 +493,13 @@ public class RegistryGenerator {
                 .collect(CodeBlock.joining(",\n"));
     }
 
-    private CodeBlock productGetterEntries(Map<String, Map<String, Product>> products) {
-        return products.entrySet().stream()
+    private CodeBlock productGetterEntries(Map<String, Map<String, Product>> products, boolean owned) {
+        Map<String, Map<String, Product>> selected = new LinkedHashMap<>();
+        products.forEach((type, qualified) -> qualified.forEach((qualifier, product) -> {
+            if (product.owned() == owned)
+                selected.computeIfAbsent(type, ignored -> new LinkedHashMap<>()).put(qualifier, product);
+        }));
+        return selected.entrySet().stream()
                 .map(product -> mapEntry(
                         product.getKey(), qualifiedValues(GETTER, product.getValue(), RegistryGenerator::getter)))
                 .collect(CodeBlock.joining(",\n"));

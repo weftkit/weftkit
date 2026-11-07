@@ -9,22 +9,28 @@ Every component can inject a `Scheduler`. It is an [ambient root](components.md#
 like the plugin itself and needs no declaration. When the graph unloads, weftkit cancels every
 task scheduled through it.
 
+## Component-owned tasks
+
+Inject `TaskScope` into a singleton for tasks tied to that component. Each consumer gets its
+own scope, cancelled before its `unload`, including failed construction or startup. Other
+components' tasks keep running. The bundled `bukkit:scheduler` module supplies it.
+
 ```java
 @Wired
 @Singleton
 final class HomesFile implements Loader {
 
-    private final Scheduler scheduler;
+    private final TaskScope tasks;
 
-    HomesFile(JavaPlugin plugin, Scheduler scheduler) {
-        this.scheduler = scheduler;
+    HomesFile(JavaPlugin plugin, TaskScope tasks) {
+        this.tasks = tasks;
         ...
     }
 
     @Override
     public boolean load() {
         ...
-        scheduler.global().runRepeating(this::save, 20L * 60 * 5, 20L * 60 * 5);
+        tasks.global().runRepeating(this::save, 20L * 60 * 5, 20L * 60 * 5);
         return true;
     }
 
@@ -35,8 +41,15 @@ final class HomesFile implements Loader {
 }
 ```
 
-`unload` does not cancel the autosave task. weftkit cancels it as the graph finishes unloading. The
-[player-homes example](examples/player-homes.md) runs exactly this code.
+Import `TaskScope` from `org.weftkit.wiring.bukkit.scheduler`. The [player-homes example](examples/player-homes.md)
+uses this pattern.
+
+`TaskScope` has the same scheduling API as `Scheduler`. Closing it rejects new work, including
+through retained region and async handles, and leaves the parent scheduler open. Already-running
+callbacks may finish; closing does not interrupt or wait for them.
+
+Use `scheduler.scope()` for manual ownership and close it yourself, for example with
+try-with-resources. Only singletons can inject `TaskScope`; prototypes use manual ownership.
 
 ## The API
 
@@ -77,7 +90,7 @@ thread.
 On disable, weftkit tears down in this order:
 
 1. The [modules](modules.md) deactivate.
-2. The singletons unload, in reverse creation order.
+2. The singletons unload in reverse creation order, each closing its owned resources before its hook.
 3. The bundled `bukkit:scheduler` [module](modules.md), loaded first and so unloaded last, closes
    the `Scheduler` and cancels every task scheduled through it.
 
@@ -86,7 +99,8 @@ The [announcer example](examples/announcer.md) does this.
 
 When startup aborts because a `load` hook failed, the same unload runs for the components that
 did load, whichever `Scheduler` the graph runs with.
-An `unload` hook may still see its own tasks queued, the module cancels them right after. Disable
+Tasks scheduled through the shared `Scheduler` remain queued until the scheduler module closes;
+component-owned tasks have already been cancelled before their owner's unload hook. Disable
 the module with `@Registry(disable = BukkitModules.SCHEDULER)` to cancel by hand.
 
 `cancelAll` belongs to the adapter and only touches tasks scheduled through the `Scheduler`.

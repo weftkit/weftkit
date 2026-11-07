@@ -124,7 +124,8 @@ public final class WeftLoader {
      * interleaved where they materialized, and drops every cached singleton. Teardown continues
      * past failures, rethrowing the first with the rest suppressed. Safe to call repeatedly on
      * the owner thread, any other thread may call it only while the graph is loaded. A
-     * component materialized by an unload hook during teardown is dropped without its own hook.
+     * component materialized by an unload hook during teardown is dropped without its own hook,
+     * but its owned resources still close. Owned resources close before each singleton's hook.
      * Waits for a lazy materialization in progress. The hooks run on the calling thread, which
      * keeps graph access for their duration. Reentrant unload during loading, singleton creation,
      * or teardown is rejected.

@@ -4,6 +4,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeKind;
+import org.weftkit.wiring.Provides;
 import org.weftkit.wiring.Wired;
 import org.weftkit.wiring.processor.compiler.Diagnostics;
 import org.weftkit.wiring.processor.compiler.Mirrors;
@@ -42,6 +43,12 @@ public final class ProvidesRule extends ElementRule<ExecutableElement> {
                                 || mirrors.isAccessibleFrom(getter.getReturnType(), mirrors.packageName(owner)),
                         "Product type must be public or live in the owner package: " + product)
                 .passed();
+        if (getter.getAnnotation(Provides.class).owned()
+                && (mirrors.typeElement(product) == null
+                        || !mirrors.isSubtype(mirrors.typeElement(product), "java.lang.AutoCloseable"))) {
+            diagnostics.error(getter, "@Provides(owned = true) must return an AutoCloseable");
+            valid = false;
+        }
         if (!valid) return;
         Product previous = collector.addProduct(getter, owner);
         if (previous != null) diagnostics.error(getter, "Product is already provided by " + previous.owner());

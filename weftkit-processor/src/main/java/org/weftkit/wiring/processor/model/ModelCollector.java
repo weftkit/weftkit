@@ -18,6 +18,7 @@ import javax.lang.model.util.ElementFilter;
 import org.weftkit.wiring.FeatureFlag;
 import org.weftkit.wiring.FeatureFlags;
 import org.weftkit.wiring.HandledBy;
+import org.weftkit.wiring.Provides;
 import org.weftkit.wiring.Singleton;
 import org.weftkit.wiring.processor.compiler.Diagnostics;
 import org.weftkit.wiring.processor.compiler.Mirrors;
@@ -196,7 +197,8 @@ public final class ModelCollector {
                 mirrors.qualifier(getter),
                 new Product(
                         owner.getQualifiedName().toString(),
-                        getter.getSimpleName().toString()));
+                        getter.getSimpleName().toString(),
+                        getter.getAnnotation(Provides.class).owned()));
     }
 
     /** Whether the component is already in the model, as a source component or through a module. */

@@ -44,6 +44,9 @@ final class Components implements Instantiator {
     // Graph lock only
     private final Map<Class<?>, Object> loading = new HashMap<>();
 
+    // Graph lock only; registered before construction so constructor failures clean up too.
+    private final Map<Class<?>, WeftScope> resources = new HashMap<>();
+
     // Completion order of singleton creation, eager and lazy interleaved, driving reverse-order
     // unload. Insertion order of the singletons map would not do: a hook-materialized lazy
     // singleton is inserted after its consumer but completes before it. Graph lock only
@@ -145,9 +148,20 @@ final class Components implements Instantiator {
         List<Class<?>> order = List.copyOf(creationOrder);
         Throwable failure = null;
         for (int index = order.size() - 1; index >= 0; index--) {
-            if (!(singletons.remove(order.get(index)) instanceof Loader loader)) continue;
+            Class<?> type = order.get(index);
+            Object singleton = singletons.remove(type);
             try {
-                loader.unload();
+                dispose(type, singleton);
+            } catch (RuntimeException | Error ex) {
+                if (failure == null) failure = ex;
+                else if (failure != ex) failure.addSuppressed(ex);
+            }
+        }
+        // An unload hook may materialize another singleton after the order was captured.
+        while (!resources.isEmpty()) {
+            Class<?> type = resources.keySet().iterator().next();
+            try {
+                closeResources(type);
             } catch (RuntimeException | Error ex) {
                 if (failure == null) failure = ex;
                 else if (failure != ex) failure.addSuppressed(ex);
@@ -222,12 +236,14 @@ final class Components implements Instantiator {
 
     private boolean load(Class<?> type, Object[] arguments) {
         long start = System.nanoTime();
-        Object singleton = build(type, arguments);
-        loading.put(type, singleton);
+        resources.put(type, new WeftScope());
+        Object singleton = null;
         boolean accepted = false;
         int notified = 0;
         Throwable failure = null;
         try {
+            singleton = build(type, arguments);
+            loading.put(type, singleton);
             if (singleton instanceof Loader loader && !loader.load()) return false;
             creationOrder.add(type);
             for (CreationListener listener : listeners) {
@@ -243,14 +259,11 @@ final class Components implements Instantiator {
         } finally {
             try {
                 if (!accepted) {
-                    // A failed load may have acquired resources before declining or throwing.
-                    if (singleton instanceof Loader loader) {
-                        try {
-                            loader.unload();
-                        } catch (RuntimeException | Error teardown) {
-                            if (failure == null) throw teardown;
-                            if (failure != teardown) failure.addSuppressed(teardown);
-                        }
+                    try {
+                        dispose(type, singleton);
+                    } catch (RuntimeException | Error teardown) {
+                        if (failure == null) throw teardown;
+                        if (failure != teardown) failure.addSuppressed(teardown);
                     }
                 }
             } finally {
@@ -265,6 +278,35 @@ final class Components implements Instantiator {
         }
         timings.add(new Timing(type, Duration.ofNanos(System.nanoTime() - start)));
         return true;
+    }
+
+    @Override
+    public WeftScope resources(Class<?> type) {
+        if (!graph.isHeldByCurrentThread() || !resources.containsKey(type))
+            throw new ResolutionException("WeftScope is only injectable into singletons: " + type.getName());
+        return resources.get(type);
+    }
+
+    private void closeResources(Class<?> type) {
+        WeftScope scope = resources.remove(type);
+        if (scope != null) scope.close();
+    }
+
+    private void dispose(Class<?> type, Object singleton) {
+        Throwable failure = null;
+        try {
+            closeResources(type);
+        } catch (RuntimeException | Error ex) {
+            failure = ex;
+        }
+        try {
+            if (singleton instanceof Loader loader) loader.unload();
+        } catch (RuntimeException | Error ex) {
+            if (failure == null) failure = ex;
+            else if (failure != ex) failure.addSuppressed(ex);
+        }
+        if (failure instanceof Error error) throw error;
+        if (failure != null) throw (RuntimeException) failure;
     }
 
     @Override

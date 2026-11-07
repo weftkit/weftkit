@@ -26,10 +26,10 @@ lives in
 
 `HomesFile` owns `homes.yml`. As a `Loader` it reads the file in `load`, returning false on a
 corrupt file so the plugin never runs with silently empty homes, and saves it back in
-`unload`. In between it autosaves every five minutes on the injected
-[`Scheduler`](../scheduler.md) and never cancels that task itself: weftkit cancels it as the
-graph finishes unloading. Its `@Provides` getter exposes the parsed `YamlConfiguration` as an injectable
-value, captured right after load. The class stays package-private, only the provided value
+`unload`. In between it autosaves every five minutes through a
+directly injected [`TaskScope`](../scheduler.md#component-owned-tasks).
+weftkit cancels the autosave before `HomesFile.unload` saves one final time. Its `@Provides`
+getter exposes the parsed `YamlConfiguration` as an injectable value, captured right after load. The class stays package-private, only the provided value
 leaves the package.
 
 ```java
