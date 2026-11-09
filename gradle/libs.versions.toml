@@ -9,7 +9,7 @@ spotless = "8.8.0"
 # The Bukkit API is only published as snapshots; the timestamped build is immutable, so the
 # compatibility floor cannot silently change or break reproducibility (last 1.8-R0.1 build)
 bukkit = { module = "org.bukkit:bukkit", version = "1.8-R0.1-20150227.224714-194" }
-paper = { module = "io.papermc.paper:paper-api", version = "1.21.1-R0.1-20250328.161643-128" }
+paper = { module = "io.papermc.paper:paper-api", version = "26.2.build.112-stable" }
 folia = { module = "dev.folia:folia-api", version = "1.20.1-R0.1-20230911.182805-18" }
 bstats = { module = "org.bstats:bstats-bukkit", version = "3.2.1" }
 javapoet = { module = "com.palantir.javapoet:javapoet", version = "0.18.0" }
